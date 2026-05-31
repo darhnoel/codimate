@@ -8,10 +8,12 @@ use codimate_core::{circle, scene, tween, Color, ConcreteCircle, ConcreteNode};
 #[test]
 fn animation_stores_duration_and_resolves_scene() {
     let a = animation(
+        "intro",
         2.0,
         scene().node(circle().x(tween(0.0, 100.0)).radius(10.0).fill(Color::RED)),
     );
 
+    assert_eq!(a.name(), "intro");
     assert_eq!(a.duration(), 2.0);
     assert_eq!(
         a.resolve(0.5).children,

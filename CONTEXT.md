@@ -20,8 +20,8 @@ curves (e.g. `back`) deliberately produce values outside `[0,1]`, which flow
 into `tween`'s intended extrapolation — this is not an Invariant 2 violation,
 since the eased value still *receives* `t ∈ [0,1]` from its Animation context.
 
-**Animation**: A thing with a `duration: f32` and a `scene: fn(t) → Scene`.
-Never say "clip", "track", or "timeline object".
+**Animation**: A named thing with a `duration: f32` and a Scene that resolves
+with normalized `t`. Never say "clip", "track", or "timeline object".
 
 **Scene**: A tree of Nodes where every stylistic property is `Animated<T>`.
 Never say "stage", "canvas state", or "frame data".

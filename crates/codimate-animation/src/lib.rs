@@ -4,8 +4,9 @@
 
 use codimate_core::{ConcreteScene, Scene};
 
-/// Layer 3 — a Scene paired with a duration.
+/// Layer 3 — a named Scene paired with a duration.
 pub struct Animation {
+    name: String,
     duration: f32,
     scene: Scene,
 }
@@ -16,15 +17,24 @@ pub struct Animation {
 /// use codimate_animation::animation;
 /// use codimate_core::{circle, scene};
 ///
-/// let a = animation(2.0, scene().node(circle().radius(10.0)));
+/// let a = animation("intro", 2.0, scene().node(circle().radius(10.0)));
+/// assert_eq!(a.name(), "intro");
 /// assert_eq!(a.duration(), 2.0);
 /// assert_eq!(a.resolve(0.5).children.len(), 1);
 /// ```
-pub fn animation(duration: f32, scene: Scene) -> Animation {
-    Animation { duration, scene }
+pub fn animation(name: impl Into<String>, duration: f32, scene: Scene) -> Animation {
+    Animation {
+        name: name.into(),
+        duration,
+        scene,
+    }
 }
 
 impl Animation {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn duration(&self) -> f32 {
         self.duration
     }
