@@ -36,7 +36,12 @@ Never say "snapshot" or "frame state".
 **Sequence**: A named Layer 3 Composition that plays Animations back-to-back.
 Child Animation timestamps are local to that child; boundaries are hard cuts.
 
-**Composition**: Combining Animations in time via `sequence`, `par`, `stagger`.
+**Parallel**: A named Layer 3 Composition that plays Animations at the same
+time. Duration is the longest child duration; shorter children hold their final
+state.
+
+**Composition**: Combining Animations in time via `sequence`, `parallel`,
+`stagger`.
 Never say "sequencer", "timeline", or "animation graph".
 
 **Duration**: Lives in Layer 3 (Composition) ONLY.
