@@ -7,4 +7,5 @@ members = [
     "crates/codimate-render",
     "crates/codimate-wayland",
     "crates/codimate-export",
+    "examples/basic",
 ]

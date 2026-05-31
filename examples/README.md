@@ -1,5 +1,5 @@
 # Examples
 
-Runnable examples will live here once the preview/export crates have concrete
-backend slices. The workspace keeps this directory now so examples can be added
-without changing the crate layout later.
+- `basic/` — compile-checked authoring example that resolves a named animation,
+  samples preview/export frames, lays them out, and produces renderer-neutral
+  commands.

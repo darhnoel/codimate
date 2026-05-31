@@ -14,6 +14,17 @@ name = "codimate-core"
 version = "0.1.0"
 
 [[package]]
+name = "codimate-example-basic"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-layout",
+ "codimate-wayland",
+]
+
+[[package]]
 name = "codimate-export"
 version = "0.1.0"
 dependencies = [
