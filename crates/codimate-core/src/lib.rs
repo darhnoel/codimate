@@ -27,7 +27,12 @@ pub struct Color {
 }
 
 impl Color {
-    pub const RED: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
+    pub const RED: Color = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
 }
 
 /// Layer 1 — a value that resolves at time `t ∈ [0.0, 1.0]`.
@@ -213,7 +218,13 @@ impl Circle {
             x: 0.0.into_animated(),
             y: 0.0.into_animated(),
             radius: 0.0.into_animated(),
-            fill: Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }.into_animated(),
+            fill: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
+            .into_animated(),
         }
     }
 
@@ -257,6 +268,108 @@ impl Default for Circle {
 /// Lowercase free constructor so scenes read like English: `circle().radius(..)`.
 pub fn circle() -> Circle {
     Circle::new()
+}
+
+/// A Node (Layer 2): a rectangle with animated layout and fill properties.
+/// Timeless — no duration. Nodes do not render themselves (Invariant 3).
+///
+/// ```
+/// use codimate_core::{rect, tween, Color};
+///
+/// let r = rect()
+///     .x(tween(0.0, 100.0))
+///     .y(50.0)
+///     .width(120.0)
+///     .height(40.0)
+///     .fill(Color::RED);
+///
+/// let at_mid = r.resolve(0.5);
+/// assert_eq!(at_mid.x, 50.0);
+/// assert_eq!(at_mid.y, 50.0);
+/// ```
+#[derive(Clone)]
+pub struct Rect {
+    x: Animated<f32>,
+    y: Animated<f32>,
+    width: Animated<f32>,
+    height: Animated<f32>,
+    fill: Animated<Color>,
+}
+
+/// A `Rect` resolved at a specific `t` — all plain values, no Skia.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ConcreteRect {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub fill: Color,
+}
+
+impl Rect {
+    /// Defaults: `x = y = width = height = 0.0`, `fill = opaque white`.
+    pub fn new() -> Self {
+        Rect {
+            x: 0.0.into_animated(),
+            y: 0.0.into_animated(),
+            width: 0.0.into_animated(),
+            height: 0.0.into_animated(),
+            fill: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
+            .into_animated(),
+        }
+    }
+
+    pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
+        self.x = x.into_animated();
+        self
+    }
+
+    pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
+        self.y = y.into_animated();
+        self
+    }
+
+    pub fn width(mut self, width: impl IntoAnimated<f32>) -> Self {
+        self.width = width.into_animated();
+        self
+    }
+
+    pub fn height(mut self, height: impl IntoAnimated<f32>) -> Self {
+        self.height = height.into_animated();
+        self
+    }
+
+    pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
+        self.fill = c.into_animated();
+        self
+    }
+
+    /// `f(t) → Concrete` — resolves every `Animated` field at the same `t`.
+    pub fn resolve(&self, t: f32) -> ConcreteRect {
+        ConcreteRect {
+            x: self.x.resolve(t),
+            y: self.y.resolve(t),
+            width: self.width.resolve(t),
+            height: self.height.resolve(t),
+            fill: self.fill.resolve(t),
+        }
+    }
+}
+
+impl Default for Rect {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Lowercase free constructor so scenes read like English: `rect().width(..)`.
+pub fn rect() -> Rect {
+    Rect::new()
 }
 
 // --- Built-in easing curves (`f32 → f32`). All satisfy curve(0)=0, curve(1)=1. ---

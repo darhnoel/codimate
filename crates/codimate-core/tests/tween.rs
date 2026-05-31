@@ -29,17 +29,30 @@ fn tween_lerps_vec2_componentwise() {
 /// Color interpolates each channel independently (red -> blue at the midpoint).
 #[test]
 fn tween_lerps_color_channelwise() {
-    let blue = Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
+    let blue = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+    };
     let c = tween(Color::RED, blue);
-    assert_eq!(c.resolve(0.5), Color { r: 0.5, g: 0.0, b: 0.5, a: 1.0 });
+    assert_eq!(
+        c.resolve(0.5),
+        Color {
+            r: 0.5,
+            g: 0.0,
+            b: 0.5,
+            a: 1.0
+        }
+    );
 }
 
 /// Invariant 7 in action: endpoints may themselves be Animated. Each endpoint
 /// is resolved at the same t, then interpolated.
 #[test]
 fn tween_between_two_animated_endpoints() {
-    let a = tween(0.0, 10.0);     // at t=0.5 -> 5.0
-    let b = tween(100.0, 200.0);  // at t=0.5 -> 150.0
-    let mixed = tween(a, b);      // lerp(5.0, 150.0, 0.5) = 77.5
+    let a = tween(0.0, 10.0); // at t=0.5 -> 5.0
+    let b = tween(100.0, 200.0); // at t=0.5 -> 150.0
+    let mixed = tween(a, b); // lerp(5.0, 150.0, 0.5) = 77.5
     assert_eq!(mixed.resolve(0.5), 77.5);
 }

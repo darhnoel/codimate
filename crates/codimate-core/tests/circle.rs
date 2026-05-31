@@ -6,10 +6,7 @@ use codimate_core::{circle, tween, Color};
 /// holds (proves x/y are independent), and plain values pass with no ceremony.
 #[test]
 fn circle_resolves_each_property() {
-    let c = circle()
-        .x(tween(0.0, 100.0))
-        .radius(20.0)
-        .fill(Color::RED);
+    let c = circle().x(tween(0.0, 100.0)).radius(20.0).fill(Color::RED);
     let r = c.resolve(0.5);
     assert_eq!(r.x, 50.0); // animated x resolved at t
     assert_eq!(r.y, 0.0); // default holds — independent of x
@@ -24,5 +21,13 @@ fn circle_defaults() {
     assert_eq!(r.x, 0.0);
     assert_eq!(r.y, 0.0);
     assert_eq!(r.radius, 0.0);
-    assert_eq!(r.fill, Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
+    assert_eq!(
+        r.fill,
+        Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0
+        }
+    );
 }

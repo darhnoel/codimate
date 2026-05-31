@@ -34,7 +34,10 @@ fn ease_in_out_is_symmetric() {
 #[test]
 fn back_overshoots_past_target() {
     let r = tween(0.0, 100.0).ease(back);
-    assert!(r.resolve(0.9) > 100.0, "back should overshoot above the target");
+    assert!(
+        r.resolve(0.9) > 100.0,
+        "back should overshoot above the target"
+    );
     assert_eq!(r.resolve(1.0), 100.0); // still settles exactly on target
 }
 
