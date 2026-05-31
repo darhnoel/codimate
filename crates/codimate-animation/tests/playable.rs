@@ -1,7 +1,7 @@
 //! Layer 3 tests: Playable is the shared contract for sampled compositions.
 
 use codimate_animation::{animation, parallel, sequence, stagger, Playable};
-use codimate_core::{circle, rect, scene};
+use codimate_core::{circle, rect, scene, tween, ConcreteNode};
 
 fn child_count(playable: &impl Playable) -> usize {
     playable.resolve(0.5).children.len()
@@ -45,4 +45,28 @@ fn playable_resolves_all_layer_3_types() {
     );
     assert_eq!(stagger.name(), "cascade");
     assert_eq!(child_count(&stagger), 2);
+}
+
+/// Elapsed-time sampling maps seconds into normalized `t` without owning a
+/// clock. Values outside the animation range clamp to the nearest endpoint.
+#[test]
+fn playable_resolves_at_elapsed_seconds() {
+    let single = animation(
+        "single",
+        2.0,
+        scene().node(circle().x(tween(0.0, 100.0)).radius(10.0)),
+    );
+
+    match &single.resolve_at(1.0).children[0] {
+        ConcreteNode::Circle(circle) => assert_eq!(circle.x, 50.0),
+        other => panic!("expected circle at midpoint, got {other:?}"),
+    }
+    match &single.resolve_at(-1.0).children[0] {
+        ConcreteNode::Circle(circle) => assert_eq!(circle.x, 0.0),
+        other => panic!("expected circle at start, got {other:?}"),
+    }
+    match &single.resolve_at(3.0).children[0] {
+        ConcreteNode::Circle(circle) => assert_eq!(circle.x, 100.0),
+        other => panic!("expected circle at end, got {other:?}"),
+    }
 }

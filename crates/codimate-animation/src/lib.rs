@@ -12,6 +12,20 @@ pub trait Playable {
     fn name(&self) -> &str;
     fn duration(&self) -> f32;
     fn resolve(&self, t: f32) -> ConcreteScene;
+
+    /// Resolve by elapsed seconds, clamped into this Playable's duration.
+    ///
+    /// This is still pure: callers own clocks/playback loops and pass elapsed
+    /// time in explicitly.
+    fn resolve_at(&self, elapsed_seconds: f32) -> ConcreteScene {
+        let duration = self.duration();
+        let t = if duration == 0.0 {
+            1.0
+        } else {
+            (elapsed_seconds / duration).clamp(0.0, 1.0)
+        };
+        self.resolve(t)
+    }
 }
 
 /// Layer 3 — a named Scene paired with a duration.

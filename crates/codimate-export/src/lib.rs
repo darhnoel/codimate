@@ -39,22 +39,17 @@ pub fn export_frames(playable: &impl Playable, config: ExportConfig) -> Vec<Expo
     let mut elapsed = 0.0;
 
     while elapsed < duration {
-        frames.push(sample(playable, frames.len(), elapsed, duration));
+        frames.push(sample(playable, frames.len(), elapsed));
         elapsed += step;
     }
-    frames.push(sample(playable, frames.len(), duration, duration));
+    frames.push(sample(playable, frames.len(), duration));
     frames
 }
 
-fn sample(playable: &impl Playable, index: usize, elapsed: f32, duration: f32) -> ExportFrame {
-    let t = if duration == 0.0 {
-        1.0
-    } else {
-        (elapsed / duration).min(1.0)
-    };
+fn sample(playable: &impl Playable, index: usize, elapsed: f32) -> ExportFrame {
     ExportFrame {
         index,
         elapsed_seconds: elapsed,
-        scene: playable.resolve(t),
+        scene: playable.resolve_at(elapsed),
     }
 }
