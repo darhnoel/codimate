@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 codimate-animation = { path = "../codimate-animation" }
 codimate-core = { path = "../codimate-core" }
+codimate-layout = { path = "../codimate-layout" }
+codimate-render = { path = "../codimate-render" }

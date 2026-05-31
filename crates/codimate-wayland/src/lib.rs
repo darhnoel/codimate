@@ -4,29 +4,24 @@
 //! slice only provides pure preview sampling helpers.
 
 use codimate_animation::Playable;
-use codimate_core::ConcreteScene;
+use codimate_layout::{layout_scene, Viewport};
+use codimate_render::{render_frame, RenderFrame};
 
 /// Preview sampling configuration.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PreviewConfig {
     pub fps: f32,
+    pub viewport: Viewport,
 }
 
 impl PreviewConfig {
-    pub fn new(fps: f32) -> Self {
-        Self { fps }
+    pub fn new(fps: f32, viewport: Viewport) -> Self {
+        Self { fps, viewport }
     }
 }
 
-/// A frame sampled for preview at elapsed seconds.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PreviewFrame {
-    pub elapsed_seconds: f32,
-    pub scene: ConcreteScene,
-}
-
 /// Pure frame sampler. The future Wayland loop will own the real clock.
-pub fn preview_frames(playable: &impl Playable, config: PreviewConfig) -> Vec<PreviewFrame> {
+pub fn preview_frames(playable: &impl Playable, config: PreviewConfig) -> Vec<RenderFrame> {
     let duration = playable.duration();
     let step = if config.fps <= 0.0 {
         duration
@@ -37,16 +32,16 @@ pub fn preview_frames(playable: &impl Playable, config: PreviewConfig) -> Vec<Pr
     let mut elapsed = 0.0;
 
     while elapsed < duration {
-        frames.push(sample(playable, elapsed));
+        frames.push(sample(playable, config, elapsed));
         elapsed += step;
     }
-    frames.push(sample(playable, duration));
+    frames.push(sample(playable, config, duration));
     frames
 }
 
-fn sample(playable: &impl Playable, elapsed: f32) -> PreviewFrame {
-    PreviewFrame {
-        elapsed_seconds: elapsed,
-        scene: playable.resolve_at(elapsed),
-    }
+fn sample(playable: &impl Playable, config: PreviewConfig, elapsed: f32) -> RenderFrame {
+    let scene = playable.resolve_at(elapsed);
+    let layout = layout_scene(scene, config.viewport);
+
+    render_frame(playable.name(), elapsed, &layout)
 }

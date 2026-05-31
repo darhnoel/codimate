@@ -19,6 +19,8 @@ version = "0.1.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",
+ "codimate-layout",
+ "codimate-render",
 ]
 
 [[package]]
@@ -42,4 +44,6 @@ version = "0.1.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",
+ "codimate-layout",
+ "codimate-render",
 ]
