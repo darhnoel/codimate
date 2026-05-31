@@ -1,0 +1,7 @@
+[package]
+name = "codimate-core"
+version = "0.1.0"
+edition = "2021"
+
+# Invariant 6: codimate-core has zero non-pure dependencies (std only).
+[dependencies]
