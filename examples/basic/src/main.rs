@@ -1,6 +1,6 @@
 use codimate_animation::{animation, sequence};
-use codimate_core::{circle, rect, scene, tween, Color};
-use codimate_export::{export_frames, ExportConfig};
+use codimate_core::{circle, path_node, circle_path, rect_path, rect, scene, tween, Color};
+use codimate_export::{export_frames, export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use codimate_wayland::{preview_frames, PreviewConfig};
 
@@ -35,10 +35,21 @@ fn main() {
         ),
     );
 
-    let demo = sequence("demo", [intro, outro]);
+    let morph = animation(
+        "morph",
+        1.0,
+        scene().node(
+            path_node()
+                .path(tween(circle_path(400.0, 300.0, 80.0), rect_path(300.0, 200.0, 200.0, 200.0)))
+                .fill(Color::RED),
+        ),
+    );
+
+    let demo = sequence("demo", [intro, outro, morph]);
     let viewport = Viewport::new(800.0, 600.0);
+    let export_cfg = ExportConfig::new(30.0, viewport);
     let preview = preview_frames(&demo, PreviewConfig::new(30.0, viewport));
-    let export = export_frames(&demo, ExportConfig::new(30.0, viewport));
+    let export = export_frames(&demo, export_cfg);
 
     println!(
         "{} preview frames, {} export frames",
@@ -49,4 +60,10 @@ fn main() {
         "first preview frame: {} render command(s)",
         preview[0].commands.len()
     );
+
+    println!("Exporting demo.mp4 …");
+    match export_mp4(&demo, &export_cfg, "demo.mp4") {
+        Ok(()) => println!("Written demo.mp4"),
+        Err(e) => eprintln!("mp4 export skipped: {e}"),
+    }
 }

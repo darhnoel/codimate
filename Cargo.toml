@@ -8,4 +8,6 @@ members = [
     "crates/codimate-wayland",
     "crates/codimate-export",
     "examples/basic",
+    "examples/neural-net",
+    "examples/matrix-mult",
 ]

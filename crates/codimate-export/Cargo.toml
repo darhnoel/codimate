@@ -8,3 +8,7 @@ codimate-animation = { path = "../codimate-animation" }
 codimate-core = { path = "../codimate-core" }
 codimate-layout = { path = "../codimate-layout" }
 codimate-render = { path = "../codimate-render" }
+png = "0.18.1"
+
+[dev-dependencies]
+png = "0.18.1"

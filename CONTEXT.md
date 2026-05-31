@@ -73,9 +73,9 @@ codimate/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Wayland, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
 │   ├── codimate-layout/    # taffy integration, layout pass
-│   ├── codimate-render/    # skia-safe, Renderer trait + SkiaRenderer
+│   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
 │   ├── codimate-wayland/   # live preview window, frame callbacks
-│   └── codimate-export/    # PNG frames, ffmpeg pipe
+│   └── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)
 └── examples/
 
 **codimate-core has zero non-pure dependencies.** If a PR adds an I/O import

@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 codimate-core = { path = "../codimate-core" }
 codimate-layout = { path = "../codimate-layout" }
+tiny-skia = "0.12.0"
+ab_glyph = "0.2.32"

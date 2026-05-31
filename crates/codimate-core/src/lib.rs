@@ -35,6 +35,98 @@ impl Color {
     };
 }
 
+/// A single curve segment in a Path.
+///
+/// Each variant owns all its points — `from`, `to`, and control points — so
+/// every segment is self-describing and inspectable without traversal.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Segment {
+    Line(Vec2, Vec2),
+    Quad(Vec2, Vec2, Vec2),
+    Cubic(Vec2, Vec2, Vec2, Vec2),
+}
+
+impl Segment {
+    pub fn to_cubic(self) -> (Vec2, Vec2, Vec2, Vec2) {
+        match self {
+            Segment::Line(a, b) => {
+                let c1 = Vec2::lerp(a, b, 1.0 / 3.0);
+                let c2 = Vec2::lerp(a, b, 2.0 / 3.0);
+                (a, c1, c2, b)
+            }
+            Segment::Quad(a, ctrl, b) => {
+                let c1 = Vec2::lerp(a, ctrl, 2.0 / 3.0);
+                let c2 = Vec2::lerp(ctrl, b, 2.0 / 3.0);
+                (a, c1, c2, b)
+            }
+            Segment::Cubic(a, c1, c2, b) => (a, c1, c2, b),
+        }
+    }
+
+    pub fn from_cubic(from: Vec2, c1: Vec2, c2: Vec2, to: Vec2) -> Self {
+        Segment::Cubic(from, c1, c2, to)
+    }
+}
+
+/// A shape defined by curve segments — the canonical geometry primitive.
+///
+/// Every shape (circle, rect, polygon) can be expressed as a `Path`. Because
+/// `Path` implements `Lerp`, `tween(path_a, path_b)` produces shape morphing
+/// for free — the core benefit from ADR 0002.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Path {
+    pub segments: Vec<Segment>,
+    pub closed: bool,
+}
+
+/// Cubic-Bézier approximation of a circle centred at `(cx, cy)` with radius `r`.
+/// Uses the standard 4-cubic-segment approximation (k = 0.55228).
+pub fn circle_path(cx: f32, cy: f32, r: f32) -> Path {
+    let k = r * 0.552_284_9;
+    Path {
+        segments: vec![
+            Segment::Cubic(
+                Vec2::new(cx + r, cy),
+                Vec2::new(cx + r, cy + k),
+                Vec2::new(cx + k, cy + r),
+                Vec2::new(cx, cy + r),
+            ),
+            Segment::Cubic(
+                Vec2::new(cx, cy + r),
+                Vec2::new(cx - k, cy + r),
+                Vec2::new(cx - r, cy + k),
+                Vec2::new(cx - r, cy),
+            ),
+            Segment::Cubic(
+                Vec2::new(cx - r, cy),
+                Vec2::new(cx - r, cy - k),
+                Vec2::new(cx - k, cy - r),
+                Vec2::new(cx, cy - r),
+            ),
+            Segment::Cubic(
+                Vec2::new(cx, cy - r),
+                Vec2::new(cx + k, cy - r),
+                Vec2::new(cx + r, cy - k),
+                Vec2::new(cx + r, cy),
+            ),
+        ],
+        closed: true,
+    }
+}
+
+/// Path for an axis-aligned rectangle at `(x, y)` with given `width` and `height`.
+pub fn rect_path(x: f32, y: f32, w: f32, h: f32) -> Path {
+    Path {
+        segments: vec![
+            Segment::Line(Vec2::new(x, y), Vec2::new(x + w, y)),
+            Segment::Line(Vec2::new(x + w, y), Vec2::new(x + w, y + h)),
+            Segment::Line(Vec2::new(x + w, y + h), Vec2::new(x, y + h)),
+            Segment::Line(Vec2::new(x, y + h), Vec2::new(x, y)),
+        ],
+        closed: true,
+    }
+}
+
 /// Layer 1 — a value that resolves at time `t ∈ [0.0, 1.0]`.
 ///
 /// Timeless (no `duration`) and pure (`resolve` depends only on `t`).
@@ -106,6 +198,24 @@ impl From<Vec2> for Animated<Vec2> {
     }
 }
 
+impl From<Path> for Animated<Path> {
+    fn from(v: Path) -> Self {
+        Animated(Arc::new(move |_| v.clone()))
+    }
+}
+
+impl From<String> for Animated<String> {
+    fn from(s: String) -> Self {
+        Animated(Arc::new(move |_| s.clone()))
+    }
+}
+
+impl From<&'static str> for Animated<String> {
+    fn from(s: &'static str) -> Self {
+        Animated(Arc::new(move |_| s.to_string()))
+    }
+}
+
 /// The conversion every public API accepts (Invariant 7): a plain leaf value
 /// or an already-`Animated` value can be passed without ceremony.
 pub trait IntoAnimated<T> {
@@ -150,6 +260,61 @@ impl Lerp for Color {
             g: f32::lerp(a.g, b.g, t),
             b: f32::lerp(a.b, b.b, t),
             a: f32::lerp(a.a, b.a, t),
+        }
+    }
+}
+
+impl Lerp for Segment {
+    fn lerp(a: Self, b: Self, t: f32) -> Self {
+        let (a0, a1, a2, a3) = a.to_cubic();
+        let (b0, b1, b2, b3) = b.to_cubic();
+        Segment::from_cubic(
+            Vec2::lerp(a0, b0, t),
+            Vec2::lerp(a1, b1, t),
+            Vec2::lerp(a2, b2, t),
+            Vec2::lerp(a3, b3, t),
+        )
+    }
+}
+
+impl Lerp for Path {
+    fn lerp(a: Self, b: Self, t: f32) -> Self {
+        let max_len = a.segments.len().max(b.segments.len());
+        let a_end = a
+            .segments
+            .last()
+            .map(|s| s.to_cubic().3)
+            .unwrap_or(Vec2::new(0.0, 0.0));
+        let b_end = b
+            .segments
+            .last()
+            .map(|s| s.to_cubic().3)
+            .unwrap_or(Vec2::new(0.0, 0.0));
+
+        let segments = (0..max_len)
+            .map(|i| {
+                let a_cubic = a
+                    .segments
+                    .get(i)
+                    .map(|s| s.to_cubic())
+                    .unwrap_or((a_end, a_end, a_end, a_end));
+                let b_cubic = b
+                    .segments
+                    .get(i)
+                    .map(|s| s.to_cubic())
+                    .unwrap_or((b_end, b_end, b_end, b_end));
+                Segment::from_cubic(
+                    Vec2::lerp(a_cubic.0, b_cubic.0, t),
+                    Vec2::lerp(a_cubic.1, b_cubic.1, t),
+                    Vec2::lerp(a_cubic.2, b_cubic.2, t),
+                    Vec2::lerp(a_cubic.3, b_cubic.3, t),
+                )
+            })
+            .collect();
+
+        Path {
+            segments,
+            closed: a.closed && b.closed,
         }
     }
 }
@@ -372,6 +537,176 @@ pub fn rect() -> Rect {
     Rect::new()
 }
 
+/// A Node (Layer 2): a path shape whose geometry and fill are animated.
+///
+/// ```
+/// use codimate_core::{path_node, circle_path, tween, Color};
+///
+/// let p = path_node()
+///     .path(tween(circle_path(0.0, 0.0, 20.0), circle_path(100.0, 50.0, 40.0)))
+///     .fill(Color::RED);
+/// let resolved = p.resolve(0.5);
+/// assert_eq!(resolved.path.segments.len(), 4);
+/// ```
+#[derive(Clone)]
+pub struct PathNode {
+    path: Animated<Path>,
+    fill: Animated<Color>,
+}
+
+/// A `PathNode` resolved at a specific `t` — concrete geometry and color.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConcretePath {
+    pub path: Path,
+    pub fill: Color,
+}
+
+impl PathNode {
+    pub fn new() -> Self {
+        PathNode {
+            path: Path {
+                segments: Vec::new(),
+                closed: false,
+            }
+            .into_animated(),
+            fill: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
+            .into_animated(),
+        }
+    }
+
+    pub fn path(mut self, path: impl IntoAnimated<Path>) -> Self {
+        self.path = path.into_animated();
+        self
+    }
+
+    pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
+        self.fill = c.into_animated();
+        self
+    }
+
+    pub fn resolve(&self, t: f32) -> ConcretePath {
+        ConcretePath {
+            path: self.path.resolve(t),
+            fill: self.fill.resolve(t),
+        }
+    }
+}
+
+impl Default for PathNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub fn path_node() -> PathNode {
+    PathNode::new()
+}
+
+/// A Node (Layer 2): a text label with position, font size, and fill.
+/// Timeless — no duration.
+///
+/// ```
+/// use codimate_core::{text, tween, Color};
+///
+/// let t = text()
+///     .x(tween(0.0, 100.0))
+///     .y(50.0)
+///     .text("hello")
+///     .font_size(24.0)
+///     .fill(Color::RED);
+///
+/// let at_mid = t.resolve(0.5);
+/// assert_eq!(at_mid.x, 50.0);
+/// assert_eq!(at_mid.text, "hello");
+/// ```
+#[derive(Clone)]
+pub struct Text {
+    x: Animated<f32>,
+    y: Animated<f32>,
+    text: Animated<String>,
+    font_size: Animated<f32>,
+    fill: Animated<Color>,
+}
+
+/// A `Text` resolved at a specific `t` — all plain values.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConcreteText {
+    pub x: f32,
+    pub y: f32,
+    pub text: String,
+    pub font_size: f32,
+    pub fill: Color,
+}
+
+impl Text {
+    pub fn new() -> Self {
+        Text {
+            x: 0.0.into_animated(),
+            y: 0.0.into_animated(),
+            text: String::new().into_animated(),
+            font_size: 16.0.into_animated(),
+            fill: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
+            .into_animated(),
+        }
+    }
+
+    pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
+        self.x = x.into_animated();
+        self
+    }
+
+    pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
+        self.y = y.into_animated();
+        self
+    }
+
+    pub fn text(mut self, text: impl IntoAnimated<String>) -> Self {
+        self.text = text.into_animated();
+        self
+    }
+
+    pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
+        self.font_size = size.into_animated();
+        self
+    }
+
+    pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
+        self.fill = c.into_animated();
+        self
+    }
+
+    pub fn resolve(&self, t: f32) -> ConcreteText {
+        ConcreteText {
+            x: self.x.resolve(t),
+            y: self.y.resolve(t),
+            text: self.text.resolve(t),
+            font_size: self.font_size.resolve(t),
+            fill: self.fill.resolve(t),
+        }
+    }
+}
+
+impl Default for Text {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Lowercase free constructor so scenes read like English: `text().font_size(..)`.
+pub fn text() -> Text {
+    Text::new()
+}
+
 /// Shared Layer 2 interface: pure Node data resolves into concrete data at `t`.
 pub trait Node {
     type Concrete;
@@ -395,11 +730,21 @@ impl Node for Rect {
     }
 }
 
+impl Node for Text {
+    type Concrete = ConcreteText;
+
+    fn resolve(&self, t: f32) -> Self::Concrete {
+        Text::resolve(self, t)
+    }
+}
+
 /// A supported Node inside a Scene.
 #[derive(Clone)]
 pub enum SceneNode {
     Circle(Circle),
     Rect(Rect),
+    Path(PathNode),
+    Text(Text),
 }
 
 /// A resolved Scene child — concrete data only, no rendering backend.
@@ -407,6 +752,8 @@ pub enum SceneNode {
 pub enum ConcreteNode {
     Circle(ConcreteCircle),
     Rect(ConcreteRect),
+    Path(ConcretePath),
+    Text(ConcreteText),
 }
 
 impl From<Circle> for SceneNode {
@@ -421,6 +768,18 @@ impl From<Rect> for SceneNode {
     }
 }
 
+impl From<PathNode> for SceneNode {
+    fn from(path: PathNode) -> Self {
+        SceneNode::Path(path)
+    }
+}
+
+impl From<Text> for SceneNode {
+    fn from(text: Text) -> Self {
+        SceneNode::Text(text)
+    }
+}
+
 impl Node for SceneNode {
     type Concrete = ConcreteNode;
 
@@ -428,6 +787,8 @@ impl Node for SceneNode {
         match self {
             SceneNode::Circle(circle) => ConcreteNode::Circle(circle.resolve(t)),
             SceneNode::Rect(rect) => ConcreteNode::Rect(rect.resolve(t)),
+            SceneNode::Path(path) => ConcreteNode::Path(path.resolve(t)),
+            SceneNode::Text(text) => ConcreteNode::Text(text.resolve(t)),
         }
     }
 }
