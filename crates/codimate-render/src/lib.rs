@@ -4,7 +4,7 @@
 //! renderer-neutral command stream and the `Renderer` trait.
 
 use codimate_core::{Color, ConcreteNode};
-use codimate_layout::LayoutFrame;
+use codimate_layout::{LayoutFrame, Viewport};
 
 /// Renderer-neutral drawing command produced from a laid-out frame.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -46,6 +46,29 @@ pub fn render_commands(frame: &LayoutFrame) -> Vec<RenderCommand> {
             },
         })
         .collect()
+}
+
+/// Renderer-neutral frame ready for a backend or export pipeline.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RenderFrame {
+    pub name: String,
+    pub elapsed_seconds: f32,
+    pub viewport: Viewport,
+    pub commands: Vec<RenderCommand>,
+}
+
+/// Package a laid-out frame and metadata into renderer-neutral commands.
+pub fn render_frame(
+    name: impl Into<String>,
+    elapsed_seconds: f32,
+    frame: &LayoutFrame,
+) -> RenderFrame {
+    RenderFrame {
+        name: name.into(),
+        elapsed_seconds,
+        viewport: frame.viewport,
+        commands: render_commands(frame),
+    }
 }
 
 /// Backend trait implemented by concrete renderers.
