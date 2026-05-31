@@ -33,7 +33,10 @@ Never say "object", "element", or "sprite".
 `Color`, `Vec2`, etc. Produced by `scene.resolve(t)`.
 Never say "snapshot" or "frame state".
 
-**Composition**: Combining Animations in time via `seq!`, `par!`, `stagger`.
+**Sequence**: A named Layer 3 Composition that plays Animations back-to-back.
+Child Animation timestamps are local to that child; boundaries are hard cuts.
+
+**Composition**: Combining Animations in time via `sequence`, `par`, `stagger`.
 Never say "sequencer", "timeline", or "animation graph".
 
 **Duration**: Lives in Layer 3 (Composition) ONLY.
