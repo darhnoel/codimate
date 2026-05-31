@@ -29,6 +29,25 @@ Never say "stage", "canvas state", or "frame data".
 **Node**: Pure data. Has layout properties and style properties.
 Never say "object", "element", or "sprite".
 
+**Connection**: A Node (Layer 2) that links two shape Anchors with a line,
+optionally ending in an arrowhead. It derives its geometry from its endpoints at
+resolve time, so it tracks the shapes as they move. "Connection" is the canonical
+term — not "edge", "link", "wire", or "arrow" (an arrowhead is a feature of it).
+
+**Anchor**: A point on a shape's boundary (top, bottom, left, right, center),
+resolvable at `t` as an `Animated<Vec2>`. Connections attach to Anchors so they
+follow the shape as it animates.
+
+**Port**: An evenly-divided Anchor slot along an edge, addressed as "slot i of n"
+(e.g. a bottom edge split into 3 for three incoming Connections) so fan-in/out
+does not overlap on a single point. Ports are stated explicitly for now;
+automatic allocation is a future layout concern.
+
+**Pulse**: A marker (a dot) that travels along a Connection's path as a progress
+value goes 0→1, showing flow / "firing". The Connection (line + arrowhead) stays
+fully drawn the whole time; the Pulse is an *overlay* on top — it does not reveal
+the line. Positioned by a point a fraction along the path, measured by arc length.
+
 **ConcreteScene**: A Scene resolved at a specific `t` — all values are plain `f32`,
 `Color`, `Vec2`, etc. Produced by `scene.resolve(t)`.
 Never say "snapshot" or "frame state".
