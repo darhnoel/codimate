@@ -1,0 +1,8 @@
+[package]
+name = "codimate-export"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codimate-animation = { path = "../codimate-animation" }
+codimate-core = { path = "../codimate-core" }

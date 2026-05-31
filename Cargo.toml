@@ -1,3 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/codimate-core", "crates/codimate-animation"]
+members = [
+    "crates/codimate-core",
+    "crates/codimate-animation",
+    "crates/codimate-layout",
+    "crates/codimate-render",
+    "crates/codimate-wayland",
+    "crates/codimate-export",
+]

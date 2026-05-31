@@ -1,0 +1,8 @@
+[package]
+name = "codimate-render"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codimate-core = { path = "../codimate-core" }
+codimate-layout = { path = "../codimate-layout" }
