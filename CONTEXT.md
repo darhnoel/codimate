@@ -56,6 +56,7 @@ belong in Codimate yet.
 codimate/
 ├── crates/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Wayland, no Skia
+│   ├── codimate-animation/ # Layer 3 — Animation duration + composition
 │   ├── codimate-layout/    # taffy integration, layout pass
 │   ├── codimate-render/    # skia-safe, Renderer trait + SkiaRenderer
 │   ├── codimate-wayland/   # live preview window, frame callbacks

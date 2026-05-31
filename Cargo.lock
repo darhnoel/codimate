@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "codimate-animation"
+version = "0.1.0"
+dependencies = [
+ "codimate-core",
+]
+
+[[package]]
 name = "codimate-core"
 version = "0.1.0"
