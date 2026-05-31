@@ -372,6 +372,128 @@ pub fn rect() -> Rect {
     Rect::new()
 }
 
+/// Shared Layer 2 interface: pure Node data resolves into concrete data at `t`.
+pub trait Node {
+    type Concrete;
+
+    fn resolve(&self, t: f32) -> Self::Concrete;
+}
+
+impl Node for Circle {
+    type Concrete = ConcreteCircle;
+
+    fn resolve(&self, t: f32) -> Self::Concrete {
+        Circle::resolve(self, t)
+    }
+}
+
+impl Node for Rect {
+    type Concrete = ConcreteRect;
+
+    fn resolve(&self, t: f32) -> Self::Concrete {
+        Rect::resolve(self, t)
+    }
+}
+
+/// A supported Node inside a Scene.
+#[derive(Clone)]
+pub enum SceneNode {
+    Circle(Circle),
+    Rect(Rect),
+}
+
+/// A resolved Scene child — concrete data only, no rendering backend.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ConcreteNode {
+    Circle(ConcreteCircle),
+    Rect(ConcreteRect),
+}
+
+impl From<Circle> for SceneNode {
+    fn from(circle: Circle) -> Self {
+        SceneNode::Circle(circle)
+    }
+}
+
+impl From<Rect> for SceneNode {
+    fn from(rect: Rect) -> Self {
+        SceneNode::Rect(rect)
+    }
+}
+
+impl Node for SceneNode {
+    type Concrete = ConcreteNode;
+
+    fn resolve(&self, t: f32) -> Self::Concrete {
+        match self {
+            SceneNode::Circle(circle) => ConcreteNode::Circle(circle.resolve(t)),
+            SceneNode::Rect(rect) => ConcreteNode::Rect(rect.resolve(t)),
+        }
+    }
+}
+
+/// A Scene (Layer 2): a tree of Nodes resolved by the same normalized `t`.
+///
+/// ```
+/// use codimate_core::{circle, rect, scene, Color};
+///
+/// let s = scene()
+///     .node(circle().x(10.0).radius(5.0).fill(Color::RED))
+///     .node(rect().width(100.0).height(40.0).fill(Color::RED));
+///
+/// let concrete = s.resolve(0.5);
+/// assert_eq!(concrete.children.len(), 2);
+/// ```
+#[derive(Clone)]
+pub struct Scene {
+    children: Vec<SceneNode>,
+}
+
+/// A Scene resolved at a specific `t` — all children are concrete data.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConcreteScene {
+    pub children: Vec<ConcreteNode>,
+}
+
+impl Scene {
+    pub fn new() -> Self {
+        Scene {
+            children: Vec::new(),
+        }
+    }
+
+    pub fn node(mut self, node: impl Into<SceneNode>) -> Self {
+        self.children.push(node.into());
+        self
+    }
+
+    /// `f(t) → ConcreteScene` — resolves every child Node at the same `t`.
+    pub fn resolve(&self, t: f32) -> ConcreteScene {
+        ConcreteScene {
+            children: self.children.iter().map(|node| node.resolve(t)).collect(),
+        }
+    }
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Node for Scene {
+    type Concrete = ConcreteScene;
+
+    fn resolve(&self, t: f32) -> Self::Concrete {
+        Scene::resolve(self, t)
+    }
+}
+
+/// Lowercase free constructor so scene roots read like English.
+pub fn scene() -> Scene {
+    Scene::new()
+}
+
 // --- Built-in easing curves (`f32 → f32`). All satisfy curve(0)=0, curve(1)=1. ---
 
 /// Starts slow, accelerates. `t * t`.
