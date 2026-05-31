@@ -40,6 +40,9 @@ Child Animation timestamps are local to that child; boundaries are hard cuts.
 time. Duration is the longest child duration; shorter children hold their final
 state.
 
+**Stagger**: A named Layer 3 Composition that starts Animations at fixed time
+offsets. Not-yet-started children are absent; finished children hold final state.
+
 **Composition**: Combining Animations in time via `sequence`, `parallel`,
 `stagger`.
 Never say "sequencer", "timeline", or "animation graph".
