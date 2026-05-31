@@ -43,6 +43,10 @@ state.
 **Stagger**: A named Layer 3 Composition that starts Animations at fixed time
 offsets. Not-yet-started children are absent; finished children hold final state.
 
+**Playable**: A Layer 3 value with `name`, `duration`, and `resolve(t)`.
+Preview/export code should accept `impl Playable` when it can sample any
+Animation or Composition.
+
 **Composition**: Combining Animations in time via `sequence`, `parallel`,
 `stagger`.
 Never say "sequencer", "timeline", or "animation graph".

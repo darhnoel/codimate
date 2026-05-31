@@ -4,6 +4,16 @@
 
 use codimate_core::{ConcreteScene, Scene};
 
+/// Shared Layer 3 sampling contract for preview/export code.
+///
+/// A `Playable` has an authored name, a duration in seconds, and resolves from
+/// normalized `t` into a concrete Scene.
+pub trait Playable {
+    fn name(&self) -> &str;
+    fn duration(&self) -> f32;
+    fn resolve(&self, t: f32) -> ConcreteScene;
+}
+
 /// Layer 3 — a named Scene paired with a duration.
 pub struct Animation {
     name: String,
@@ -45,6 +55,20 @@ impl Animation {
     /// does not read clocks or elapsed wall time.
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         self.scene.resolve(t)
+    }
+}
+
+impl Playable for Animation {
+    fn name(&self) -> &str {
+        Animation::name(self)
+    }
+
+    fn duration(&self) -> f32 {
+        Animation::duration(self)
+    }
+
+    fn resolve(&self, t: f32) -> ConcreteScene {
+        Animation::resolve(self, t)
     }
 }
 
@@ -121,6 +145,20 @@ impl Sequence {
     }
 }
 
+impl Playable for Sequence {
+    fn name(&self) -> &str {
+        Sequence::name(self)
+    }
+
+    fn duration(&self) -> f32 {
+        Sequence::duration(self)
+    }
+
+    fn resolve(&self, t: f32) -> ConcreteScene {
+        Sequence::resolve(self, t)
+    }
+}
+
 /// Layer 3 — named Animations played at the same time.
 ///
 /// ```
@@ -190,6 +228,20 @@ impl Parallel {
             .collect();
 
         ConcreteScene { children }
+    }
+}
+
+impl Playable for Parallel {
+    fn name(&self) -> &str {
+        Parallel::name(self)
+    }
+
+    fn duration(&self) -> f32 {
+        Parallel::duration(self)
+    }
+
+    fn resolve(&self, t: f32) -> ConcreteScene {
+        Parallel::resolve(self, t)
     }
 }
 
@@ -273,5 +325,19 @@ impl Stagger {
             .collect();
 
         ConcreteScene { children }
+    }
+}
+
+impl Playable for Stagger {
+    fn name(&self) -> &str {
+        Stagger::name(self)
+    }
+
+    fn duration(&self) -> f32 {
+        Stagger::duration(self)
+    }
+
+    fn resolve(&self, t: f32) -> ConcreteScene {
+        Stagger::resolve(self, t)
     }
 }
