@@ -170,6 +170,27 @@ fn active_vertical_conn(
         .arrow(active_width(start, span, 3.6))
 }
 
+/// Three short Q/K/V stub arrows fanning into an attention box's bottom edge,
+/// placed with evenly-divided anchor *ports* so they don't overlap.
+fn qkv_arrows(mut s: Scene, cx: f32, ay: f32, ah: f32) -> Scene {
+    let bx = mkbx(cx, ay, ah, Color::WHITE);
+    let stub = 34.0;
+    // Fan the three stubs out from a shared point below the box, so they read
+    // as Q/K/V inputs (the outer two angle in toward the box).
+    let origin_y = ay + ah + stub;
+    for j in 0..3 {
+        let port = bx.anchor_port(AnchorKind::Bottom, j, 3);
+        let p = port.resolve(0.0); // boxes are static, so the port is constant
+        let start_x = cx + (p.x - cx) * 0.45; // pull the outer stubs toward centre
+        s = s.node(
+            connection(Vec2::new(start_x, origin_y), port)
+                .stroke(1.8, WIRE)
+                .arrow(4.0),
+        );
+    }
+    s
+}
+
 fn vpulse(
     cx: f32,
     y1: f32,
@@ -592,6 +613,11 @@ fn main() {
             .node(mklbl(CR, dy[i], dec_h[i], label));
     }
 
+    // Q/K/V triple-arrow inputs into the attention blocks (uses anchor ports).
+    base = qkv_arrows(base, CL, ey[1], enc_h[1]); // encoder Multi-Head Attention
+    base = qkv_arrows(base, CR, dy[1], dec_h[1]); // decoder Masked Multi-Head Attn
+    base = qkv_arrows(base, CR, dy[3], dec_h[3]); // decoder Multi-Head Attention
+
     // N× labels
     base = base.node(
         text()
@@ -739,9 +765,10 @@ fn main() {
     let viewport = Viewport::new(1000.0, 800.0);
     let cfg = ExportConfig::new(30.0, viewport).crf(12);
 
-    println!("Exporting transformer.mp4 …");
-    match export_mp4(&play, &cfg, "transformer.mp4") {
-        Ok(()) => println!("Written transformer.mp4"),
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting results/transformer.mp4 …");
+    match export_mp4(&play, &cfg, "results/transformer.mp4") {
+        Ok(()) => println!("Written results/transformer.mp4"),
         Err(e) => eprintln!("mp4 export skipped: {e}"),
     }
 }
