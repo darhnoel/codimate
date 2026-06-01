@@ -61,9 +61,10 @@ fn main() {
         preview[0].commands.len()
     );
 
-    println!("Exporting demo.mp4 …");
-    match export_mp4(&demo, &export_cfg, "demo.mp4") {
-        Ok(()) => println!("Written demo.mp4"),
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting results/demo.mp4 …");
+    match export_mp4(&demo, &export_cfg, "results/demo.mp4") {
+        Ok(()) => println!("Written results/demo.mp4"),
         Err(e) => eprintln!("mp4 export skipped: {e}"),
     }
 }

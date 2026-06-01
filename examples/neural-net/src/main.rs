@@ -245,9 +245,10 @@ fn main() {
     let viewport = Viewport::new(800.0, 600.0);
     let config = ExportConfig::new(30.0, viewport);
 
-    println!("Exporting neural-net.mp4 …");
-    match export_mp4(&timeline, &config, "neural-net.mp4") {
-        Ok(()) => println!("Written neural-net.mp4"),
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting results/neural-net.mp4 …");
+    match export_mp4(&timeline, &config, "results/neural-net.mp4") {
+        Ok(()) => println!("Written results/neural-net.mp4"),
         Err(e) => eprintln!("export skipped: {e}"),
     }
 }

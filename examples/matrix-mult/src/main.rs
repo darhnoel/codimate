@@ -446,9 +446,10 @@ fn main() {
     let viewport = Viewport::new(800.0, 450.0);
     let config = ExportConfig::new(30.0, viewport);
 
-    println!("Exporting matrix-mult.mp4 …");
-    match export_mp4(&timeline, &config, "matrix-mult.mp4") {
-        Ok(()) => println!("Written matrix-mult.mp4"),
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting results/matrix-mult.mp4 …");
+    match export_mp4(&timeline, &config, "results/matrix-mult.mp4") {
+        Ok(()) => println!("Written results/matrix-mult.mp4"),
         Err(e) => eprintln!("export skipped: {e}"),
     }
 }

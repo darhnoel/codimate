@@ -48,9 +48,10 @@ fn main() {
     let viewport = Viewport::new(600.0, 360.0);
     let cfg = ExportConfig::new(30.0, viewport).crf(10);
 
-    println!("Exporting connection-pulse.mp4 …");
-    match export_mp4(&play, &cfg, "connection-pulse.mp4") {
-        Ok(()) => println!("Written connection-pulse.mp4"),
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting results/connection-pulse.mp4 …");
+    match export_mp4(&play, &cfg, "results/connection-pulse.mp4") {
+        Ok(()) => println!("Written results/connection-pulse.mp4"),
         Err(e) => eprintln!("mp4 export skipped: {e}"),
     }
 }
