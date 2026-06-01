@@ -46,6 +46,8 @@ fn rasterize_path_fills_rect_path() {
             ],
             closed: true,
             fill: Color::RED,
+            stroke_width: 0.0,
+            stroke_color: Color::RED,
         }],
     };
 
@@ -63,15 +65,13 @@ fn rasterize_text_draws_glyphs() {
         name: "text-test".to_string(),
         elapsed_seconds: 0.0,
         viewport: Viewport::new(64.0, 64.0),
-        commands: vec![
-            RenderCommand::Text {
-                x: 10.0,
-                y: 32.0,
-                text: "A".to_string(),
-                font_size: 24.0,
-                fill: Color::RED,
-            },
-        ],
+        commands: vec![RenderCommand::Text {
+            x: 10.0,
+            y: 32.0,
+            text: "A".to_string(),
+            font_size: 24.0,
+            fill: Color::RED,
+        }],
     };
 
     let img = rasterize(&frame);
@@ -85,6 +85,50 @@ fn rasterize_text_draws_glyphs() {
 }
 
 #[test]
+fn rasterize_path_fill_and_stroke_produce_distinct_regions() {
+    // Filled red rect (4,4)-(20,20) with white stroke width=4.
+    // Stroke band: left edge covers x=2..6. Fill covers x=4..20.
+    //   x=3,y=8 → stroke only (inside stroke band, outside fill) → white
+    //   x=7,y=8 → fill only   (inside fill, outside stroke band) → red
+    let frame = RenderFrame {
+        name: "stroke-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(24.0, 24.0),
+        commands: vec![RenderCommand::Path {
+            segments: vec![
+                Segment::Line(Vec2::new(4.0, 4.0), Vec2::new(20.0, 4.0)),
+                Segment::Line(Vec2::new(20.0, 4.0), Vec2::new(20.0, 20.0)),
+                Segment::Line(Vec2::new(20.0, 20.0), Vec2::new(4.0, 20.0)),
+                Segment::Line(Vec2::new(4.0, 20.0), Vec2::new(4.0, 4.0)),
+            ],
+            closed: true,
+            fill: Color::RED,
+            stroke_width: 4.0,
+            stroke_color: Color::WHITE,
+        }],
+    };
+
+    let img = rasterize(&frame);
+
+    // Center is red (fill)
+    assert_eq!(img.pixel(12, 12), (255, 0, 0, 255));
+
+    // Stroke-only region: inside stroke band, outside fill
+    let pix = img.pixel(3, 8);
+    let expected: (u8, u8, u8, u8) = (255, 255, 255, 255);
+    assert_eq!(
+        pix, expected,
+        "stroke-only pixel expected white, got {pix:?}"
+    );
+
+    // Fill-only region: inside fill, outside stroke band
+    assert_eq!(img.pixel(7, 8), (255, 0, 0, 255));
+
+    // Far corner stays black
+    assert_eq!(img.pixel(0, 0), (0, 0, 0, 255));
+}
+
+#[test]
 fn rasterize_path_cubic_circle() {
     let circle = circle_path(32.0, 32.0, 20.0);
     let frame = RenderFrame {
@@ -95,6 +139,8 @@ fn rasterize_path_cubic_circle() {
             segments: circle.segments.clone(),
             closed: circle.closed,
             fill: Color::RED,
+            stroke_width: 0.0,
+            stroke_color: Color::RED,
         }],
     };
 

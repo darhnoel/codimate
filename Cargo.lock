@@ -77,6 +77,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "codimate-example-connection-pulse"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-layout",
+]
+
+[[package]]
 name = "codimate-example-matrix-mult"
 version = "0.1.0"
 dependencies = [
@@ -88,6 +98,16 @@ dependencies = [
 
 [[package]]
 name = "codimate-example-neural-net"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-layout",
+]
+
+[[package]]
+name = "codimate-example-transformer"
 version = "0.1.0"
 dependencies = [
  "codimate-animation",

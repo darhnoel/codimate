@@ -10,4 +10,6 @@ members = [
     "examples/basic",
     "examples/neural-net",
     "examples/matrix-mult",
+    "examples/connection-pulse",
+    "examples/transformer",
 ]

@@ -15,11 +15,23 @@ use std::process::{Command, Stdio};
 pub struct ExportConfig {
     pub fps: f32,
     pub viewport: Viewport,
+    /// H.264 CRF (0–51). Lower = better quality, larger file.
+    /// Default 23 is a good balance; use 10–15 for demo-quality exports.
+    pub crf: u32,
 }
 
 impl ExportConfig {
     pub fn new(fps: f32, viewport: Viewport) -> Self {
-        Self { fps, viewport }
+        Self {
+            fps,
+            viewport,
+            crf: 23,
+        }
+    }
+
+    pub fn crf(mut self, crf: u32) -> Self {
+        self.crf = crf;
+        self
     }
 }
 
@@ -224,6 +236,8 @@ pub fn export_mp4(
         .arg("-")
         .arg("-c:v")
         .arg("libx264")
+        .arg("-crf")
+        .arg(config.crf.to_string())
         .arg("-pix_fmt")
         .arg("yuv420p")
         .arg(output.as_ref())
@@ -231,10 +245,7 @@ pub fn export_mp4(
         .spawn()
         .map_err(|_| ExportError::EncoderNotFound)?;
 
-    let stdin = child
-        .stdin
-        .take()
-        .ok_or(ExportError::EncoderNotFound)?;
+    let stdin = child.stdin.take().ok_or(ExportError::EncoderNotFound)?;
 
     let frames = playable_frames(playable, *config);
     write_raw_frames(frames, &mut &stdin)?;
