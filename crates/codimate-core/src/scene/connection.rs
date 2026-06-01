@@ -47,7 +47,11 @@ impl Connection {
         }
     }
 
-    pub fn stroke(mut self, width: impl IntoAnimated<f32>, color: impl IntoAnimated<Color>) -> Self {
+    pub fn stroke(
+        mut self,
+        width: impl IntoAnimated<f32>,
+        color: impl IntoAnimated<Color>,
+    ) -> Self {
         self.stroke_width = width.into_animated();
         self.stroke_color = color.into_animated();
         self

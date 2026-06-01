@@ -1,7 +1,5 @@
 use codimate_animation::{animation, sequence};
-use codimate_core::{
-    rect, scene, tween, Color, IntoAnimated, Scene, Text,
-};
+use codimate_core::{rect, scene, tween, Color, IntoAnimated, Scene, Text};
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 
@@ -88,8 +86,8 @@ const TITLE_COLOR: Color = Color {
 // ── Phase definition ────────────────────────────────────────────────────
 
 struct Phase {
-    highlight_row: Option<usize>, // A row to highlight
-    highlight_col: Option<usize>, // B col to highlight
+    highlight_row: Option<usize>,    // A row to highlight
+    highlight_col: Option<usize>,    // B col to highlight
     compute: Option<(usize, usize)>, // C cell being computed (None = all done)
     formula: &'static str,
 }
@@ -430,9 +428,7 @@ fn build_phase_scene(phase_idx: usize) -> Scene {
 fn main() {
     // Phase durations: intro 1s, each compute 2s, done 1s
     let durations: &[f32] = &[1.0, 2.0, 2.0, 2.0, 2.0, 1.0];
-    let names: &[&str] = &[
-        "intro", "c00", "c01", "c10", "c11", "done",
-    ];
+    let names: &[&str] = &["intro", "c00", "c01", "c10", "c11", "done"];
 
     let anims: Vec<_> = (0..PHASES.len())
         .map(|i| {

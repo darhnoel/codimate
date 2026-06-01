@@ -2,7 +2,8 @@
 //!
 //! How a single value changes over `t`. Everything here is **timeless** (no
 //! duration) and **pure**. The key type is [`Animated<T>`]; the geometry leaf
-//! types (`Vec2`, `Color`, `Segment`, `Path`) are the values that get animated.
+//! types (`Vec2`, `Color`, `Style`, `Segment`, `Path`) are the values that get
+//! animated.
 
 use std::sync::Arc;
 
@@ -59,6 +60,56 @@ impl Color {
         b: 1.0,
         a: 1.0,
     };
+}
+
+/// A coordinated visual style — plain leaf values, timeless and lerpable.
+///
+/// ```
+/// use codimate_core::{tween, Color, Style};
+///
+/// let rest = Style::new()
+///     .fill(Color::WHITE)
+///     .stroke(1.0, Color::BLACK);
+/// let active = Style::new()
+///     .fill(Color::RED)
+///     .stroke(4.0, Color::CYAN);
+///
+/// let style = tween(rest, active).resolve(0.5);
+/// assert_eq!(style.stroke_width, 2.5);
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Style {
+    pub fill: Color,
+    pub stroke_width: f32,
+    pub stroke_color: Color,
+}
+
+impl Style {
+    /// Defaults match `PathNode`: white fill, no visible stroke.
+    pub fn new() -> Self {
+        Style {
+            fill: Color::WHITE,
+            stroke_width: 0.0,
+            stroke_color: Color::WHITE,
+        }
+    }
+
+    pub fn fill(mut self, fill: Color) -> Self {
+        self.fill = fill;
+        self
+    }
+
+    pub fn stroke(mut self, width: f32, color: Color) -> Self {
+        self.stroke_width = width;
+        self.stroke_color = color;
+        self
+    }
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// A single curve segment in a Path.
@@ -336,6 +387,12 @@ impl From<Path> for Animated<Path> {
     }
 }
 
+impl From<Style> for Animated<Style> {
+    fn from(v: Style) -> Self {
+        Animated(Arc::new(move |_| v))
+    }
+}
+
 impl From<String> for Animated<String> {
     fn from(s: String) -> Self {
         Animated(Arc::new(move |_| s.clone()))
@@ -392,6 +449,16 @@ impl Lerp for Color {
             g: f32::lerp(a.g, b.g, t),
             b: f32::lerp(a.b, b.b, t),
             a: f32::lerp(a.a, b.a, t),
+        }
+    }
+}
+
+impl Lerp for Style {
+    fn lerp(a: Self, b: Self, t: f32) -> Self {
+        Style {
+            fill: Color::lerp(a.fill, b.fill, t),
+            stroke_width: f32::lerp(a.stroke_width, b.stroke_width, t),
+            stroke_color: Color::lerp(a.stroke_color, b.stroke_color, t),
         }
     }
 }

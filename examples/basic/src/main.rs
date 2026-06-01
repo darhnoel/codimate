@@ -1,5 +1,5 @@
 use codimate_animation::{animation, sequence};
-use codimate_core::{circle, path_node, circle_path, rect_path, rect, scene, tween, Color};
+use codimate_core::{circle, circle_path, path_node, rect, rect_path, scene, tween, Color};
 use codimate_export::{export_frames, export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use codimate_wayland::{preview_frames, PreviewConfig};
@@ -40,7 +40,10 @@ fn main() {
         1.0,
         scene().node(
             path_node()
-                .path(tween(circle_path(400.0, 300.0, 80.0), rect_path(300.0, 200.0, 200.0, 200.0)))
+                .path(tween(
+                    circle_path(400.0, 300.0, 80.0),
+                    rect_path(300.0, 200.0, 200.0, 200.0),
+                ))
                 .fill(Color::RED),
         ),
     );

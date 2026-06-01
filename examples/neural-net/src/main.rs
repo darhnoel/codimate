@@ -68,11 +68,7 @@ const N: f32 = 220.0;
 const NW: f32 = 100.0;
 
 fn network() -> Net {
-    let inputs = [
-        (NW, 300.0 - N),
-        (NW, 300.0),
-        (NW, 300.0 + N),
-    ];
+    let inputs = [(NW, 300.0 - N), (NW, 300.0), (NW, 300.0 + N)];
     let hiddens = [
         (400.0, 300.0 - N * 0.75),
         (400.0, 300.0 - N * 0.25),

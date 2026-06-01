@@ -72,9 +72,43 @@ impl PathNode {
         self
     }
 
-    pub fn stroke(mut self, width: impl IntoAnimated<f32>, color: impl IntoAnimated<Color>) -> Self {
+    pub fn stroke(
+        mut self,
+        width: impl IntoAnimated<f32>,
+        color: impl IntoAnimated<Color>,
+    ) -> Self {
         self.stroke_width = width.into_animated();
         self.stroke_color = color.into_animated();
+        self
+    }
+
+    /// Apply a coordinated visual style.
+    ///
+    /// Builder order is last-wins, so `.style(s).fill(c)` overrides just the
+    /// fill while keeping the stroke from `s`.
+    ///
+    /// ```
+    /// use codimate_core::{path_node, rect_path, tween, Color, Style};
+    ///
+    /// let rest = Style::new()
+    ///     .fill(Color::WHITE)
+    ///     .stroke(1.0, Color::BLACK);
+    /// let active = Style::new()
+    ///     .fill(Color::RED)
+    ///     .stroke(4.0, Color::CYAN);
+    ///
+    /// let node = path_node()
+    ///     .path(rect_path(0.0, 0.0, 100.0, 50.0))
+    ///     .style(tween(rest, active));
+    /// assert_eq!(node.resolve(0.5).stroke_width, 2.5);
+    /// ```
+    pub fn style(mut self, style: impl IntoAnimated<Style>) -> Self {
+        let style = style.into_animated();
+        let fill = style.clone();
+        let stroke_width = style.clone();
+        self.fill = Animated::new(move |t| fill.resolve(t).fill);
+        self.stroke_width = Animated::new(move |t| stroke_width.resolve(t).stroke_width);
+        self.stroke_color = Animated::new(move |t| style.resolve(t).stroke_color);
         self
     }
 

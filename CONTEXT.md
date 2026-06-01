@@ -29,6 +29,11 @@ Never say "stage", "canvas state", or "frame data".
 **Node**: Pure data. Has layout properties and style properties.
 Never say "object", "element", or "sprite".
 
+**Style**: A timeless, lerpable bundle of visual style leaf values:
+`fill: Color`, `stroke_width: f32`, and `stroke_color: Color`. A `Style` holds
+plain values, not `Animated` fields; animate a coordinated look by tweening
+between two Styles.
+
 **Connection**: A Node (Layer 2) that links two shape Anchors with a line,
 optionally ending in an arrowhead. It derives its geometry from its endpoints at
 resolve time, so it tracks the shapes as they move. "Connection" is the canonical
@@ -109,6 +114,23 @@ to codimate-core, reject it.
 5. Duration lives in Layer 3 only
 6. `codimate-core` has no I/O dependencies
 7. Every public API accepts `impl IntoAnimated<T>` not `Animated<T>` directly
+
+## Formatting Conventions
+
+Use standard `cargo fmt` output. The root `rustfmt.toml` only pins stable,
+project-wide defaults: Unix newlines, 100-column width, and 2021 style edition.
+Do not add nightly-only rustfmt options.
+
+In docs and examples, use named multi-line builder chains when a value is reused
+or carries domain meaning:
+
+```rust
+let rest = Style::new()
+    .fill(Color::WHITE)
+    .stroke(1.0, Color::BLACK);
+```
+
+Inline builder chains only for tiny one-offs where naming would add noise.
 
 ## Out of Scope (Do Not Implement)
 - Stateful particles (violates pure f(t))

@@ -26,7 +26,8 @@ fn playable_frames_yields_correct_count_and_timestamps() {
     let playable = animation("test", 2.0, scene().node(circle().radius(5.0)));
 
     // 2 second duration, 4 fps -> 9 frames (0.0, 0.25, ..., 2.0)
-    let frames: Vec<_> = playable_frames(&playable, ExportConfig::new(4.0, Viewport::new(10.0, 10.0))).collect();
+    let frames: Vec<_> =
+        playable_frames(&playable, ExportConfig::new(4.0, Viewport::new(10.0, 10.0))).collect();
 
     assert_eq!(frames.len(), 9);
     for (i, frame) in frames.iter().enumerate() {
@@ -45,7 +46,8 @@ fn playable_frames_yields_correct_count_and_timestamps() {
 fn playable_frames_includes_final_frame_exactly_at_duration() {
     let playable = animation("test", 1.0, scene().node(circle().radius(5.0)));
 
-    let frames: Vec<_> = playable_frames(&playable, ExportConfig::new(3.0, Viewport::new(10.0, 10.0))).collect();
+    let frames: Vec<_> =
+        playable_frames(&playable, ExportConfig::new(3.0, Viewport::new(10.0, 10.0))).collect();
 
     let last = frames.last().unwrap();
     assert!((last.elapsed_seconds - 1.0).abs() < 1e-6);
@@ -91,7 +93,11 @@ fn write_raw_frames_counts_correctly_with_multiple_frames() {
 
 #[test]
 fn export_mp4_produces_valid_mp4() {
-    let playable = animation("demo", 0.5, scene().node(circle().radius(5.0).fill(Color::RED)));
+    let playable = animation(
+        "demo",
+        0.5,
+        scene().node(circle().radius(5.0).fill(Color::RED)),
+    );
     let config = ExportConfig::new(10.0, Viewport::new(32.0, 32.0));
 
     let path = "/tmp/codimate-test-export.mp4";

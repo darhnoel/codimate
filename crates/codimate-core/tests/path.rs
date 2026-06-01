@@ -1,4 +1,7 @@
-use codimate_core::{circle_path, path_node, rect_path, scene, tween, Color, ConcreteNode, Lerp, Path, Segment, Vec2};
+use codimate_core::{
+    circle_path, path_node, rect_path, scene, tween, Color, ConcreteNode, Lerp, Path, Segment,
+    Style, Vec2,
+};
 
 #[test]
 fn circle_path_has_four_cubic_segments_and_is_closed() {
@@ -87,13 +90,62 @@ fn tween_path_at_t1_equals_second() {
 #[test]
 fn path_node_resolves_to_concrete_path() {
     let node = path_node()
-        .path(tween(circle_path(0.0, 0.0, 20.0), circle_path(100.0, 50.0, 40.0)))
+        .path(tween(
+            circle_path(0.0, 0.0, 20.0),
+            circle_path(100.0, 50.0, 40.0),
+        ))
         .fill(Color::RED);
 
     let resolved = node.resolve(0.0);
     assert_eq!(resolved.path.segments.len(), 4);
     assert!(resolved.path.closed);
     assert_eq!(resolved.fill, Color::RED);
+}
+
+#[test]
+fn path_node_style_applies_resolved_style() {
+    let rest = Style::new().fill(Color::WHITE).stroke(1.0, Color::BLACK);
+    let active = Style::new().fill(Color::RED).stroke(5.0, Color::CYAN);
+
+    let resolved = path_node()
+        .path(rect_path(0.0, 0.0, 20.0, 10.0))
+        .style(tween(rest, active))
+        .resolve(0.5);
+
+    assert_eq!(
+        resolved.fill,
+        Color {
+            r: 1.0,
+            g: 0.5,
+            b: 0.5,
+            a: 1.0
+        }
+    );
+    assert_eq!(resolved.stroke_width, 3.0);
+    assert_eq!(
+        resolved.stroke_color,
+        Color {
+            r: 0.0,
+            g: 0.5,
+            b: 0.5,
+            a: 1.0
+        }
+    );
+}
+
+#[test]
+fn path_node_style_obeys_builder_order_overrides() {
+    let style = Style::new().fill(Color::WHITE).stroke(2.0, Color::BLACK);
+
+    let resolved = path_node()
+        .path(rect_path(0.0, 0.0, 20.0, 10.0))
+        .style(style)
+        .fill(Color::RED)
+        .resolve(0.0);
+
+    assert_eq!(resolved.fill, Color::RED);
+    assert_eq!(resolved.stroke_width, 2.0);
+    assert_eq!(resolved.stroke_color, Color::BLACK);
 }
 
 #[test]

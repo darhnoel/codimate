@@ -114,11 +114,13 @@ fn draw_box(cx: f32, y: f32, h: f32, c: Color) -> PathNode {
 fn active_box(cx: f32, y: f32, h: f32, start: f32, span: f32) -> PathNode {
     path_node()
         .path(rect_path(cx - BHW - 4.0, y - 4.0, BW + 8.0, h + 8.0))
-        .fill(Color::TRANSPARENT)
-        .stroke(
-            active_width(start, span, 5.0),
-            active_color(BLOCK_HIGHLIGHT, start, span, 0.90),
-        )
+        .style(active_outline_style(
+            start,
+            span,
+            BLOCK_HIGHLIGHT,
+            5.0,
+            0.90,
+        ))
 }
 
 fn label_width(s: &str, font_size: f32) -> f32 {
@@ -215,6 +217,31 @@ fn active_amount(t: f32, start: f32, span: f32) -> f32 {
     } else {
         (std::f32::consts::PI * u).sin()
     }
+}
+
+fn active_outline_style(
+    start: f32,
+    span: f32,
+    stroke_color: Color,
+    max_width: f32,
+    max_alpha: f32,
+) -> Animated<Style> {
+    let rest = Style::new().fill(Color::TRANSPARENT).stroke(
+        0.0,
+        Color {
+            a: 0.0,
+            ..stroke_color
+        },
+    );
+    let active = Style::new().fill(Color::TRANSPARENT).stroke(
+        max_width,
+        Color {
+            a: max_alpha,
+            ..stroke_color
+        },
+    );
+
+    tween(rest, active).ease(move |t| active_amount(t, start, span))
 }
 
 fn active_width(start: f32, span: f32, max: f32) -> Animated<f32> {
@@ -322,7 +349,34 @@ fn container_rect(cx: f32, top: f32, bottom: f32) -> PathNode {
 /// Local residual skip wrapping a sublayer into the following Add & Norm.
 /// Left-side variant.
 fn residual_left(cx: f32, fy: f32, fh: f32, ty: f32, th: f32) -> Connection {
-    residual_left_styled(cx, fy, fh, ty, th, 1.3, RESIDUAL_WIRE, 3.2)
+    residual_left_styled(
+        cx,
+        fy,
+        fh,
+        ty,
+        th,
+        ResidualStyle::new(1.3, RESIDUAL_WIRE, 3.2),
+    )
+}
+
+struct ResidualStyle {
+    width: Animated<f32>,
+    color: Animated<Color>,
+    arrow: Animated<f32>,
+}
+
+impl ResidualStyle {
+    fn new(
+        width: impl IntoAnimated<f32>,
+        color: impl IntoAnimated<Color>,
+        arrow: impl IntoAnimated<f32>,
+    ) -> Self {
+        Self {
+            width: width.into_animated(),
+            color: color.into_animated(),
+            arrow: arrow.into_animated(),
+        }
+    }
 }
 
 fn residual_left_styled(
@@ -331,9 +385,7 @@ fn residual_left_styled(
     fh: f32,
     ty: f32,
     th: f32,
-    width: impl IntoAnimated<f32>,
-    color: impl IntoAnimated<Color>,
-    arrow: impl IntoAnimated<f32>,
+    style: ResidualStyle,
 ) -> Connection {
     let off = 6.0;
     let from_y = fy + fh / 2.0;
@@ -346,13 +398,20 @@ fn residual_left_styled(
         Vec2::new(cx - BHW - off, from_y),
         Vec2::new(cx - BHW - off, end_y),
     ])
-    .stroke(width, color)
-    .arrow(arrow)
+    .stroke(style.width, style.color)
+    .arrow(style.arrow)
 }
 
 /// Right-side variant.
 fn residual_right(cx: f32, fy: f32, fh: f32, ty: f32, th: f32) -> Connection {
-    residual_right_styled(cx, fy, fh, ty, th, 1.3, RESIDUAL_WIRE, 3.2)
+    residual_right_styled(
+        cx,
+        fy,
+        fh,
+        ty,
+        th,
+        ResidualStyle::new(1.3, RESIDUAL_WIRE, 3.2),
+    )
 }
 
 fn residual_right_styled(
@@ -361,9 +420,7 @@ fn residual_right_styled(
     fh: f32,
     ty: f32,
     th: f32,
-    width: impl IntoAnimated<f32>,
-    color: impl IntoAnimated<Color>,
-    arrow: impl IntoAnimated<f32>,
+    style: ResidualStyle,
 ) -> Connection {
     let off = 6.0;
     let from_y = fy + fh / 2.0;
@@ -376,8 +433,8 @@ fn residual_right_styled(
         Vec2::new(cx + BHW + off, from_y),
         Vec2::new(cx + BHW + off, end_y),
     ])
-    .stroke(width, color)
-    .arrow(arrow)
+    .stroke(style.width, style.color)
+    .arrow(style.arrow)
 }
 
 fn pos_encoding_group(mut base: Scene, cx: f32, cy: f32, label_dx: f32) -> Scene {
@@ -460,9 +517,11 @@ fn add_encoder_highlights(mut s: Scene, ey: [f32; 5], enc_h: [f32; 5]) -> Scene 
         enc_h[1],
         ey[2],
         enc_h[2],
-        active_width(0.28, 0.26, 3.2),
-        active_color(BRIDGE_HIGHLIGHT, 0.28, 0.26, 0.75),
-        active_width(0.28, 0.26, 4.8),
+        ResidualStyle::new(
+            active_width(0.28, 0.26, 3.2),
+            active_color(BRIDGE_HIGHLIGHT, 0.28, 0.26, 0.75),
+            active_width(0.28, 0.26, 4.8),
+        ),
     ));
     s.node(residual_right_styled(
         CL,
@@ -470,9 +529,11 @@ fn add_encoder_highlights(mut s: Scene, ey: [f32; 5], enc_h: [f32; 5]) -> Scene 
         enc_h[3],
         ey[4],
         enc_h[4],
-        active_width(0.66, 0.26, 3.2),
-        active_color(BRIDGE_HIGHLIGHT, 0.66, 0.26, 0.75),
-        active_width(0.66, 0.26, 4.8),
+        ResidualStyle::new(
+            active_width(0.66, 0.26, 3.2),
+            active_color(BRIDGE_HIGHLIGHT, 0.66, 0.26, 0.75),
+            active_width(0.66, 0.26, 4.8),
+        ),
     ))
 }
 
@@ -503,9 +564,11 @@ fn add_decoder_highlights(mut s: Scene, dy: [f32; 9], dec_h: [f32; 9]) -> Scene 
         dec_h[1],
         dy[2],
         dec_h[2],
-        active_width(0.20, 0.20, 3.0),
-        active_color(BRIDGE_HIGHLIGHT, 0.20, 0.20, 0.70),
-        active_width(0.20, 0.20, 4.5),
+        ResidualStyle::new(
+            active_width(0.20, 0.20, 3.0),
+            active_color(BRIDGE_HIGHLIGHT, 0.20, 0.20, 0.70),
+            active_width(0.20, 0.20, 4.5),
+        ),
     ));
     s = s.node(residual_right_styled(
         CR,
@@ -513,9 +576,11 @@ fn add_decoder_highlights(mut s: Scene, dy: [f32; 9], dec_h: [f32; 9]) -> Scene 
         dec_h[3],
         dy[4],
         dec_h[4],
-        active_width(0.44, 0.20, 3.0),
-        active_color(BRIDGE_HIGHLIGHT, 0.44, 0.20, 0.70),
-        active_width(0.44, 0.20, 4.5),
+        ResidualStyle::new(
+            active_width(0.44, 0.20, 3.0),
+            active_color(BRIDGE_HIGHLIGHT, 0.44, 0.20, 0.70),
+            active_width(0.44, 0.20, 4.5),
+        ),
     ));
     s.node(residual_left_styled(
         CR,
@@ -523,9 +588,11 @@ fn add_decoder_highlights(mut s: Scene, dy: [f32; 9], dec_h: [f32; 9]) -> Scene 
         dec_h[5],
         dy[6],
         dec_h[6],
-        active_width(0.66, 0.20, 3.0),
-        active_color(BRIDGE_HIGHLIGHT, 0.66, 0.20, 0.70),
-        active_width(0.66, 0.20, 4.5),
+        ResidualStyle::new(
+            active_width(0.66, 0.20, 3.0),
+            active_color(BRIDGE_HIGHLIGHT, 0.66, 0.20, 0.70),
+            active_width(0.66, 0.20, 4.5),
+        ),
     ))
 }
 

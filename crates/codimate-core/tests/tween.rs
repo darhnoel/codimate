@@ -1,6 +1,6 @@
 //! Layer 1 tests: tween(a, b) + the Lerp trait.
 
-use codimate_core::{tween, Color, Vec2};
+use codimate_core::{tween, Color, Style, Vec2};
 
 /// Golden test: linear travel from a to b across normalized t.
 #[test]
@@ -44,6 +44,35 @@ fn tween_lerps_color_channelwise() {
             b: 0.5,
             a: 1.0
         }
+    );
+}
+
+/// Style interpolates a coordinated look as one value.
+#[test]
+fn tween_lerps_style_fields_together() {
+    let rest = Style::new().fill(Color::WHITE).stroke(1.0, Color::BLACK);
+    let active = Style::new().fill(Color::RED).stroke(5.0, Color::CYAN);
+
+    let style = tween(rest, active).resolve(0.5);
+
+    assert_eq!(
+        style,
+        Style::new()
+            .fill(Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.5,
+                a: 1.0
+            })
+            .stroke(
+                3.0,
+                Color {
+                    r: 0.0,
+                    g: 0.5,
+                    b: 0.5,
+                    a: 1.0
+                }
+            )
     );
 }
 

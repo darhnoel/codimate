@@ -6,7 +6,7 @@
 //!
 //! - [`value`] — **Layer 1 (Value)**: how a single value changes over `t`.
 //!   `Animated<T>`, `IntoAnimated`, `Lerp`, `tween`, the easing curves, and the
-//!   geometry leaf types (`Vec2`, `Color`, `Segment`, `Path`).
+//!   geometry and style leaf types (`Vec2`, `Color`, `Style`, `Segment`, `Path`).
 //! - [`scene`] — **Layer 2 (Scene)**: what exists at a moment in time. The
 //!   `Node` trait, the node types (`Circle`, `Rect`, `PathNode`, `Text`,
 //!   `Connection`, `Pulse`), anchors, and the `Scene` tree.
