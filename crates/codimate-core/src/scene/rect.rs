@@ -130,6 +130,46 @@ impl Rect {
         }
     }
 
+    /// An evenly-divided anchor slot ("port `index` of `count`") along an edge,
+    /// so several fan-in Connections don't pile onto one point. Ports sit at the
+    /// centres of `count` equal slots; `port(_, 0, 1)` is the edge midpoint
+    /// (i.e. the plain [`anchor`](Self::anchor)). `Center` ignores the port.
+    ///
+    /// ```
+    /// use codimate_core::{rect, AnchorKind, Vec2};
+    /// // The three Q/K/V arrows into an attention box: 3 ports on the bottom edge.
+    /// let attn = rect().x(0.0).y(0.0).width(120.0).height(40.0);
+    /// let k = attn.anchor_port(AnchorKind::Bottom, 1, 3); // the middle of three
+    /// assert_eq!(k.resolve(0.0), Vec2::new(60.0, 40.0));
+    /// ```
+    pub fn anchor_port(&self, kind: AnchorKind, index: usize, count: usize) -> Animated<Vec2> {
+        let x = self.x.clone();
+        let y = self.y.clone();
+        let w = self.width.clone();
+        let h = self.height.clone();
+        let f = (index as f32 + 0.5) / count.max(1) as f32;
+        match kind {
+            AnchorKind::Center => Animated::new(move |t| {
+                Vec2::new(
+                    x.resolve(t) + w.resolve(t) / 2.0,
+                    y.resolve(t) + h.resolve(t) / 2.0,
+                )
+            }),
+            AnchorKind::Top => {
+                Animated::new(move |t| Vec2::new(x.resolve(t) + f * w.resolve(t), y.resolve(t)))
+            }
+            AnchorKind::Bottom => Animated::new(move |t| {
+                Vec2::new(x.resolve(t) + f * w.resolve(t), y.resolve(t) + h.resolve(t))
+            }),
+            AnchorKind::Left => {
+                Animated::new(move |t| Vec2::new(x.resolve(t), y.resolve(t) + f * h.resolve(t)))
+            }
+            AnchorKind::Right => Animated::new(move |t| {
+                Vec2::new(x.resolve(t) + w.resolve(t), y.resolve(t) + f * h.resolve(t))
+            }),
+        }
+    }
+
     /// `f(t) → Concrete` — resolves every `Animated` field at the same `t`.
     pub fn resolve(&self, t: f32) -> ConcreteRect {
         ConcreteRect {
