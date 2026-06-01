@@ -1,0 +1,141 @@
+//! The `PathNode`: a Bézier shape with animated geometry, fill, and stroke.
+
+use super::AnchorKind;
+use crate::value::*;
+
+/// A Node (Layer 2): a path shape whose geometry and fill are animated.
+///
+/// ```
+/// use codimate_core::{path_node, circle_path, tween, Color};
+///
+/// let p = path_node()
+///     .path(tween(circle_path(0.0, 0.0, 20.0), circle_path(100.0, 50.0, 40.0)))
+///     .fill(Color::RED);
+/// let resolved = p.resolve(0.5);
+/// assert_eq!(resolved.path.segments.len(), 4);
+/// ```
+#[derive(Clone)]
+pub struct PathNode {
+    path: Animated<Path>,
+    fill: Animated<Color>,
+    stroke_width: Animated<f32>,
+    stroke_color: Animated<Color>,
+}
+
+/// A `PathNode` resolved at a specific `t` — concrete geometry and colors.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConcretePath {
+    pub path: Path,
+    pub fill: Color,
+    pub stroke_width: f32,
+    pub stroke_color: Color,
+}
+
+impl ConcretePath {
+    pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
+        let Some((xmin, ymin, xmax, ymax)) = self.path.bounding_box() else {
+            return Vec2::new(0.0, 0.0);
+        };
+        let cx = (xmin + xmax) / 2.0;
+        let cy = (ymin + ymax) / 2.0;
+        match kind {
+            AnchorKind::Center => Vec2::new(cx, cy),
+            AnchorKind::Top => Vec2::new(cx, ymin),
+            AnchorKind::Bottom => Vec2::new(cx, ymax),
+            AnchorKind::Left => Vec2::new(xmin, cy),
+            AnchorKind::Right => Vec2::new(xmax, cy),
+        }
+    }
+}
+
+impl PathNode {
+    pub fn new() -> Self {
+        PathNode {
+            path: Path {
+                segments: Vec::new(),
+                closed: false,
+            }
+            .into_animated(),
+            fill: Color::WHITE.into_animated(),
+            stroke_width: 0.0.into_animated(),
+            stroke_color: Color::WHITE.into_animated(),
+        }
+    }
+
+    pub fn path(mut self, path: impl IntoAnimated<Path>) -> Self {
+        self.path = path.into_animated();
+        self
+    }
+
+    pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
+        self.fill = c.into_animated();
+        self
+    }
+
+    pub fn stroke(mut self, width: impl IntoAnimated<f32>, color: impl IntoAnimated<Color>) -> Self {
+        self.stroke_width = width.into_animated();
+        self.stroke_color = color.into_animated();
+        self
+    }
+
+    /// A named anchor point derived from the shape's animated bounding box.
+    ///
+    /// For an empty path (no segments), the anchor falls back to `(0.0, 0.0)`.
+    ///
+    /// ```
+    /// use codimate_core::{path_node, rect_path, tween, AnchorKind};
+    /// let p = path_node()
+    ///     .path(tween(rect_path(0.0, 0.0, 100.0, 50.0), rect_path(10.0, 20.0, 80.0, 40.0)));
+    /// let bottom = p.anchor(AnchorKind::Bottom);
+    /// assert_eq!(bottom.resolve(0.0), codimate_core::Vec2::new(50.0, 50.0));
+    /// ```
+    pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
+        let path_anim = self.path.clone();
+        match kind {
+            AnchorKind::Center => Animated::new(move |t| {
+                let path = path_anim.resolve(t);
+                let (xmin, ymin, xmax, ymax) = path.bounding_box().unwrap_or((0.0, 0.0, 0.0, 0.0));
+                Vec2::new((xmin + xmax) / 2.0, (ymin + ymax) / 2.0)
+            }),
+            AnchorKind::Top => Animated::new(move |t| {
+                let path = path_anim.resolve(t);
+                let (xmin, ymin, xmax, _ymax) = path.bounding_box().unwrap_or((0.0, 0.0, 0.0, 0.0));
+                Vec2::new((xmin + xmax) / 2.0, ymin)
+            }),
+            AnchorKind::Bottom => Animated::new(move |t| {
+                let path = path_anim.resolve(t);
+                let (xmin, _ymin, xmax, ymax) = path.bounding_box().unwrap_or((0.0, 0.0, 0.0, 0.0));
+                Vec2::new((xmin + xmax) / 2.0, ymax)
+            }),
+            AnchorKind::Left => Animated::new(move |t| {
+                let path = path_anim.resolve(t);
+                let (xmin, ymin, _xmax, ymax) = path.bounding_box().unwrap_or((0.0, 0.0, 0.0, 0.0));
+                Vec2::new(xmin, (ymin + ymax) / 2.0)
+            }),
+            AnchorKind::Right => Animated::new(move |t| {
+                let path = path_anim.resolve(t);
+                let (_xmin, ymin, xmax, ymax) = path.bounding_box().unwrap_or((0.0, 0.0, 0.0, 0.0));
+                Vec2::new(xmax, (ymin + ymax) / 2.0)
+            }),
+        }
+    }
+
+    pub fn resolve(&self, t: f32) -> ConcretePath {
+        ConcretePath {
+            path: self.path.resolve(t),
+            fill: self.fill.resolve(t),
+            stroke_width: self.stroke_width.resolve(t),
+            stroke_color: self.stroke_color.resolve(t),
+        }
+    }
+}
+
+impl Default for PathNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub fn path_node() -> PathNode {
+    PathNode::new()
+}
