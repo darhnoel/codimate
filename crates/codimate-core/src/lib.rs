@@ -18,8 +18,10 @@
 //! Everything is re-exported flat (`codimate_core::circle`, `::Animated`, …);
 //! the modules exist to mirror the layers, not to change the public surface.
 
+pub mod manim_palette;
 pub mod scene;
 pub mod value;
 
+pub use manim_palette as manim;
 pub use scene::*;
 pub use value::*;

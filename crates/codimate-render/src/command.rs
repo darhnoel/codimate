@@ -102,6 +102,27 @@ pub fn render_frame(
     }
 }
 
+/// Inject debug metadata into a rendered frame.
+///
+/// Appends a green overlay [`RenderCommand::Text`] with the animation name and
+/// elapsed seconds so rendered frames can be traced back to their source during
+/// testing or AI feedback.
+pub fn inject_debug_metadata(frame: &mut RenderFrame) {
+    let text = format!("{}  {:.2}s", frame.name, frame.elapsed_seconds);
+    frame.commands.push(RenderCommand::Text {
+        x: 8.0,
+        y: 20.0,
+        text,
+        font_size: 12.0,
+        fill: Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    });
+}
+
 /// Backend trait implemented by concrete renderers — the seam where a CPU,
 /// GPU, or Skia adapter plugs in (ADR 0001).
 pub trait Renderer {

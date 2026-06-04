@@ -1,0 +1,23 @@
+[package]
+name = "codimate-previewer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codimate-animation = { path = "../codimate-animation" }
+codimate-core = { path = "../codimate-core" }
+codimate-export = { path = "../codimate-export" }
+codimate-layout = { path = "../codimate-layout" }
+codimate-render = { path = "../codimate-render" }
+codimate-example-circle-to-square = { path = "../../examples/circle-to-square" }
+codimate-example-demo = { path = "../../examples/demo" }
+codimate-example-connection-pulse = { path = "../../examples/connection-pulse" }
+codimate-example-matrix-mult = { path = "../../examples/matrix-mult" }
+codimate-example-neural-net = { path = "../../examples/neural-net" }
+codimate-example-transformer = { path = "../../examples/transformer" }
+codimate-example-merge-sort = { path = "../../examples/merge-sort" }
+minifb = { version = "0.25", default-features = false, features = ["x11"] }
+
+[[bin]]
+name = "codimate-previewer"
+path = "src/bin/preview.rs"

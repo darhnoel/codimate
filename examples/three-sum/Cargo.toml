@@ -1,0 +1,11 @@
+[package]
+name = "codimate-example-three-sum"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+codimate-animation = { path = "../../crates/codimate-animation" }
+codimate-core = { path = "../../crates/codimate-core" }
+codimate-export = { path = "../../crates/codimate-export" }
+codimate-layout = { path = "../../crates/codimate-layout" }

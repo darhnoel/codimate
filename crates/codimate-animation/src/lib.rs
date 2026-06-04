@@ -355,3 +355,15 @@ impl Playable for Stagger {
         Stagger::resolve(self, t)
     }
 }
+
+impl Playable for Box<dyn Playable> {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+    fn duration(&self) -> f32 {
+        (**self).duration()
+    }
+    fn resolve(&self, t: f32) -> ConcreteScene {
+        (**self).resolve(t)
+    }
+}

@@ -1,0 +1,21 @@
+use codimate_core::{manim, Color};
+
+pub(crate) const BG: Color = manim::BLACK;
+pub(crate) const PANEL: Color = manim::DARKER_GRAY;
+pub(crate) const PANEL_BORDER: Color = manim::DARK_GRAY;
+pub(crate) const INK: Color = manim::WHITE;
+pub(crate) const MUTED: Color = manim::LIGHT_GRAY;
+pub(crate) const ACCENT: Color = manim::BLUE;
+pub(crate) const GLOW_ACCENT: Color = manim::BLUE_E;
+pub(crate) const HIT_SUCCESS: Color = manim::GREEN_E;
+pub(crate) const HIT_BORDER: Color = manim::GREEN;
+pub(crate) const CANDIDATE_FILL: Color = manim::ORANGE;
+pub(crate) const EDGE_FILL: Color = PANEL;
+pub(crate) const EDGE_ACTIVE: Color = PANEL_BORDER;
+pub(crate) const DICT_ACTIVE: Color = GLOW_ACCENT;
+pub(crate) const DIM: Color = manim::GRAY;
+pub(crate) const PULSE_FILL: Color = manim::YELLOW;
+pub(crate) const INDEX_FIRE: Color = PULSE_FILL;
+pub(crate) const MISS_FILL: Color = manim::RED_E;
+pub(crate) const REJECT: Color = manim::RED;
+pub(crate) const SUBTITLE_BG: Color = manim::with_alpha(manim::DARKER_GRAY, 0.88);

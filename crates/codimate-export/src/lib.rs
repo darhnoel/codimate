@@ -15,6 +15,9 @@ use std::process::{Command, Stdio};
 pub struct ExportConfig {
     pub fps: f32,
     pub viewport: Viewport,
+    /// Optional encoded output size. Frames are rendered at `viewport`, then
+    /// scaled and padded by the encoder so the scene keeps its aspect ratio.
+    pub output_viewport: Option<Viewport>,
     /// H.264 CRF (0–51). Lower = better quality, larger file.
     /// Default 23 is a good balance; use 10–15 for demo-quality exports.
     pub crf: u32,
@@ -25,8 +28,14 @@ impl ExportConfig {
         Self {
             fps,
             viewport,
+            output_viewport: None,
             crf: 23,
         }
+    }
+
+    pub fn output_viewport(mut self, viewport: Viewport) -> Self {
+        self.output_viewport = Some(viewport);
+        self
     }
 
     pub fn crf(mut self, crf: u32) -> Self {
@@ -222,7 +231,8 @@ pub fn export_mp4(
     let height = config.viewport.height.round().max(1.0) as u32;
     let fps = config.fps.max(1.0);
 
-    let mut child = Command::new("ffmpeg")
+    let mut command = Command::new("ffmpeg");
+    command
         .arg("-y")
         .arg("-f")
         .arg("rawvideo")
@@ -233,7 +243,15 @@ pub fn export_mp4(
         .arg("-r")
         .arg(fps.to_string())
         .arg("-i")
-        .arg("-")
+        .arg("-");
+
+    if let Some(output_viewport) = config.output_viewport {
+        command
+            .arg("-vf")
+            .arg(scale_pad_filter(config.viewport, output_viewport));
+    }
+
+    let mut child = command
         .arg("-c:v")
         .arg("libx264")
         .arg("-crf")
@@ -258,6 +276,31 @@ pub fn export_mp4(
         return Err(ExportError::EncoderFailed(status));
     }
     Ok(())
+}
+
+fn scale_pad_filter(input: Viewport, output: Viewport) -> String {
+    let input_width = input.width.round().max(1.0);
+    let input_height = input.height.round().max(1.0);
+    let output_width = even_dimension(output.width);
+    let output_height = even_dimension(output.height);
+
+    let scale = (output_width as f32 / input_width).min(output_height as f32 / input_height);
+    let scaled_width = even_dimension((input_width * scale).min(output_width as f32));
+    let scaled_height = even_dimension((input_height * scale).min(output_height as f32));
+    let pad_x = (output_width - scaled_width) / 2;
+    let pad_y = (output_height - scaled_height) / 2;
+
+    format!(
+        "scale={scaled_width}:{scaled_height}:flags=lanczos,pad={output_width}:{output_height}:{pad_x}:{pad_y}:color=black"
+    )
+}
+
+fn even_dimension(value: f32) -> u32 {
+    let mut dimension = value.round().max(2.0) as u32;
+    if !dimension.is_multiple_of(2) {
+        dimension += 1;
+    }
+    dimension
 }
 
 // ---------------------------------------------------------------------------
@@ -298,4 +341,17 @@ pub fn export_frame_png(
     let frame = render_frame(playable.name(), seconds, &layout);
     let bitmap = rasterize(&frame);
     write_png(path, &bitmap)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scale_pad_filter_preserves_aspect_ratio_for_1080p() {
+        assert_eq!(
+            scale_pad_filter(Viewport::new(1000.0, 640.0), Viewport::new(1920.0, 1080.0)),
+            "scale=1688:1080:flags=lanczos,pad=1920:1080:116:0:color=black"
+        );
+    }
 }

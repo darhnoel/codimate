@@ -98,7 +98,8 @@ fn export_mp4_produces_valid_mp4() {
         0.5,
         scene().node(circle().radius(5.0).fill(Color::RED)),
     );
-    let config = ExportConfig::new(10.0, Viewport::new(32.0, 32.0));
+    let config = ExportConfig::new(10.0, Viewport::new(32.0, 20.0))
+        .output_viewport(Viewport::new(64.0, 64.0));
 
     let path = "/tmp/codimate-test-export.mp4";
     let result = codimate_export::export_mp4(&playable, &config, path);

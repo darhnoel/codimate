@@ -1,0 +1,11 @@
+[package]
+name = "codimate-example-preview"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+codimate-animation = { path = "../../crates/codimate-animation" }
+codimate-core = { path = "../../crates/codimate-core" }
+codimate-layout = { path = "../../crates/codimate-layout" }
+codimate-previewer = { path = "../../crates/codimate-previewer" }

@@ -4,7 +4,40 @@
 An animation is a pure function from time to a visual scene.
 `f(t: f32) → Scene` — NEVER break this invariant.
 
+## The Authoring Model
+Codimate animations are authored from the concept outward. Describe the
+concept's state, derive a trace from its logic, project each trace moment into a
+Scene, then let Layer 3 timing compose the result into `f(t) → Scene`.
+
 ## Ubiquitous Language
+
+**Concept**: The idea being explained: a sort, a matrix multiplication, a
+network signal flow, a swap. Avoid treating the video timeline as the concept.
+
+**State**: The concept's data at a meaningful point in the explanation. State is
+domain data, not visual data and not renderer state.
+
+**Algorithm**: A pure transformation from State into a Trace. For non-algorithmic
+topics, this is still the concept logic that decides what happens next.
+
+**Trace**: The ordered explanation events derived from the concept's logic. A
+Trace is the script Codimate can regenerate; avoid "hand-authored timeline".
+
+**Trace Event**: One meaningful event in a Trace, such as compare, swap, choose
+pivot, compute output cell, or fire signal group. Avoid "keyframe".
+
+**View**: The projection from State plus Trace Event into a Scene. View code
+decides what the concept looks like; it does not decide the concept's logic.
+
+**Motion**: Timeless movement/styling choices used by a View, such as easing,
+paths, reveals, pulses, and style transitions. Motion has no duration.
+
+**Timing**: The Layer 3 durations assigned to Trace Events and holds. Timing is
+where pacing lives; never hide duration inside Motion or View.
+
+**Explanation**: A composed animation built from State, Algorithm, View, Motion,
+and Timing. It is the authoring-level object that eventually renders as a
+Playable.
 
 **Animated<T>**: A value that resolves at time `t ∈ [0.0, 1.0]`.
 A plain value is trivially `Animated<T>`. Never say "keyframe value".
@@ -94,11 +127,11 @@ belong in Codimate yet.
 
 codimate/
 ├── crates/
-│   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Wayland, no Skia
+│   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
 │   ├── codimate-layout/    # taffy integration, layout pass
 │   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
-│   ├── codimate-wayland/   # live preview window, frame callbacks
+│   ├── codimate-previewer/ # interactive preview window, sampled from Playable
 │   └── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)
 └── examples/
 
