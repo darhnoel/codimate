@@ -23,6 +23,9 @@ codimate-example-faster-dijkstra = { path = "../../examples/faster-dijkstra" }
 codimate-example-newton-laws = { path = "../../examples/newton-laws" }
 minifb = { version = "0.25", default-features = false, features = ["x11"] }
 
+[build-dependencies]
+toml = "0.8"
+
 [[bin]]
 name = "codimate-previewer"
 path = "src/bin/preview.rs"
