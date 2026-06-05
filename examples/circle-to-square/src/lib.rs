@@ -1,8 +1,9 @@
 use codimate_animation::{animation, sequence, Animation, Playable};
 use codimate_core::{
     circle_path, ease_in_out, manim, path_node, rect_path, scene, tween, Animated, Color, Path,
-    Scene, Style,
+    Scene, Style, ExplanationBuilder,
 };
+use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 
 #[derive(Clone, Copy)]
@@ -103,61 +104,65 @@ fn step_scene(step: ShapeStep, motion: ShapeMotion) -> Scene {
     }
 }
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<ShapeDemo>,
-    algorithm: Option<fn(ShapeDemo) -> Vec<ShapeStep>>,
-    motion: Option<ShapeMotion>,
-    timing: ShapeTiming,
-}
+type Inner = ExplanationBuilder<ShapeDemo, fn(ShapeDemo) -> Vec<ShapeStep>, ShapeMotion, ShapeTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: ShapeTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: ShapeDemo) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: ShapeDemo) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> ShapeView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(ShapeDemo) -> Vec<ShapeStep>) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(ShapeDemo) -> Vec<ShapeStep>) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> ShapeMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> ShapeMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: ShapeTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: ShapeTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("shape demo state must be provided");
-        let algorithm = self
-            .algorithm
-            .expect("shape demo algorithm must be provided");
-        build_circle_to_square(
-            self.name,
-            algorithm(state),
-            self.motion.expect("shape demo motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("circle-to-square: state, algorithm, motion required");
+        build_circle_to_square(name, algorithm(state), motion, timing)
+    }
+
+    pub fn render(self, output: impl AsRef<std::path::Path>) {
+        self.render_with(output, |viewport| ExportConfig::new(30.0, viewport).crf(12));
+    }
+
+    pub fn render_with(
+        self,
+        output: impl AsRef<std::path::Path>,
+        export_config: impl FnOnce(Viewport) -> ExportConfig,
+    ) {
+        let output = output.as_ref();
+        if let Some(parent) = output.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent).ok();
+            }
+        }
+
+        let (play, viewport) = self.build();
+        let cfg = export_config(viewport);
+        println!("Exporting {} ...", output.display());
+        match export_mp4(&play, &cfg, output) {
+            Ok(()) => println!("Written {}", output.display()),
+            Err(e) => eprintln!("mp4 export skipped: {e}"),
+        }
     }
 }
 

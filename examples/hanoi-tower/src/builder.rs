@@ -1,62 +1,45 @@
-use crate::{view::build_hanoi, HanoiMotion, HanoiTiming, HanoiTower, HanoiTrace, HanoiView};
+use crate::{view::build_hanoi, HanoiMotion, HanoiTiming, HanoiTower, HanoiTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<HanoiTower>,
-    algorithm: Option<fn(HanoiTower) -> HanoiTrace>,
-    motion: Option<HanoiMotion>,
-    timing: HanoiTiming,
-}
+type Inner =
+    ExplanationBuilder<HanoiTower, fn(HanoiTower) -> HanoiTrace, HanoiMotion, HanoiTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: HanoiTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: HanoiTower) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: HanoiTower) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> HanoiView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(HanoiTower) -> HanoiTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(HanoiTower) -> HanoiTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> HanoiMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> HanoiMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: HanoiTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: HanoiTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("Hanoi state must be provided");
-        let algorithm = self.algorithm.expect("Hanoi algorithm must be provided");
-        build_hanoi(
-            self.name,
-            algorithm(state),
-            self.motion.expect("Hanoi motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("hanoi: state, algorithm, motion required");
+        build_hanoi(name, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

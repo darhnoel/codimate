@@ -1,67 +1,49 @@
-use crate::{
-    view::build_newton_laws, NewtonLawTrace, NewtonLaws, NewtonLawsMotion, NewtonLawsTiming,
-    NewtonLawsView,
-};
+use crate::{view::build_newton_laws, NewtonLawTrace, NewtonLaws, NewtonLawsMotion, NewtonLawsTiming};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<NewtonLaws>,
-    algorithm: Option<fn(NewtonLaws) -> NewtonLawTrace>,
-    motion: Option<NewtonLawsMotion>,
-    timing: NewtonLawsTiming,
-}
+type Inner = ExplanationBuilder<
+    NewtonLaws,
+    fn(NewtonLaws) -> NewtonLawTrace,
+    NewtonLawsMotion,
+    NewtonLawsTiming,
+>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: NewtonLawsTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: NewtonLaws) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: NewtonLaws) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> NewtonLawsView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(NewtonLaws) -> NewtonLawTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(NewtonLaws) -> NewtonLawTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> NewtonLawsMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> NewtonLawsMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: NewtonLawsTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: NewtonLawsTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("Newton laws state must be provided");
-        let algorithm = self
-            .algorithm
-            .expect("Newton laws algorithm must be provided");
-        build_newton_laws(
-            self.name,
-            algorithm(state),
-            self.motion.expect("Newton laws motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("newton-laws: state, algorithm, motion required");
+        build_newton_laws(name, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

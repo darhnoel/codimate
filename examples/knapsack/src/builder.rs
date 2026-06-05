@@ -1,65 +1,45 @@
-use crate::{
-    view::build_knapsack, Knapsack, KnapsackMotion, KnapsackTiming, KnapsackTrace, KnapsackView,
-};
+use crate::{view::build_knapsack, Knapsack, KnapsackMotion, KnapsackTiming, KnapsackTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<Knapsack>,
-    algorithm: Option<fn(Knapsack) -> KnapsackTrace>,
-    motion: Option<KnapsackMotion>,
-    timing: KnapsackTiming,
-}
+type Inner =
+    ExplanationBuilder<Knapsack, fn(Knapsack) -> KnapsackTrace, KnapsackMotion, KnapsackTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: KnapsackTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: Knapsack) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: Knapsack) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> KnapsackView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(Knapsack) -> KnapsackTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(Knapsack) -> KnapsackTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> KnapsackMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> KnapsackMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: KnapsackTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: KnapsackTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("knapsack state must be provided");
-        let algorithm = self.algorithm.expect("knapsack algorithm must be provided");
-        build_knapsack(
-            self.name,
-            state,
-            algorithm(state),
-            self.motion.expect("knapsack motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("knapsack: state, algorithm, motion required");
+        build_knapsack(name, state, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

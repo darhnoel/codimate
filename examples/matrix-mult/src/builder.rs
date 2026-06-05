@@ -1,71 +1,49 @@
-use crate::{
-    view::build_matrix_mult, MatrixMultMotion, MatrixMultTiming, MatrixMultView,
-    MatrixMultiplication, MatrixTrace,
-};
+use crate::{view::build_matrix_mult, MatrixMultMotion, MatrixMultTiming, MatrixMultiplication, MatrixTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<MatrixMultiplication>,
-    algorithm: Option<fn(MatrixMultiplication) -> MatrixTrace>,
-    motion: Option<MatrixMultMotion>,
-    timing: MatrixMultTiming,
-}
+type Inner = ExplanationBuilder<
+    MatrixMultiplication,
+    fn(MatrixMultiplication) -> MatrixTrace,
+    MatrixMultMotion,
+    MatrixMultTiming,
+>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: MatrixMultTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: MatrixMultiplication) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: MatrixMultiplication) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> MatrixMultView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(MatrixMultiplication) -> MatrixTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(MatrixMultiplication) -> MatrixTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> MatrixMultMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> MatrixMultMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: MatrixMultTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: MatrixMultTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self
-            .state
-            .expect("matrix multiplication state must be provided");
-        let algorithm = self
-            .algorithm
-            .expect("matrix multiplication algorithm must be provided");
-        build_matrix_mult(
-            self.name,
-            state,
-            algorithm(state),
-            self.motion
-                .expect("matrix multiplication motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("matrix-mult: state, algorithm, motion required");
+        build_matrix_mult(name, state, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

@@ -1,68 +1,62 @@
-use crate::{view::build_demo, Demo, DemoMotion, DemoTiming, DemoTrace, DemoView};
+use crate::{view::build_demo, Demo, DemoMotion, DemoTiming, DemoTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<Demo>,
-    trace: Option<DemoTrace>,
-    motion: Option<DemoMotion>,
-    timing: DemoTiming,
-}
+type Inner = ExplanationBuilder<Demo, DemoTrace, DemoMotion, DemoTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        trace: None,
-        motion: None,
-        timing: DemoTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: Demo) -> Self {
-        self.state = Some(state);
-        self
-    }
-
-    pub fn view(self, view: fn() -> DemoView) -> Self {
-        let _ = view();
-        self
+    pub fn state(self, state: Demo) -> Self {
+        Self(self.0.state(state))
     }
 
     pub fn algorithm(mut self, algorithm: fn(Demo) -> DemoTrace) -> Self {
         let state = self
+            .0
             .state
-            .expect("demo state must be provided before algorithm");
-        self.trace = Some(algorithm(state));
-        self.state = Some(state);
-        self
+            .take()
+            .expect("demo: state needed before algorithm");
+        let trace = algorithm(state);
+        self.0.state = Some(state);
+        Self(self.0.algorithm(trace))
     }
 
-    pub fn motion(mut self, motion: fn() -> DemoMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn motion(self, motion: fn() -> DemoMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn timing(mut self, timing: DemoTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn timing(self, timing: DemoTiming) -> Self {
+        Self(self.0.timing(timing))
+    }
+
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        build_demo(
-            self.name,
-            self.state.expect("demo state must be provided"),
-            self.trace.expect("demo algorithm must be provided"),
-            self.motion.expect("demo motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, trace, motion, timing) =
+            self.0.take().expect("demo: state, algorithm, motion required");
+        build_demo(name, state, trace, motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {
+        self.render_with(output, |viewport| ExportConfig::new(30.0, viewport).crf(12));
+    }
+
+    pub fn render_with(
+        self,
+        output: impl AsRef<Path>,
+        export_config: impl FnOnce(Viewport) -> ExportConfig,
+    ) {
         let output = output.as_ref();
         if let Some(parent) = output.parent() {
             if !parent.as_os_str().is_empty() {
@@ -71,7 +65,7 @@ impl ExplainBuilder {
         }
 
         let (play, viewport) = self.build();
-        let cfg = ExportConfig::new(30.0, viewport).crf(12);
+        let cfg = export_config(viewport);
         println!("Exporting {} ...", output.display());
         match export_mp4(&play, &cfg, output) {
             Ok(()) => println!("Written {}", output.display()),

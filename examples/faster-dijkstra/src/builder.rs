@@ -1,69 +1,55 @@
 use crate::{
     view::build_faster_dijkstra, FasterDijkstra, FasterDijkstraMotion, FasterDijkstraTiming,
-    FasterDijkstraTrace, FasterDijkstraView,
+    FasterDijkstraTrace,
 };
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<FasterDijkstra>,
-    algorithm: Option<fn(FasterDijkstra) -> FasterDijkstraTrace>,
-    motion: Option<FasterDijkstraMotion>,
-    timing: FasterDijkstraTiming,
-}
+type Inner = ExplanationBuilder<
+    FasterDijkstra,
+    fn(FasterDijkstra) -> FasterDijkstraTrace,
+    FasterDijkstraMotion,
+    FasterDijkstraTiming,
+>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: FasterDijkstraTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: FasterDijkstra) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: FasterDijkstra) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> FasterDijkstraView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(
+        self,
+        algorithm: fn(FasterDijkstra) -> FasterDijkstraTrace,
+    ) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(FasterDijkstra) -> FasterDijkstraTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> FasterDijkstraMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> FasterDijkstraMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: FasterDijkstraTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: FasterDijkstraTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("faster dijkstra state must be provided");
-        let algorithm = self
-            .algorithm
-            .expect("faster dijkstra algorithm must be provided");
-        build_faster_dijkstra(
-            self.name,
-            state,
-            algorithm(state),
-            self.motion
-                .expect("faster dijkstra motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("faster-dijkstra: state, algorithm, motion required");
+        build_faster_dijkstra(name, state, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

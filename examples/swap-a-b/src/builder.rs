@@ -1,62 +1,45 @@
-use crate::{view::build_swap_a_b, SwapAB, SwapABMotion, SwapABTiming, SwapABTrace, SwapABView};
+use crate::{view::build_swap_a_b, SwapAB, SwapABMotion, SwapABTiming, SwapABTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<SwapAB>,
-    algorithm: Option<fn(SwapAB) -> SwapABTrace>,
-    motion: Option<SwapABMotion>,
-    timing: SwapABTiming,
-}
+type Inner =
+    ExplanationBuilder<SwapAB, fn(SwapAB) -> SwapABTrace, SwapABMotion, SwapABTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: SwapABTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: SwapAB) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: SwapAB) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> SwapABView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(SwapAB) -> SwapABTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(SwapAB) -> SwapABTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> SwapABMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> SwapABMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: SwapABTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: SwapABTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("Swap A B state must be provided");
-        let algorithm = self.algorithm.expect("Swap A B algorithm must be provided");
-        build_swap_a_b(
-            self.name,
-            algorithm(state),
-            self.motion.expect("Swap A B motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("swap-a-b: state, algorithm, motion required");
+        build_swap_a_b(name, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

@@ -1,64 +1,45 @@
-use crate::{
-    view::build_three_sum, ThreeSum, ThreeSumMotion, ThreeSumTiming, ThreeSumTrace, ThreeSumView,
-};
+use crate::{view::build_three_sum, ThreeSum, ThreeSumMotion, ThreeSumTiming, ThreeSumTrace};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<ThreeSum>,
-    algorithm: Option<fn(ThreeSum) -> ThreeSumTrace>,
-    motion: Option<ThreeSumMotion>,
-    timing: ThreeSumTiming,
-}
+type Inner =
+    ExplanationBuilder<ThreeSum, fn(ThreeSum) -> ThreeSumTrace, ThreeSumMotion, ThreeSumTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        algorithm: None,
-        motion: None,
-        timing: ThreeSumTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: ThreeSum) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: ThreeSum) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> ThreeSumView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn(ThreeSum) -> ThreeSumTrace) -> Self {
+        Self(self.0.algorithm(algorithm))
     }
 
-    pub fn algorithm(mut self, algorithm: fn(ThreeSum) -> ThreeSumTrace) -> Self {
-        self.algorithm = Some(algorithm);
-        self
+    pub fn motion(self, motion: fn() -> ThreeSumMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> ThreeSumMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: ThreeSumTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: ThreeSumTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        let state = self.state.expect("3Sum state must be provided");
-        let algorithm = self.algorithm.expect("3Sum algorithm must be provided");
-        build_three_sum(
-            self.name,
-            algorithm(state),
-            self.motion.expect("3Sum motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, algorithm, motion, timing) =
+            self.0.take().expect("three-sum: state, algorithm, motion required");
+        build_three_sum(name, algorithm(state), motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {

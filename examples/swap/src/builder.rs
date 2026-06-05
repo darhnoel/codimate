@@ -1,64 +1,55 @@
-use crate::{view::build_swap, Swap, SwapMotion, SwapMove, SwapTiming, SwapView};
+use crate::{view::build_swap, Swap, SwapMotion, SwapMove, SwapTiming};
 use codimate_animation::Playable;
+use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-pub struct ExplainBuilder {
-    name: &'static str,
-    state: Option<Swap>,
-    moves: Option<Vec<SwapMove>>,
-    motion: Option<SwapMotion>,
-    timing: SwapTiming,
-}
+type Inner = ExplanationBuilder<Swap, Vec<SwapMove>, SwapMotion, SwapTiming>;
+
+pub struct ExplainBuilder(Inner);
 
 pub fn explain(name: &'static str) -> ExplainBuilder {
-    ExplainBuilder {
-        name,
-        state: None,
-        moves: None,
-        motion: None,
-        timing: SwapTiming::default(),
-    }
+    ExplainBuilder(Inner::new(name))
 }
 
 impl ExplainBuilder {
-    pub fn state(mut self, state: Swap) -> Self {
-        self.state = Some(state);
-        self
+    pub fn state(self, state: Swap) -> Self {
+        Self(self.0.state(state))
     }
 
-    pub fn view(self, view: fn() -> SwapView) -> Self {
-        let _ = view();
-        self
+    pub fn algorithm(self, algorithm: fn() -> [SwapMove; 3]) -> Self {
+        Self(self.0.algorithm(algorithm().to_vec()))
     }
 
-    pub fn algorithm(mut self, algorithm: fn() -> [SwapMove; 3]) -> Self {
-        self.moves = Some(algorithm().to_vec());
-        self
+    pub fn motion(self, motion: fn() -> SwapMotion) -> Self {
+        Self(self.0.motion(motion()))
     }
 
-    pub fn motion(mut self, motion: fn() -> SwapMotion) -> Self {
-        self.motion = Some(motion());
-        self
+    pub fn timing(self, timing: SwapTiming) -> Self {
+        Self(self.0.timing(timing))
     }
 
-    pub fn timing(mut self, timing: SwapTiming) -> Self {
-        self.timing = timing;
-        self
+    pub fn view<V>(self, view: fn() -> V) -> Self {
+        Self(self.0.view(view))
     }
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
-        build_swap(
-            self.name,
-            self.state.expect("swap state must be provided"),
-            self.moves.expect("swap algorithm must be provided"),
-            self.motion.expect("swap motion must be provided"),
-            self.timing,
-        )
+        let name = self.0.name;
+        let (state, trace, motion, timing) =
+            self.0.take().expect("swap: state, algorithm, motion required");
+        build_swap(name, state, trace, motion, timing)
     }
 
     pub fn render(self, output: impl AsRef<Path>) {
+        self.render_with(output, |viewport| ExportConfig::new(30.0, viewport).crf(12));
+    }
+
+    pub fn render_with(
+        self,
+        output: impl AsRef<Path>,
+        export_config: impl FnOnce(Viewport) -> ExportConfig,
+    ) {
         let output = output.as_ref();
         if let Some(parent) = output.parent() {
             if !parent.as_os_str().is_empty() {
@@ -67,7 +58,7 @@ impl ExplainBuilder {
         }
 
         let (play, viewport) = self.build();
-        let cfg = ExportConfig::new(30.0, viewport).crf(12);
+        let cfg = export_config(viewport);
         println!("Exporting {} ...", output.display());
         match export_mp4(&play, &cfg, output) {
             Ok(()) => println!("Written {}", output.display()),
