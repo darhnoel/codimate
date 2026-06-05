@@ -1,7 +1,7 @@
 //! The `PathNode`: a Bézier shape with animated geometry, fill, and stroke.
 
 use super::AnchorKind;
-use crate::value::*;
+use crate::{path::*, value::*};
 
 /// A Node (Layer 2): a path shape whose geometry and fill are animated.
 ///

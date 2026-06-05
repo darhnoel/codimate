@@ -1,7 +1,7 @@
 //! The `Connection` Node: a stroked line between two anchors, optional arrowhead.
 
 use super::ConcretePath;
-use crate::value::*;
+use crate::{path::*, value::*};
 
 /// A Node (Layer 2) that links two shape Anchors with a stroked line,
 /// optionally ending in an arrowhead at the target (end) anchor.

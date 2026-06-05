@@ -1,6 +1,6 @@
 use codimate_core::{
-    circle_path, path_node, rect_path, scene, tween, Color, ConcreteNode, Lerp, Path, Segment,
-    Style, Vec2,
+    circle_path, ellipse_path, path_node, polygon_path, rect_path, regular_polygon_path, scene,
+    triangle_path, tween, Color, ConcreteNode, Lerp, Path, Segment, Style, Vec2,
 };
 
 #[test]
@@ -21,6 +21,83 @@ fn rect_path_has_four_line_segments_and_is_closed() {
     for seg in &p.segments {
         assert!(matches!(seg, Segment::Line(..)));
     }
+}
+
+#[test]
+fn polygon_path_three_vertices_is_closed_triangle() {
+    let p = polygon_path(&[
+        Vec2::new(0.0, 0.0),
+        Vec2::new(100.0, 0.0),
+        Vec2::new(50.0, 86.6),
+    ]);
+    assert_eq!(p.segments.len(), 3);
+    assert!(p.closed);
+    for seg in &p.segments {
+        assert!(matches!(seg, Segment::Line(..)));
+    }
+}
+
+#[test]
+fn polygon_path_empty_or_single_vertex_has_no_segments() {
+    assert!(polygon_path(&[]).segments.is_empty());
+    assert!(polygon_path(&[Vec2::new(0.0, 0.0)]).segments.is_empty());
+}
+
+#[test]
+fn regular_polygon_path_triangle_is_equilateral() {
+    let p = regular_polygon_path(0.0, 0.0, 100.0, 3);
+    assert_eq!(p.segments.len(), 3);
+    assert!(p.closed);
+    let verts: Vec<Vec2> = p.segments.iter().map(|s| s.to_cubic().0).collect();
+    let dist = |a: Vec2, b: Vec2| ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt();
+    let d01 = dist(verts[0], verts[1]);
+    let d12 = dist(verts[1], verts[2]);
+    let d20 = dist(verts[2], verts[0]);
+    assert!((d01 - d12).abs() < 0.01);
+    assert!((d12 - d20).abs() < 0.01);
+}
+
+#[test]
+fn regular_polygon_path_square_has_four_sides() {
+    let p = regular_polygon_path(0.0, 0.0, 100.0, 4);
+    assert_eq!(p.segments.len(), 4);
+    assert!(p.closed);
+    for seg in &p.segments {
+        assert!(matches!(seg, Segment::Line(..)));
+    }
+}
+
+#[test]
+fn triangle_path_is_convenience_for_n3() {
+    let a = triangle_path(10.0, 20.0, 50.0);
+    let b = regular_polygon_path(10.0, 20.0, 50.0, 3);
+    assert_eq!(a.segments.len(), b.segments.len());
+    for i in 0..a.segments.len() {
+        let (a0, _, _, a3) = a.segments[i].to_cubic();
+        let (b0, _, _, b3) = b.segments[i].to_cubic();
+        assert!((a0.x - b0.x).abs() < 1e-6);
+        assert!((a0.y - b0.y).abs() < 1e-6);
+        assert!((a3.x - b3.x).abs() < 1e-6);
+        assert!((a3.y - b3.y).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn ellipse_path_has_four_cubic_segments_and_is_closed() {
+    let p = ellipse_path(100.0, 200.0, 80.0, 40.0);
+    assert_eq!(p.segments.len(), 4);
+    assert!(p.closed);
+    for seg in &p.segments {
+        assert!(matches!(seg, Segment::Cubic(..)));
+    }
+}
+
+#[test]
+fn ellipse_path_with_equal_radii_matches_circle_path() {
+    let p = ellipse_path(50.0, 50.0, 100.0, 100.0);
+    // same control-point math: first segment end at bottom
+    assert!((p.segments[0].to_cubic().0.x - 150.0).abs() < 1e-6);
+    assert!((p.segments[0].to_cubic().0.y - 50.0).abs() < 1e-6);
 }
 
 #[test]
