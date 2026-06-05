@@ -121,10 +121,11 @@ impl Previewer {
                     b: 0.6,
                     a: 1.0,
                 },
+                align: TextAlign::Left,
             });
             if !playing {
                 frame.commands.push(RenderCommand::Text {
-                    x: self.config.viewport.width * 0.5 - 50.0,
+                    x: self.config.viewport.width * 0.5,
                     y: self.config.viewport.height * 0.5 - 12.0,
                     text: "[ PAUSED ]".into(),
                     font_size: 24.0,
@@ -134,6 +135,7 @@ impl Previewer {
                         b: 0.0,
                         a: 1.0,
                     },
+                    align: TextAlign::Center,
                 });
             }
         }

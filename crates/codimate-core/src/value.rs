@@ -118,14 +118,17 @@ impl Default for Style {
 /// every segment is self-describing and inspectable without traversal.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Segment {
+    MoveTo(Vec2),
     Line(Vec2, Vec2),
     Quad(Vec2, Vec2, Vec2),
     Cubic(Vec2, Vec2, Vec2, Vec2),
+    Close,
 }
 
 impl Segment {
     pub fn to_cubic(self) -> (Vec2, Vec2, Vec2, Vec2) {
         match self {
+            Segment::MoveTo(p) => (p, p, p, p),
             Segment::Line(a, b) => {
                 let c1 = Vec2::lerp(a, b, 1.0 / 3.0);
                 let c2 = Vec2::lerp(a, b, 2.0 / 3.0);
@@ -137,6 +140,7 @@ impl Segment {
                 (a, c1, c2, b)
             }
             Segment::Cubic(a, c1, c2, b) => (a, c1, c2, b),
+            Segment::Close => (Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0)),
         }
     }
 
@@ -147,9 +151,23 @@ impl Segment {
     /// All defining points for this segment (start, controls, end).
     pub fn points(&self) -> Vec<Vec2> {
         match self {
+            Segment::MoveTo(p) => vec![*p],
             Segment::Line(a, b) => vec![*a, *b],
             Segment::Quad(a, ctrl, b) => vec![*a, *ctrl, *b],
             Segment::Cubic(a, c1, c2, b) => vec![*a, *c1, *c2, *b],
+            Segment::Close => vec![],
+        }
+    }
+
+    /// Offset every point in this segment by `(dx, dy)`.
+    pub fn translate(self, dx: f32, dy: f32) -> Self {
+        let t = |v: Vec2| Vec2::new(v.x + dx, v.y + dy);
+        match self {
+            Segment::MoveTo(p) => Segment::MoveTo(t(p)),
+            Segment::Line(a, b) => Segment::Line(t(a), t(b)),
+            Segment::Quad(a, c, b) => Segment::Quad(t(a), t(c), t(b)),
+            Segment::Cubic(a, c1, c2, b) => Segment::Cubic(t(a), t(c1), t(c2), t(b)),
+            Segment::Close => Segment::Close,
         }
     }
 }
@@ -179,6 +197,18 @@ fn cubic_point(a: Vec2, c1: Vec2, c2: Vec2, b: Vec2, t: f32) -> Vec2 {
 }
 
 impl Path {
+    /// Offset every point in the path's segments by `(dx, dy)`.
+    pub fn translate(self, dx: f32, dy: f32) -> Self {
+        Path {
+            segments: self
+                .segments
+                .into_iter()
+                .map(|s| s.translate(dx, dy))
+                .collect(),
+            closed: self.closed,
+        }
+    }
+
     /// Axis-aligned bounding box. Returns `None` for an empty path.
     pub fn bounding_box(&self) -> Option<(f32, f32, f32, f32)> {
         let points: Vec<Vec2> = self.segments.iter().flat_map(|s| s.points()).collect();
@@ -359,6 +389,15 @@ impl<T> Animated<T> {
         T: 'static,
     {
         Animated::new(move |t| self.resolve(curve(t)))
+    }
+
+    /// Transform the wrapped value by `f` at resolve time.
+    pub fn map<U>(self, f: impl Fn(T) -> U + 'static) -> Animated<U>
+    where
+        T: 'static,
+        U: 'static,
+    {
+        Animated::new(move |t| f(self.resolve(t)))
     }
 }
 

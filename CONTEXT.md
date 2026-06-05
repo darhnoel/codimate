@@ -9,6 +9,23 @@ Codimate animations are authored from the concept outward. Describe the
 concept's state, derive a trace from its logic, project each trace moment into a
 Scene, then let Layer 3 timing compose the result into `f(t) → Scene`.
 
+## Slot Model
+A Slot is a View-only layout position. It is not concept state, not a Scene
+Node, and not a runtime layout pass.
+
+- The screen is a Slot: `viewport.slot()`.
+- Groups are invisible Slots: `screen.centered_child(size)`.
+- Rows and columns derive child Slots: `group.row(size, gap, count)` and
+  `group.column(size, gap, count)`.
+- Neighboring labels derive from visual Slots: `slot.below(label_size, gap)`,
+  `slot.above(...)`, `slot.left_of(...)`, and `slot.right_of(...)`.
+- Text belongs in Slots: `centered_text(&slot, ...)`.
+- Items are concept identity; Slots are visual positions.
+- Motion maps item identity from an old Slot to a new Slot.
+
+Use Slots in View code before reaching for raw coordinates. Raw coordinates are
+acceptable for design constants, but repeated alignment math belongs in Slots.
+
 ## Ubiquitous Language
 
 **Concept**: The idea being explained: a sort, a matrix multiplication, a
@@ -28,6 +45,20 @@ pivot, compute output cell, or fire signal group. Avoid "keyframe".
 
 **View**: The projection from State plus Trace Event into a Scene. View code
 decides what the concept looks like; it does not decide the concept's logic.
+
+**Slot**: A View-only visual position with a top-left point and size. Slots are
+build-time helpers for layout authoring; they are not Scene Nodes, not concept
+State, and not renderer objects. Use Slots to derive rows, columns, labels, and
+group positions before constructing Nodes.
+
+**Box**: A reusable View authoring component for a styled rectangular visual
+area, usually positioned by a Slot. A Box may have a corner radius, fill, stroke
+width, and stroke color. "Box" is the canonical authoring term; "rounded
+rectangle" describes the geometry used to draw it. Box starts as View-layer
+authoring sugar that returns a Scene Node; it is not a new core Node variant.
+Its styling mirrors `PathNode`: prefer `.style(...)`, allow `.fill(...)` and
+`.stroke(...)`, and let builder order decide overrides. Use `box_in(&slot)` for
+a Slot-sized Box, and `box_at(center, size)` for a moving center-positioned Box.
 
 **Motion**: Timeless movement/styling choices used by a View, such as easing,
 paths, reveals, pulses, and style transitions. Motion has no duration.
@@ -86,6 +117,13 @@ value goes 0→1, showing flow / "firing". The Connection (line + arrowhead) sta
 fully drawn the whole time; the Pulse is an *overlay* on top — it does not reveal
 the line. Positioned by a point a fraction along the path, measured by arc length.
 
+**Formula**: A typeset mathematical expression (e.g. `F = ma`, `F_{net} = 0`,
+`\vec{F}`). Authored as a **LaTeX-subset string** and realized as a *group of
+glyph Paths* (Layer 2), so every symbol is a first-class animatable Path —
+never a flat text blob and never a rendered image. An "equation" is just a
+Formula that contains `=`; prefer "Formula" as the general term. Not "label",
+"tex", "MathText", or "math image".
+
 **ConcreteScene**: A Scene resolved at a specific `t` — all values are plain `f32`,
 `Color`, `Vec2`, etc. Produced by `scene.resolve(t)`.
 Never say "snapshot" or "frame state".
@@ -130,6 +168,7 @@ codimate/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
 │   ├── codimate-layout/    # taffy integration, layout pass
+│   ├── codimate-math/      # Formula: LaTeX -> Typst subprocess -> Paths (see ADR 0005)
 │   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
 │   ├── codimate-previewer/ # interactive preview window, sampled from Playable
 │   └── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)

@@ -62,6 +62,41 @@ fn examples() -> Vec<Example> {
             h: 600.0,
             build: codimate_example_merge_sort::create,
         },
+        Example {
+            name: "swap-a-b",
+            desc: "Minimal identity-vs-layout example: stable items A/B swap between fixed slots",
+            w: 960.0,
+            h: 540.0,
+            build: codimate_example_swap_a_b::create,
+        },
+        Example {
+            name: "dijkstra",
+            desc: "Dijkstra's shortest path: settling nodes and relaxing edges on a weighted graph",
+            w: 900.0,
+            h: 600.0,
+            build: codimate_example_dijkstra::create,
+        },
+        Example {
+            name: "faster-dijkstra",
+            desc: "Paper explainer: BMSSP, pivots, and bounded recursion break Dijkstra's sorting barrier",
+            w: 1280.0,
+            h: 720.0,
+            build: codimate_example_faster_dijkstra::create,
+        },
+        Example {
+            name: "knapsack",
+            desc: "0/1 knapsack: a DP table filled cell-by-cell, then backtracked for the chosen items",
+            w: 960.0,
+            h: 600.0,
+            build: codimate_example_knapsack::create,
+        },
+        Example {
+            name: "newton-laws",
+            desc: "Newton's three laws: inertia, force-driven acceleration, and action-reaction pairs",
+            w: 1280.0,
+            h: 720.0,
+            build: codimate_example_newton_laws::create,
+        },
     ]
 }
 

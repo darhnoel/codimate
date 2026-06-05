@@ -4,6 +4,7 @@ members = [
     "crates/codimate-core",
     "crates/codimate-animation",
     "crates/codimate-layout",
+    "crates/codimate-math",
     "crates/codimate-render",
     "crates/codimate-export",
     "crates/codimate-previewer",
@@ -19,5 +20,10 @@ members = [
     "examples/quick-sort",
     "examples/three-sum",
     "examples/hanoi-tower",
+    "examples/swap-a-b",
     "examples/symspell",
+    "examples/dijkstra",
+    "examples/knapsack",
+    "examples/faster-dijkstra",
+    "examples/newton-laws",
 ]

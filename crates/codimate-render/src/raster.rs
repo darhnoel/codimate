@@ -5,7 +5,7 @@
 //! neutral model lives in [`crate::command`]. Pure and deterministic — no I/O.
 
 use crate::command::{render_commands, RenderCommand, RenderFrame, Renderer};
-use codimate_core::{Color, Segment};
+use codimate_core::{Color, Segment, TextAlign};
 use codimate_layout::{LayoutFrame, Viewport};
 
 /// Bundled monospace font embedded in the binary (DejaVu Sans Mono).
@@ -108,8 +108,17 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
             } => {
                 let mut builder = PathBuilder::new();
                 let mut first = true;
+                let mut saw_close = false;
                 for segment in segments.iter() {
                     match segment {
+                        Segment::MoveTo(p) => {
+                            builder.move_to(p.x, p.y);
+                            first = false;
+                        }
+                        Segment::Close => {
+                            builder.close();
+                            saw_close = true;
+                        }
                         Segment::Line(from, to) => {
                             if first {
                                 builder.move_to(from.x, from.y);
@@ -133,7 +142,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
                         }
                     }
                 }
-                if *closed {
+                if *closed && !saw_close {
                     builder.close();
                 }
                 if let Some(path) = builder.finish() {
@@ -164,8 +173,9 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
                 text,
                 font_size,
                 fill,
+                align,
             } => {
-                render_text(&mut pixmap, *x, *y, text, *font_size, *fill);
+                render_text(&mut pixmap, *x, *y, text, *font_size, *fill, *align);
             }
         }
     }
@@ -194,6 +204,7 @@ fn render_text(
     text: &str,
     font_size: f32,
     fill: Color,
+    align: TextAlign,
 ) {
     use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
 
@@ -212,7 +223,11 @@ fn render_text(
     let w = pixmap.width();
     let h = pixmap.height();
     let data = pixmap.data_mut();
-    let mut cursor_x = x;
+    let width = text_width(&scaled, &font, text);
+    let mut cursor_x = match align {
+        TextAlign::Left => x,
+        TextAlign::Center => x - width / 2.0,
+    };
 
     for ch in text.chars() {
         let gid = font.glyph_id(ch);
@@ -260,6 +275,18 @@ fn render_text(
 
         cursor_x += scaled.h_advance(gid);
     }
+}
+
+fn text_width(
+    scaled: &ab_glyph::PxScaleFont<&ab_glyph::FontRef<'_>>,
+    font: &ab_glyph::FontRef<'_>,
+    text: &str,
+) -> f32 {
+    use ab_glyph::{Font, ScaleFont};
+
+    text.chars()
+        .map(|ch| scaled.h_advance(font.glyph_id(ch)))
+        .sum()
 }
 
 fn to_sk_color(color: Color) -> tiny_skia::Color {

@@ -1,0 +1,10 @@
+[package]
+name = "codimate-math"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codimate-core = { path = "../codimate-core" }
+# See docs/adr/0005; pinned for deterministic golden images.
+mitex = "0.2"                                          # LaTeX -> Typst markup
+usvg = { version = "0.47", default-features = false }  # SVG  -> path geometry

@@ -3,6 +3,12 @@
 use super::Node;
 use crate::value::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextAlign {
+    Left,
+    Center,
+}
+
 /// A Node (Layer 2): a text label with position, font size, and fill.
 /// Timeless — no duration.
 ///
@@ -27,6 +33,7 @@ pub struct Text {
     text: Animated<String>,
     font_size: Animated<f32>,
     fill: Animated<Color>,
+    align: TextAlign,
 }
 
 /// A `Text` resolved at a specific `t` — all plain values.
@@ -37,6 +44,7 @@ pub struct ConcreteText {
     pub text: String,
     pub font_size: f32,
     pub fill: Color,
+    pub align: TextAlign,
 }
 
 impl Text {
@@ -47,6 +55,7 @@ impl Text {
             text: String::new().into_animated(),
             font_size: 16.0.into_animated(),
             fill: Color::WHITE.into_animated(),
+            align: TextAlign::Left,
         }
     }
 
@@ -75,6 +84,11 @@ impl Text {
         self
     }
 
+    pub fn align(mut self, align: TextAlign) -> Self {
+        self.align = align;
+        self
+    }
+
     pub fn resolve(&self, t: f32) -> ConcreteText {
         ConcreteText {
             x: self.x.resolve(t),
@@ -82,6 +96,7 @@ impl Text {
             text: self.text.resolve(t),
             font_size: self.font_size.resolve(t),
             fill: self.fill.resolve(t),
+            align: self.align,
         }
     }
 }

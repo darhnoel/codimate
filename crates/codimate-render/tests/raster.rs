@@ -1,6 +1,6 @@
 //! Render-pipeline test: rasterize a frame into pixels (tiny-skia backend).
 
-use codimate_core::{circle_path, Color, Segment, Vec2};
+use codimate_core::{circle_path, Color, Segment, TextAlign, Vec2};
 use codimate_layout::Viewport;
 use codimate_render::{rasterize, RenderCommand, RenderFrame};
 
@@ -71,6 +71,7 @@ fn rasterize_text_draws_glyphs() {
             text: "A".to_string(),
             font_size: 24.0,
             fill: Color::RED,
+            align: TextAlign::Left,
         }],
     };
 

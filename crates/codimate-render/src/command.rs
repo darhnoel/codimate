@@ -6,7 +6,7 @@
 //! [`crate::raster`] adapter today, a GPU one tomorrow) consumes this behind
 //! the [`Renderer`] seam (ADR 0001).
 
-use codimate_core::{Color, ConcreteNode, Segment};
+use codimate_core::{Color, ConcreteNode, Segment, TextAlign};
 use codimate_layout::{LayoutFrame, Viewport};
 
 /// Renderer-neutral drawing command produced from a laid-out frame.
@@ -38,6 +38,7 @@ pub enum RenderCommand {
         text: String,
         font_size: f32,
         fill: Color,
+        align: TextAlign,
     },
 }
 
@@ -74,6 +75,7 @@ pub fn render_commands(frame: &LayoutFrame) -> Vec<RenderCommand> {
                 text: text.text.clone(),
                 font_size: text.font_size,
                 fill: text.fill,
+                align: text.align,
             },
         })
         .collect()
@@ -120,6 +122,7 @@ pub fn inject_debug_metadata(frame: &mut RenderFrame) {
             b: 0.0,
             a: 1.0,
         },
+        align: TextAlign::Left,
     });
 }
 

@@ -1,7 +1,7 @@
 use crate::{style::*, MergeSort, MergeSortMotion, MergeSortTiming, MergeStep, MergeTrace, N};
 use codimate_animation::{animation, sequence, Animation, Playable};
 use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate_layout::{box_at, Viewport};
 
 const VIEW_W: f32 = 1000.0;
 const VIEW_H: f32 = 640.0;
@@ -79,44 +79,6 @@ fn text_width(text: &str, font_size: f32) -> f32 {
     text.chars().count() as f32 * font_size * 0.30
 }
 
-fn rounded_rect_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> Path {
-    let r = r.min(w / 2.0).min(h / 2.0);
-    let k = 0.552_284_8 * r;
-    Path {
-        segments: vec![
-            Segment::Line(Vec2::new(x + r, y), Vec2::new(x + w - r, y)),
-            Segment::Cubic(
-                Vec2::new(x + w - r, y),
-                Vec2::new(x + w - r + k, y),
-                Vec2::new(x + w, y + r - k),
-                Vec2::new(x + w, y + r),
-            ),
-            Segment::Line(Vec2::new(x + w, y + r), Vec2::new(x + w, y + h - r)),
-            Segment::Cubic(
-                Vec2::new(x + w, y + h - r),
-                Vec2::new(x + w, y + h - r + k),
-                Vec2::new(x + w - r + k, y + h),
-                Vec2::new(x + w - r, y + h),
-            ),
-            Segment::Line(Vec2::new(x + w - r, y + h), Vec2::new(x + r, y + h)),
-            Segment::Cubic(
-                Vec2::new(x + r, y + h),
-                Vec2::new(x + r - k, y + h),
-                Vec2::new(x, y + h - r + k),
-                Vec2::new(x, y + h - r),
-            ),
-            Segment::Line(Vec2::new(x, y + h - r), Vec2::new(x, y + r)),
-            Segment::Cubic(
-                Vec2::new(x, y + r),
-                Vec2::new(x, y + r - k),
-                Vec2::new(x + r - k, y),
-                Vec2::new(x + r, y),
-            ),
-        ],
-        closed: true,
-    }
-}
-
 fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
     Style::new().fill(fill).stroke(stroke_width, stroke_color)
 }
@@ -165,12 +127,14 @@ fn centered_label(x: f32, y: f32, content: impl Into<String>, font_size: f32, fi
     )
 }
 
-fn box_path(x: impl IntoAnimated<f32>, y: impl IntoAnimated<f32>) -> Animated<Path> {
+fn center_from_top_left(
+    x: impl IntoAnimated<f32>,
+    y: impl IntoAnimated<f32>,
+    size: Vec2,
+) -> Animated<Vec2> {
     let x = x.into_animated();
     let y = y.into_animated();
-    Animated::new(move |t| {
-        rounded_rect_path(x.resolve(t), y.resolve(t), TILE_W, TILE_H, TILE_RADIUS)
-    })
+    Animated::new(move |t| Vec2::new(x.resolve(t) + size.x / 2.0, y.resolve(t) + size.y / 2.0))
 }
 
 fn add_panel(sc: Scene) -> Scene {
@@ -207,9 +171,12 @@ fn add_lane_labels(mut sc: Scene) -> Scene {
 fn add_slots(mut sc: Scene, y: f32) -> Scene {
     for i in 0..N {
         sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(tile_x(i), y, TILE_W, TILE_H, TILE_RADIUS))
-                .style(slot_style()),
+            box_at(
+                Vec2::new(tile_x(i) + TILE_W / 2.0, y + TILE_H / 2.0),
+                Vec2::new(TILE_W, TILE_H),
+            )
+            .radius(TILE_RADIUS)
+            .style(slot_style()),
         );
     }
     sc
@@ -223,15 +190,10 @@ fn add_band(mut sc: Scene, start: usize, end: usize, y: f32, fill: Color) -> Sce
     let pad_y = 7.0;
     let x = tile_x(start) - pad_x;
     let w = tile_x(end - 1) + TILE_W - x + pad_x;
+    let h = TILE_H + pad_y * 2.0;
     sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(
-                x,
-                y - pad_y,
-                w,
-                TILE_H + pad_y * 2.0,
-                TILE_RADIUS + 1.0,
-            ))
+        box_at(Vec2::new(x + w / 2.0, y - pad_y + h / 2.0), Vec2::new(w, h))
+            .radius(TILE_RADIUS + 1.0)
             .style(band_style(fill)),
     );
     sc
@@ -263,7 +225,14 @@ fn add_tile_with_text(
     let offset_x = (TILE_W - text_width(&content, TILE_FONT)) / 2.0;
     let offset_y = (TILE_H + TILE_FONT * 0.45) / 2.0;
 
-    sc = sc.node(path_node().path(box_path(x, y)).style(tile_style));
+    sc = sc.node(
+        box_at(
+            center_from_top_left(x, y, Vec2::new(TILE_W, TILE_H)),
+            Vec2::new(TILE_W, TILE_H),
+        )
+        .radius(TILE_RADIUS)
+        .style(tile_style),
+    );
     sc.node(
         text()
             .x(Animated::new(move |t| text_x.resolve(t) + offset_x))
@@ -326,15 +295,12 @@ fn add_winner(mut sc: Scene, step: &MergeStep, motion: MergeSortMotion) -> Scene
     let rest = tile_style(MOVING_FILL);
     let active = tile_style(PLACED_FILL);
     sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(
-                tile_x(step.output) - 4.0,
-                OUTPUT_Y - 4.0,
-                TILE_W + 8.0,
-                TILE_H + 8.0,
-                TILE_RADIUS + 2.0,
-            ))
-            .style(style(Color::TRANSPARENT, 2.5, ACCENT)),
+        box_at(
+            Vec2::new(tile_x(step.output) + TILE_W / 2.0, OUTPUT_Y + TILE_H / 2.0),
+            Vec2::new(TILE_W + 8.0, TILE_H + 8.0),
+        )
+        .radius(TILE_RADIUS + 2.0)
+        .style(style(Color::TRANSPARENT, 2.5, ACCENT)),
     );
     add_tile(
         sc,

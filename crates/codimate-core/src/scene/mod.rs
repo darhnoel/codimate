@@ -21,7 +21,7 @@ pub use connection::{connection, Connection};
 pub use path::{path_node, ConcretePath, PathNode};
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};
-pub use text::{text, ConcreteText, Text};
+pub use text::{text, ConcreteText, Text, TextAlign};
 
 /// A named point on a shape's boundary.
 ///
