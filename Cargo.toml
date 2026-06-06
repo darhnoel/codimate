@@ -9,6 +9,8 @@ members = [
     "crates/codimate-export",
     "crates/codimate-previewer",
     "crates/codimate-arrange",
+    "crates/codimate-fonts",
+    "crates/codimate-glyph",
     "examples/circle-to-square",
     "examples/demo",
     "examples/neural-net",
@@ -28,4 +30,5 @@ members = [
     "examples/knapsack",
     "examples/faster-dijkstra",
     "examples/newton-laws",
+    "examples/khmer-fade-wave",
 ]

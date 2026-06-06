@@ -1,0 +1,9 @@
+[package]
+name = "codimate-fonts"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+ttf-parser = "0.21"
+
+[dependencies]

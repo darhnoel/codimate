@@ -118,11 +118,17 @@ fully drawn the whole time; the Pulse is an *overlay* on top — it does not rev
 the line. Positioned by a point a fraction along the path, measured by arc length.
 
 **Formula**: A typeset mathematical expression (e.g. `F = ma`, `F_{net} = 0`,
-`\vec{F}`). Authored as a **LaTeX-subset string** and realized as a *group of
-glyph Paths* (Layer 2), so every symbol is a first-class animatable Path —
-never a flat text blob and never a rendered image. An "equation" is just a
-Formula that contains `=`; prefer "Formula" as the general term. Not "label",
-"tex", "MathText", or "math image".
+`\vec{F}`). Authored as a **LaTeX-subset string** and realized as a
+[`GlyphBlock`] — every symbol is a first-class animatable Path — never a flat
+text blob and never a rendered image. An "equation" is just a Formula that
+contains `=`; prefer "Formula" as the general term. Not "label", "tex",
+"MathText", or "math image".
+
+**GlyphBlock**: A [`codimate_core::GlyphBlock`] — a group of animatable
+`PathNode`s with an overall width/height. Produced by both
+[`codimate_math::formula()`] (math → paths) and
+[`codimate_glyph::shape()`] (text → paths). Each glyph is a standalone
+`PathNode` that can be tweened, styled, or transformed independently.
 
 **ConcreteScene**: A Scene resolved at a specific `t` — all values are plain `f32`,
 `Color`, `Vec2`, etc. Produced by `scene.resolve(t)`.
@@ -168,6 +174,8 @@ codimate/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
 │   ├── codimate-layout/    # taffy integration, layout pass
+│   ├── codimate-fonts/     # Central font registry with Unicode coverage
+│   ├── codimate-glyph/     # Text -> animatable glyph paths (harfbuzz + ttf)
 │   ├── codimate-math/      # Formula: LaTeX -> Typst subprocess -> Paths (see ADR 0005)
 │   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
 │   ├── codimate-previewer/ # interactive preview window, sampled from Playable

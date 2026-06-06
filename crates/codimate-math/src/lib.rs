@@ -16,18 +16,9 @@
 
 use std::path::PathBuf;
 
-use codimate_core::{Color, PathNode, Segment, Vec2};
+use codimate_core::{Color, GlyphBlock, PathNode, Segment, Vec2};
 
-/// A typeset formula: positioned glyph outlines plus its bounding box, in a
-/// local space whose origin is the formula's top-left corner.
-pub struct Formula {
-    /// One `PathNode` per glyph, already positioned relative to the origin.
-    pub glyphs: Vec<PathNode>,
-    pub width: f32,
-    pub height: f32,
-}
-
-/// Why a [`formula`] could not be produced.
+/// Why a [`formula()`] could not be produced.
 #[derive(Debug)]
 pub enum FormulaError {
     /// `mitex` could not translate the LaTeX into Typst markup.
@@ -44,31 +35,11 @@ pub enum FormulaError {
 /// group of glyph `Path` nodes filled with `fill`.
 ///
 /// Runs at build time only — see the crate-level One-Law note.
-pub fn formula(latex: &str, fill: Color) -> Result<Formula, FormulaError> {
+pub fn formula(latex: &str, fill: Color) -> Result<GlyphBlock, FormulaError> {
     let typst_src = latex_to_typst(latex)?;
     let svg = typst_compile(&typst_src)?;
     let glyphs = svg_to_paths(&svg, fill)?;
-    Ok(Formula::from_glyphs(glyphs))
-}
-
-impl Formula {
-    fn from_glyphs(glyphs: Vec<PathNode>) -> Self {
-        let (mut min_x, mut min_y, mut max_x, mut max_y) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
-        for g in &glyphs {
-            let resolved = g.resolve(0.0);
-            if let Some((xmin, ymin, xmax, ymax)) = resolved.path.bounding_box() {
-                min_x = min_x.min(xmin);
-                min_y = min_y.min(ymin);
-                max_x = max_x.max(xmax);
-                max_y = max_y.max(ymax);
-            }
-        }
-        Formula {
-            glyphs,
-            width: if max_x > min_x { max_x - min_x } else { 0.0 },
-            height: if max_y > min_y { max_y - min_y } else { 0.0 },
-        }
-    }
+    Ok(GlyphBlock::from_glyphs(glyphs))
 }
 
 // --- pipeline stages ------------------------------------------------------

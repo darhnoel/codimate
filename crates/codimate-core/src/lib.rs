@@ -23,6 +23,7 @@
 
 pub mod builder;
 pub mod easing;
+pub mod glyph;
 pub mod manim_palette;
 pub mod path;
 pub mod scene;
@@ -30,6 +31,7 @@ pub mod value;
 
 pub use builder::*;
 pub use easing::*;
+pub use glyph::*;
 pub use manim_palette as manim;
 pub use path::*;
 pub use scene::*;

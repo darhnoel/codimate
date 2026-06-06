@@ -8,12 +8,7 @@ use crate::command::{render_commands, RenderCommand, RenderFrame, Renderer};
 use codimate_core::{Color, Segment, TextAlign};
 use codimate_layout::{LayoutFrame, Viewport};
 
-/// Bundled primary font embedded in the binary (DejaVu Sans Mono).
-static PRIMARY_FONT_DATA: &[u8] = include_bytes!("../DejaVuSansMono.ttf");
-
-/// Bundled fallback font with broad CJK coverage for examples that include
-/// Japanese text.
-static FALLBACK_FONT_DATA: &[u8] = include_bytes!("../DroidSansFallbackFull.ttf");
+use codimate_fonts::FontRegistry;
 
 /// A finished image in memory: straight RGBA8, 4 bytes per pixel, row-major,
 /// top-left origin.
@@ -212,11 +207,15 @@ fn render_text(
 ) {
     use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
 
-    let primary_font = match FontRef::try_from_slice(PRIMARY_FONT_DATA) {
+    let registry = FontRegistry::global();
+    let primary_font = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
         Ok(f) => f,
         Err(_) => return,
     };
-    let fallback_font = FontRef::try_from_slice(FALLBACK_FONT_DATA).ok();
+    let fallback_font = registry
+        .ids()
+        .filter(|id| *id != registry.char_font('A'))
+        .find_map(|id| FontRef::try_from_slice(registry.data(id)).ok());
     let scale = PxScale::from(font_size);
 
     let fill_r = (fill.r * 255.0) as u32;

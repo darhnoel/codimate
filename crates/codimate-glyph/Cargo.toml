@@ -1,11 +1,10 @@
 [package]
-name = "codimate-render"
+name = "codimate-glyph"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 codimate-core = { path = "../codimate-core" }
 codimate-fonts = { path = "../codimate-fonts" }
-codimate-layout = { path = "../codimate-layout" }
-tiny-skia = "0.12.0"
-ab_glyph = "0.2.32"
+harfbuzz_rs = "2.0"
+ttf-parser = "0.21"
