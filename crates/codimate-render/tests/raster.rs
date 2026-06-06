@@ -86,6 +86,50 @@ fn rasterize_text_draws_glyphs() {
 }
 
 #[test]
+fn rasterize_japanese_text_uses_real_glyphs_not_missing_boxes() {
+    let japanese_frame = RenderFrame {
+        name: "japanese-text-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(360.0, 96.0),
+        commands: vec![RenderCommand::Text {
+            x: 20.0,
+            y: 58.0,
+            text: "私は猫が好きです".to_string(),
+            font_size: 32.0,
+            fill: Color::RED,
+            align: TextAlign::Left,
+        }],
+    };
+    let missing_frame = RenderFrame {
+        name: "missing-text-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(360.0, 96.0),
+        commands: vec![RenderCommand::Text {
+            x: 20.0,
+            y: 58.0,
+            text: "\u{E000}\u{E000}\u{E000}\u{E000}\u{E000}\u{E000}\u{E000}\u{E000}".to_string(),
+            font_size: 32.0,
+            fill: Color::RED,
+            align: TextAlign::Left,
+        }],
+    };
+
+    let japanese = rasterize(&japanese_frame);
+    let missing = rasterize(&missing_frame);
+
+    let has_ink = (0..japanese.height)
+        .any(|y| (0..japanese.width).any(|x| japanese.pixel(x, y) != (0, 0, 0, 255)));
+    assert!(
+        has_ink,
+        "Japanese text rasterization produced no visible output"
+    );
+    assert_ne!(
+        japanese.rgba, missing.rgba,
+        "Japanese text rendered like repeated missing-glyph boxes"
+    );
+}
+
+#[test]
 fn rasterize_path_fill_and_stroke_produce_distinct_regions() {
     // Filled red rect (4,4)-(20,20) with white stroke width=4.
     // Stroke band: left edge covers x=2..6. Fill covers x=4..20.

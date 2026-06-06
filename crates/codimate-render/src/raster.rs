@@ -8,8 +8,12 @@ use crate::command::{render_commands, RenderCommand, RenderFrame, Renderer};
 use codimate_core::{Color, Segment, TextAlign};
 use codimate_layout::{LayoutFrame, Viewport};
 
-/// Bundled monospace font embedded in the binary (DejaVu Sans Mono).
-static FONT_DATA: &[u8] = include_bytes!("../DejaVuSansMono.ttf");
+/// Bundled primary font embedded in the binary (DejaVu Sans Mono).
+static PRIMARY_FONT_DATA: &[u8] = include_bytes!("../DejaVuSansMono.ttf");
+
+/// Bundled fallback font with broad CJK coverage for examples that include
+/// Japanese text.
+static FALLBACK_FONT_DATA: &[u8] = include_bytes!("../DroidSansFallbackFull.ttf");
 
 /// A finished image in memory: straight RGBA8, 4 bytes per pixel, row-major,
 /// top-left origin.
@@ -208,12 +212,12 @@ fn render_text(
 ) {
     use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
 
-    let font = match FontRef::try_from_slice(FONT_DATA) {
+    let primary_font = match FontRef::try_from_slice(PRIMARY_FONT_DATA) {
         Ok(f) => f,
         Err(_) => return,
     };
+    let fallback_font = FontRef::try_from_slice(FALLBACK_FONT_DATA).ok();
     let scale = PxScale::from(font_size);
-    let scaled = font.as_scaled(scale);
 
     let fill_r = (fill.r * 255.0) as u32;
     let fill_g = (fill.g * 255.0) as u32;
@@ -223,13 +227,15 @@ fn render_text(
     let w = pixmap.width();
     let h = pixmap.height();
     let data = pixmap.data_mut();
-    let width = text_width(&scaled, &font, text);
+    let width = text_width(&primary_font, fallback_font.as_ref(), scale, text);
     let mut cursor_x = match align {
         TextAlign::Left => x,
         TextAlign::Center => x - width / 2.0,
     };
 
     for ch in text.chars() {
+        let font = font_for_char(ch, &primary_font, fallback_font.as_ref());
+        let scaled = font.as_scaled(scale);
         let gid = font.glyph_id(ch);
         let glyph = gid.with_scale_and_position(scale, point(cursor_x, y));
 
@@ -277,15 +283,43 @@ fn render_text(
     }
 }
 
+fn font_for_char<'a, 'font>(
+    ch: char,
+    primary: &'a ab_glyph::FontRef<'font>,
+    fallback: Option<&'a ab_glyph::FontRef<'font>>,
+) -> &'a ab_glyph::FontRef<'font> {
+    if supports_char(primary, ch) {
+        primary
+    } else if let Some(fallback) = fallback {
+        if supports_char(fallback, ch) {
+            fallback
+        } else {
+            primary
+        }
+    } else {
+        primary
+    }
+}
+
+fn supports_char(font: &ab_glyph::FontRef<'_>, ch: char) -> bool {
+    use ab_glyph::Font;
+
+    ch.is_whitespace() || font.glyph_id(ch).0 != 0
+}
+
 fn text_width(
-    scaled: &ab_glyph::PxScaleFont<&ab_glyph::FontRef<'_>>,
-    font: &ab_glyph::FontRef<'_>,
+    primary: &ab_glyph::FontRef<'_>,
+    fallback: Option<&ab_glyph::FontRef<'_>>,
+    scale: ab_glyph::PxScale,
     text: &str,
 ) -> f32 {
     use ab_glyph::{Font, ScaleFont};
 
     text.chars()
-        .map(|ch| scaled.h_advance(font.glyph_id(ch)))
+        .map(|ch| {
+            let font = font_for_char(ch, primary, fallback);
+            font.as_scaled(scale).h_advance(font.glyph_id(ch))
+        })
         .sum()
 }
 
