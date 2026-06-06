@@ -7,6 +7,7 @@ publish = false
 [dependencies]
 codimate-animation = { path = "../../crates/codimate-animation" }
 codimate-core = { path = "../../crates/codimate-core" }
+codimate-effects = { path = "../../crates/codimate-effects" }
 codimate-fonts = { path = "../../crates/codimate-fonts" }
 codimate-glyph = { path = "../../crates/codimate-glyph" }
 codimate-layout = { path = "../../crates/codimate-layout" }

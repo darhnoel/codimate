@@ -63,6 +63,45 @@ a Slot-sized Box, and `box_at(center, size)` for a moving center-positioned Box.
 **Motion**: Timeless movement/styling choices used by a View, such as easing,
 paths, reveals, pulses, and style transitions. Motion has no duration.
 
+**Effect**: A pure, timeless authoring recipe for a visual change, such as fade,
+write, transform, indicate, or grow. An Effect resolves with normalized `t` into
+a Scene, accepts Scene-shaped input in v1, has no duration by itself, and never
+mutates Nodes or renderer state. Effect is a concrete authoring value, not a
+trait hierarchy. `Effect::ease` reuses the same Easing curves as
+`Animated<T>::ease`. Timing turns an Effect into an Animation at an explicit
+`effect.animate(name, duration)` boundary.
+
+**Manim Behavior Parity**: Manim's `manimlib.animation` modules are a behavior
+reference, not an API or lifecycle contract. Codimate may provide pure Effect or
+Composition equivalents for useful behavior families, but it does not copy
+Manim's mutable `begin`/`finish` lifecycle, scene cleanup side effects, mobject
+updaters, or method-animation mutation.
+
+**Effect Boundary**: Effects support View and Motion authoring. They do not
+replace Concept, State, Algorithm, Trace, Trace Event, or Timing. Educational
+examples still derive meaningful Trace Events first; Effects only describe how a
+Scene appears or changes within one event.
+
+**Transform Effect**: An Effect that interpolates one Scene into another. In v1,
+Transform requires matching Scene structure and matching Node counts; Codimate
+does not guess correspondences between different Scene shapes. Mismatched
+Transforms are rejected explicitly rather than silently approximated.
+
+**Fade Effect**: An Effect that changes Scene opacity without adding or removing
+Nodes. `fade_in` resolves from transparent styling to the original Scene, and
+`fade_out` resolves from the original Scene to transparent styling.
+
+**Reveal Effect**: An Effect that makes a Scene visible over local `t` in a
+Codimate-native way. Reveal may draw path-like geometry progressively and fade
+non-path Nodes, while keeping Scene structure stable. Reveal is the Codimate
+name for the useful behavior family behind Manim's creation/write animations.
+In v1, PathNode and Connection reveal by path prefix, while Circle, Rect, Text,
+and Pulse fade in.
+
+**Scene Opacity**: A pure Scene-level visual operation that multiplies the alpha
+of every color-bearing Node without changing Scene structure. Effects may use
+Scene Opacity, but it is not Effect-specific.
+
 **Timing**: The Layer 3 durations assigned to Trace Events and holds. Timing is
 where pacing lives; never hide duration inside Motion or View.
 
@@ -173,6 +212,7 @@ codimate/
 ├── crates/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
+│   ├── codimate-effects/   # Pure timeless visual change recipes + explicit Timing adapter
 │   ├── codimate-layout/    # taffy integration, layout pass
 │   ├── codimate-fonts/     # Central font registry with Unicode coverage
 │   ├── codimate-glyph/     # Text -> animatable glyph paths (harfbuzz + ttf)

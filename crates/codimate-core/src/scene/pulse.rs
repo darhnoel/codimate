@@ -1,6 +1,6 @@
 //! The `Pulse`: an overlay dot that travels along a Connection by arc length.
 
-use super::{ConcreteCircle, Connection};
+use super::{ConcreteCircle, Connection, TimeCurve};
 use crate::value::*;
 
 /// A marker (dot) that travels along a Connection's path as progress goes 0→1.
@@ -47,6 +47,43 @@ impl Pulse {
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        let fill = self.fill;
+        Pulse {
+            fill: Animated::new(move |t| {
+                let mut color = fill.resolve(t);
+                color.a *= multiplier.resolve(t);
+                color
+            }),
+            ..self
+        }
+    }
+
+    pub(crate) fn ease(self, curve: TimeCurve) -> Self {
+        let progress_curve = curve.clone();
+        let radius_curve = curve.clone();
+        let fill_curve = curve.clone();
+        Pulse {
+            source: self.source.ease(curve.clone()),
+            progress: Animated::new(move |t| self.progress.resolve(progress_curve(t))),
+            radius: Animated::new(move |t| self.radius.resolve(radius_curve(t))),
+            fill: Animated::new(move |t| self.fill.resolve(fill_curve(t))),
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Result<Self, super::SceneTransformError> {
+        Ok(Pulse {
+            source: self.source.try_lerp_to(&to.source)?,
+            progress: tween(self.progress.clone(), to.progress.clone()),
+            radius: tween(self.radius.clone(), to.radius.clone()),
+            fill: tween(self.fill.clone(), to.fill.clone()),
+        })
+    }
+
+    pub(crate) fn reveal(self, progress: Animated<f32>) -> Self {
+        self.with_opacity(progress)
     }
 
     /// Resolve the underlying Connection, find the point at `progress` along

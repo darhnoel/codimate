@@ -1,6 +1,6 @@
 //! The `Text` Node: a label with animated position, font size, and fill.
 
-use super::Node;
+use super::{Node, TimeCurve};
 use crate::value::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,6 +87,52 @@ impl Text {
     pub fn align(mut self, align: TextAlign) -> Self {
         self.align = align;
         self
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        let fill = self.fill;
+        Text {
+            fill: Animated::new(move |t| {
+                let mut color = fill.resolve(t);
+                color.a *= multiplier.resolve(t);
+                color
+            }),
+            ..self
+        }
+    }
+
+    pub(crate) fn ease(self, curve: TimeCurve) -> Self {
+        let x_curve = curve.clone();
+        let y_curve = curve.clone();
+        let text_curve = curve.clone();
+        let font_size_curve = curve.clone();
+        Text {
+            x: Animated::new(move |t| self.x.resolve(x_curve(t))),
+            y: Animated::new(move |t| self.y.resolve(y_curve(t))),
+            text: Animated::new(move |t| self.text.resolve(text_curve(t))),
+            font_size: Animated::new(move |t| self.font_size.resolve(font_size_curve(t))),
+            fill: Animated::new(move |t| self.fill.resolve(curve(t))),
+            align: self.align,
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Self {
+        let from_text = self.text.clone();
+        let to_text = to.text.clone();
+        Text {
+            x: tween(self.x.clone(), to.x.clone()),
+            y: tween(self.y.clone(), to.y.clone()),
+            text: Animated::new(move |t| {
+                if t < 0.5 {
+                    from_text.resolve(t)
+                } else {
+                    to_text.resolve(t)
+                }
+            }),
+            font_size: tween(self.font_size.clone(), to.font_size.clone()),
+            fill: tween(self.fill.clone(), to.fill.clone()),
+            align: to.align,
+        }
     }
 
     pub fn resolve(&self, t: f32) -> ConcreteText {

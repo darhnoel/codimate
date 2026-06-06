@@ -1,6 +1,6 @@
 //! The `Circle` Node: animated centre, radius, and fill.
 
-use super::{AnchorKind, Node};
+use super::{AnchorKind, Node, TimeCurve};
 use crate::value::*;
 
 /// A Node (Layer 2): pure data whose every property is an `Animated<T>`.
@@ -77,6 +77,39 @@ impl Circle {
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        let fill = self.fill;
+        Circle {
+            fill: Animated::new(move |t| {
+                let mut color = fill.resolve(t);
+                color.a *= multiplier.resolve(t);
+                color
+            }),
+            ..self
+        }
+    }
+
+    pub(crate) fn ease(self, curve: TimeCurve) -> Self {
+        let x_curve = curve.clone();
+        let y_curve = curve.clone();
+        let radius_curve = curve.clone();
+        Circle {
+            x: Animated::new(move |t| self.x.resolve(x_curve(t))),
+            y: Animated::new(move |t| self.y.resolve(y_curve(t))),
+            radius: Animated::new(move |t| self.radius.resolve(radius_curve(t))),
+            fill: Animated::new(move |t| self.fill.resolve(curve(t))),
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Self {
+        Circle {
+            x: tween(self.x.clone(), to.x.clone()),
+            y: tween(self.y.clone(), to.y.clone()),
+            radius: tween(self.radius.clone(), to.radius.clone()),
+            fill: tween(self.fill.clone(), to.fill.clone()),
+        }
     }
 
     /// A named anchor point derived from the shape's animated geometry.

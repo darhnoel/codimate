@@ -16,12 +16,18 @@ mod pulse;
 mod rect;
 mod text;
 
+use std::sync::Arc;
+
+use crate::value::{Animated, IntoAnimated};
+
 pub use circle::{circle, Circle, ConcreteCircle};
 pub use connection::{connection, Connection};
 pub use path::{path_node, ConcretePath, PathNode};
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};
 pub use text::{text, ConcreteText, Text, TextAlign};
+
+pub(crate) type TimeCurve = Arc<dyn Fn(f32) -> f32>;
 
 /// A named point on a shape's boundary.
 ///
@@ -67,6 +73,23 @@ pub enum ConcreteNode {
     Rect(ConcreteRect),
     Path(ConcretePath),
     Text(ConcreteText),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SceneTransformError {
+    ChildCountMismatch {
+        from: usize,
+        to: usize,
+    },
+    NodeKindMismatch {
+        index: usize,
+        from: &'static str,
+        to: &'static str,
+    },
+    WaypointCountMismatch {
+        from: usize,
+        to: usize,
+    },
 }
 
 impl From<Circle> for SceneNode {
@@ -120,6 +143,80 @@ impl Node for SceneNode {
     }
 }
 
+impl SceneNode {
+    fn kind(&self) -> &'static str {
+        match self {
+            SceneNode::Circle(_) => "Circle",
+            SceneNode::Rect(_) => "Rect",
+            SceneNode::Path(_) => "Path",
+            SceneNode::Text(_) => "Text",
+            SceneNode::Connection(_) => "Connection",
+            SceneNode::Pulse(_) => "Pulse",
+        }
+    }
+
+    fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        match self {
+            SceneNode::Circle(circle) => SceneNode::Circle(circle.with_opacity(multiplier)),
+            SceneNode::Rect(rect) => SceneNode::Rect(rect.with_opacity(multiplier)),
+            SceneNode::Path(path) => SceneNode::Path(path.with_opacity(multiplier)),
+            SceneNode::Text(text) => SceneNode::Text(text.with_opacity(multiplier)),
+            SceneNode::Connection(conn) => SceneNode::Connection(conn.with_opacity(multiplier)),
+            SceneNode::Pulse(pulse) => SceneNode::Pulse(pulse.with_opacity(multiplier)),
+        }
+    }
+
+    fn ease(self, curve: TimeCurve) -> Self {
+        match self {
+            SceneNode::Circle(circle) => SceneNode::Circle(circle.ease(curve)),
+            SceneNode::Rect(rect) => SceneNode::Rect(rect.ease(curve)),
+            SceneNode::Path(path) => SceneNode::Path(path.ease(curve)),
+            SceneNode::Text(text) => SceneNode::Text(text.ease(curve)),
+            SceneNode::Connection(conn) => SceneNode::Connection(conn.ease(curve)),
+            SceneNode::Pulse(pulse) => SceneNode::Pulse(pulse.ease(curve)),
+        }
+    }
+
+    fn reveal(self, progress: Animated<f32>) -> Self {
+        match self {
+            SceneNode::Circle(circle) => SceneNode::Circle(circle.with_opacity(progress)),
+            SceneNode::Rect(rect) => SceneNode::Rect(rect.with_opacity(progress)),
+            SceneNode::Path(path) => SceneNode::Path(path.reveal(progress)),
+            SceneNode::Text(text) => SceneNode::Text(text.with_opacity(progress)),
+            SceneNode::Connection(conn) => SceneNode::Connection(conn.reveal(progress)),
+            SceneNode::Pulse(pulse) => SceneNode::Pulse(pulse.reveal(progress)),
+        }
+    }
+
+    fn try_lerp_to(&self, to: &Self, index: usize) -> Result<Self, SceneTransformError> {
+        match (self, to) {
+            (SceneNode::Circle(from), SceneNode::Circle(to)) => {
+                Ok(SceneNode::Circle(from.try_lerp_to(to)))
+            }
+            (SceneNode::Rect(from), SceneNode::Rect(to)) => {
+                Ok(SceneNode::Rect(from.try_lerp_to(to)))
+            }
+            (SceneNode::Path(from), SceneNode::Path(to)) => {
+                Ok(SceneNode::Path(from.try_lerp_to(to)))
+            }
+            (SceneNode::Text(from), SceneNode::Text(to)) => {
+                Ok(SceneNode::Text(from.try_lerp_to(to)))
+            }
+            (SceneNode::Connection(from), SceneNode::Connection(to)) => {
+                Ok(SceneNode::Connection(from.try_lerp_to(to)?))
+            }
+            (SceneNode::Pulse(from), SceneNode::Pulse(to)) => {
+                Ok(SceneNode::Pulse(from.try_lerp_to(to)?))
+            }
+            (from, to) => Err(SceneTransformError::NodeKindMismatch {
+                index,
+                from: from.kind(),
+                to: to.kind(),
+            }),
+        }
+    }
+}
+
 /// A Scene (Layer 2): a tree of Nodes resolved by the same normalized `t`.
 ///
 /// ```
@@ -153,6 +250,58 @@ impl Scene {
     pub fn node(mut self, node: impl Into<SceneNode>) -> Self {
         self.children.push(node.into());
         self
+    }
+
+    pub fn with_opacity(self, multiplier: impl IntoAnimated<f32>) -> Self {
+        let multiplier = multiplier.into_animated();
+        Scene {
+            children: self
+                .children
+                .into_iter()
+                .map(|node| node.with_opacity(multiplier.clone()))
+                .collect(),
+        }
+    }
+
+    pub fn ease(self, curve: impl Fn(f32) -> f32 + 'static) -> Self {
+        let curve = Arc::new(curve);
+        Scene {
+            children: self
+                .children
+                .into_iter()
+                .map(|node| node.ease(curve.clone()))
+                .collect(),
+        }
+    }
+
+    pub fn reveal(self, progress: impl IntoAnimated<f32>) -> Self {
+        let progress = progress.into_animated();
+        Scene {
+            children: self
+                .children
+                .into_iter()
+                .map(|node| node.reveal(progress.clone()))
+                .collect(),
+        }
+    }
+
+    pub fn try_lerp_to(&self, to: &Self) -> Result<Self, SceneTransformError> {
+        if self.children.len() != to.children.len() {
+            return Err(SceneTransformError::ChildCountMismatch {
+                from: self.children.len(),
+                to: to.children.len(),
+            });
+        }
+
+        let children = self
+            .children
+            .iter()
+            .zip(&to.children)
+            .enumerate()
+            .map(|(index, (from, to))| from.try_lerp_to(to, index))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Scene { children })
     }
 
     /// `f(t) → ConcreteScene` — resolves every child Node at the same `t`.

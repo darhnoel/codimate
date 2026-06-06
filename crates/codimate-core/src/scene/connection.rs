@@ -1,6 +1,6 @@
 //! The `Connection` Node: a stroked line between two anchors, optional arrowhead.
 
-use super::ConcretePath;
+use super::{ConcretePath, TimeCurve};
 use crate::{path::*, value::*};
 
 /// A Node (Layer 2) that links two shape Anchors with a stroked line,
@@ -33,6 +33,7 @@ pub struct Connection {
     stroke_width: Animated<f32>,
     stroke_color: Animated<Color>,
     arrow_size: Animated<f32>,
+    reveal_progress: Animated<f32>,
 }
 
 impl Connection {
@@ -44,6 +45,7 @@ impl Connection {
             stroke_width: 1.0.into_animated(),
             stroke_color: Color::WHITE.into_animated(),
             arrow_size: 0.0.into_animated(),
+            reveal_progress: 1.0.into_animated(),
         }
     }
 
@@ -55,6 +57,73 @@ impl Connection {
         self.stroke_width = width.into_animated();
         self.stroke_color = color.into_animated();
         self
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        let stroke_color = self.stroke_color;
+        Connection {
+            stroke_color: Animated::new(move |t| {
+                let mut color = stroke_color.resolve(t);
+                color.a *= multiplier.resolve(t);
+                color
+            }),
+            ..self
+        }
+    }
+
+    pub(crate) fn ease(self, curve: TimeCurve) -> Self {
+        let start_curve = curve.clone();
+        let end_curve = curve.clone();
+        let stroke_width_curve = curve.clone();
+        let stroke_color_curve = curve.clone();
+        let arrow_size_curve = curve.clone();
+        Connection {
+            start: Animated::new(move |t| self.start.resolve(start_curve(t))),
+            end: Animated::new(move |t| self.end.resolve(end_curve(t))),
+            waypoints: self
+                .waypoints
+                .into_iter()
+                .map(|waypoint| {
+                    let curve = curve.clone();
+                    Animated::new(move |t| waypoint.resolve(curve(t)))
+                })
+                .collect(),
+            stroke_width: Animated::new(move |t| self.stroke_width.resolve(stroke_width_curve(t))),
+            stroke_color: Animated::new(move |t| self.stroke_color.resolve(stroke_color_curve(t))),
+            arrow_size: Animated::new(move |t| self.arrow_size.resolve(arrow_size_curve(t))),
+            reveal_progress: Animated::new(move |t| self.reveal_progress.resolve(curve(t))),
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Result<Self, super::SceneTransformError> {
+        if self.waypoints.len() != to.waypoints.len() {
+            return Err(super::SceneTransformError::WaypointCountMismatch {
+                from: self.waypoints.len(),
+                to: to.waypoints.len(),
+            });
+        }
+
+        Ok(Connection {
+            start: tween(self.start.clone(), to.start.clone()),
+            end: tween(self.end.clone(), to.end.clone()),
+            waypoints: self
+                .waypoints
+                .iter()
+                .zip(&to.waypoints)
+                .map(|(from, to)| tween(from.clone(), to.clone()))
+                .collect(),
+            stroke_width: tween(self.stroke_width.clone(), to.stroke_width.clone()),
+            stroke_color: tween(self.stroke_color.clone(), to.stroke_color.clone()),
+            arrow_size: tween(self.arrow_size.clone(), to.arrow_size.clone()),
+            reveal_progress: tween(self.reveal_progress.clone(), to.reveal_progress.clone()),
+        })
+    }
+
+    pub(crate) fn reveal(self, progress: Animated<f32>) -> Self {
+        Connection {
+            reveal_progress: progress,
+            ..self
+        }
     }
 
     pub fn arrow(mut self, size: impl IntoAnimated<f32>) -> Self {
@@ -124,15 +193,18 @@ impl Connection {
             segments.push(Segment::Line(w2, back));
         }
 
-        ConcretePath {
-            path: Path {
-                segments,
-                closed: false,
+        prefix_concrete_path(
+            ConcretePath {
+                path: Path {
+                    segments,
+                    closed: false,
+                },
+                fill: Color::TRANSPARENT,
+                stroke_width: sw,
+                stroke_color: sc,
             },
-            fill: Color::TRANSPARENT,
-            stroke_width: sw,
-            stroke_color: sc,
-        }
+            self.reveal_progress.resolve(t),
+        )
     }
 
     /// Resolve just the main line, excluding arrowhead geometry.
@@ -141,16 +213,24 @@ impl Connection {
         let (segments, _, _, _) = self.resolve_main(t);
         let sw = self.stroke_width.resolve(t);
         let sc = self.stroke_color.resolve(t);
-        ConcretePath {
-            path: Path {
-                segments,
-                closed: false,
+        prefix_concrete_path(
+            ConcretePath {
+                path: Path {
+                    segments,
+                    closed: false,
+                },
+                fill: Color::TRANSPARENT,
+                stroke_width: sw,
+                stroke_color: sc,
             },
-            fill: Color::TRANSPARENT,
-            stroke_width: sw,
-            stroke_color: sc,
-        }
+            self.reveal_progress.resolve(t),
+        )
     }
+}
+
+fn prefix_concrete_path(mut path: ConcretePath, progress: f32) -> ConcretePath {
+    path.path = path.path.prefix(progress);
+    path
 }
 
 /// Lowercase free constructor so scenes read like English.

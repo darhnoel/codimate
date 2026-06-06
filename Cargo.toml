@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/codimate-core",
     "crates/codimate-animation",
+    "crates/codimate-effects",
     "crates/codimate-layout",
     "crates/codimate-math",
     "crates/codimate-render",

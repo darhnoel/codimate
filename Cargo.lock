@@ -176,6 +176,14 @@ name = "codimate-core"
 version = "0.1.0"
 
 [[package]]
+name = "codimate-effects"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+]
+
+[[package]]
 name = "codimate-example-attention-is-all-you-need-architecture"
 version = "0.1.0"
 dependencies = [
@@ -251,6 +259,7 @@ version = "0.1.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",
+ "codimate-effects",
  "codimate-export",
  "codimate-fonts",
  "codimate-glyph",

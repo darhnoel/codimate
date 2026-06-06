@@ -92,6 +92,117 @@ fn cubic_point(a: Vec2, c1: Vec2, c2: Vec2, b: Vec2, t: f32) -> Vec2 {
 }
 
 impl Path {
+    /// Split into independent contours at `MoveTo` boundaries.
+    ///
+    /// Each returned `Path` starts with its own `MoveTo` and has `closed: false`.
+    /// This is useful for animations that need per-contour control (e.g. `prefix`).
+    pub fn split_contours(&self) -> Vec<Path> {
+        let mut contours: Vec<Vec<Segment>> = Vec::new();
+        let mut current: Vec<Segment> = Vec::new();
+        for seg in &self.segments {
+            if matches!(seg, Segment::MoveTo(_)) && !current.is_empty() {
+                contours.push(current);
+                current = Vec::new();
+            }
+            current.push(*seg);
+        }
+        if !current.is_empty() {
+            contours.push(current);
+        }
+        contours
+            .into_iter()
+            .map(|segs| Path {
+                segments: segs,
+                closed: false,
+            })
+            .collect()
+    }
+
+    /// First `t` fraction of this single-contour path's arc length.
+    ///
+    /// Panics (via `debug_assert`) if the path contains multiple contours.
+    /// Returns an empty path for `t ≤ 0.0` and a full clone for `t ≥ 1.0`.
+    pub fn prefix(&self, t: f32) -> Self {
+        let t = t.clamp(0.0, 1.0);
+        if self.segments.is_empty() || t <= 0.0 {
+            return Path {
+                segments: Vec::new(),
+                closed: false,
+            };
+        }
+        if t >= 1.0 {
+            return self.clone();
+        }
+        debug_assert!(
+            self.segments
+                .iter()
+                .skip(1)
+                .all(|s| !matches!(s, Segment::MoveTo(_))),
+            "prefix only works on single-contour paths; call split_contours first"
+        );
+
+        const STEPS: usize = 20;
+        let mut cumul: Vec<f32> = Vec::with_capacity(self.segments.len());
+        let mut total = 0.0;
+        for seg in &self.segments {
+            let (a, c1, c2, b) = seg.to_cubic();
+            let mut seg_len = 0.0;
+            for i in 0..STEPS {
+                let u1 = i as f32 / STEPS as f32;
+                let u2 = (i + 1) as f32 / STEPS as f32;
+                let p1 = cubic_point(a, c1, c2, b, u1);
+                let p2 = cubic_point(a, c1, c2, b, u2);
+                let dx = p2.x - p1.x;
+                let dy = p2.y - p1.y;
+                seg_len += (dx * dx + dy * dy).sqrt();
+            }
+            total += seg_len;
+            cumul.push(total);
+        }
+
+        if total <= 0.0 {
+            return Path {
+                segments: Vec::new(),
+                closed: false,
+            };
+        }
+
+        let target = t * total;
+        let cut_idx = cumul
+            .iter()
+            .position(|&c| c >= target)
+            .unwrap_or(self.segments.len() - 1);
+        let prev_len = if cut_idx > 0 { cumul[cut_idx - 1] } else { 0.0 };
+        let seg_len = cumul[cut_idx] - prev_len;
+        let frac_in_seg = if seg_len > 0.0 {
+            (target - prev_len) / seg_len
+        } else {
+            1.0
+        };
+
+        let mut out: Vec<Segment> = Vec::new();
+        let full_start = if let Segment::MoveTo(pt) = self.segments[0] {
+            out.push(Segment::MoveTo(pt));
+            1
+        } else {
+            0
+        };
+
+        for i in full_start..cut_idx {
+            out.push(self.segments[i]);
+        }
+
+        // Truncated segment at the cut — find the arc-length point, draw a line to it
+        let (a, c1, c2, b) = self.segments[cut_idx].to_cubic();
+        let end_pt = cubic_point(a, c1, c2, b, frac_in_seg);
+        out.push(Segment::Line(a, end_pt));
+
+        Path {
+            segments: out,
+            closed: false,
+        }
+    }
+
     /// Offset every point in the path's segments by `(dx, dy)`.
     pub fn translate(self, dx: f32, dy: f32) -> Self {
         Path {

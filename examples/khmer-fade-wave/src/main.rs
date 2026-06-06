@@ -1,75 +1,88 @@
-use codimate_animation::animation;
+use codimate_animation::{animation, sequence};
 use codimate_core::*;
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_fonts::FontRegistry;
 use codimate_layout::Viewport;
 
+struct GlyphPaths {
+    base: Path,
+    contours: Vec<Path>,
+}
+
 fn main() {
     let viewport = Viewport::new(800.0, 600.0);
 
-    // 1. Shape Khmer text into glyph paths
     let font_id = FontRegistry::global().char_font('ខ');
     let block = codimate_glyph::shape("ជំរាបសួរ", font_id, 72.0, Color::WHITE).unwrap();
 
-    // 2. Center the block in the viewport
     let ox = (viewport.width - block.width) / 2.0;
     let oy = viewport.height / 2.0;
 
-    // 3. Pre-compute rest & wave paths (glyph-by-glyph)
-    let glyphs: Vec<(Path, Path)> = block
+    let glyphs: Vec<GlyphPaths> = block
         .glyphs
         .iter()
-        .map(|g| {
-            let resolved = g.resolve(0.0);
-            let rest = resolved.path.translate(ox, oy);
-            let wave = rest.clone().translate(0.0, -18.0);
-            (rest, wave)
+        .map(|gn| {
+            let resolved = gn.resolve(0.0);
+            let base = resolved.path.translate(ox, oy);
+            let contours = base.split_contours();
+            GlyphPaths { base, contours }
         })
         .collect();
 
-    // 4. Timing constants
-    let fade_dur = 1.0;
+    let n = glyphs.len() as f32;
+    let reveal_dur = 1.2;
     let wave_dur = 1.2;
     let stagger = 0.06;
-    let total = fade_dur + wave_dur + (glyphs.len() as f32 - 1.0) * stagger;
+    let wave_total = wave_dur + (n - 1.0) * stagger;
+    let glyph_reveal_span = 1.0 / n.max(1.0);
 
-    // 5. Scene: each glyph fades in, then waves with stagger
-    let mut s = scene();
-    for (i, (rest, wave)) in glyphs.iter().enumerate() {
-        let i = i as f32;
-        let rest = rest.clone();
-        let wave = wave.clone();
-        let wave_start = fade_dur + i * stagger;
-
-        let path = Animated::new({
-            let total = total;
-            move |t| {
-                let secs = t * total;
-                if secs < wave_start {
-                    rest.clone()
-                } else if secs < wave_start + wave_dur {
-                    let local = (secs - wave_start) / wave_dur;
-                    let bounce = if local < 0.5 { local * 2.0 } else { 2.0 - local * 2.0 };
-                    Path::lerp(rest.clone(), wave.clone(), bounce)
-                } else {
-                    rest.clone()
-                }
-            }
-        });
-        let fill = Animated::new(move |t| {
-            let secs = t * total;
-            if secs < fade_dur {
-                Color::lerp(Color::TRANSPARENT, Color::WHITE, secs / fade_dur)
-            } else {
-                Color::WHITE
-            }
-        });
-        s = s.node(path_node().path(path).fill(fill));
+    let mut reveal_scene = scene();
+    for (gi, glyph) in glyphs.iter().enumerate() {
+        let start = gi as f32 * glyph_reveal_span;
+        let end = start + glyph_reveal_span;
+        for path in &glyph.contours {
+            let path = path.clone();
+            let revealed = Animated::new(move |t| {
+                let local = ((t - start) / (end - start)).clamp(0.0, 1.0);
+                path.prefix(local)
+            });
+            reveal_scene = reveal_scene.node(
+                path_node()
+                    .path(revealed)
+                    .stroke(2.0, Color::WHITE)
+                    .fill(Color::TRANSPARENT),
+            );
+        }
     }
+    let reveal_anim = animation("reveal khmer contours", reveal_dur, reveal_scene);
 
-    let playable = animation("KhmerFadeWave", total, s);
+    let mut wave_scene = scene();
+    for (gi, glyph) in glyphs.iter().enumerate() {
+        let gi = gi as f32;
+        let base = glyph.base.clone();
 
-    // 6. Export
+        let path = Animated::new(move |t| {
+            let secs = t * wave_total;
+            let local = secs - gi * stagger;
+            if local <= 0.0 {
+                base.clone()
+            } else if local < wave_dur {
+                let bounce = if local / wave_dur < 0.5 {
+                    (local / wave_dur) * 2.0
+                } else {
+                    2.0 - (local / wave_dur) * 2.0
+                };
+                base.clone().translate(0.0, -18.0 * bounce)
+            } else {
+                base.clone()
+            }
+        });
+        wave_scene = wave_scene.node(path_node().path(path).fill(Color::WHITE));
+    }
+    let wave_anim = animation("wave khmer contours", wave_total, wave_scene);
+
+    let playable = sequence("KhmerFadeWave", [reveal_anim, wave_anim]);
+
     let output = std::path::Path::new("results/khmer-fade-wave.mp4");
     if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).ok();

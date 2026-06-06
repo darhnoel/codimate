@@ -1,6 +1,6 @@
 //! The `PathNode`: a Bézier shape with animated geometry, fill, and stroke.
 
-use super::AnchorKind;
+use super::{AnchorKind, TimeCurve};
 use crate::{path::*, value::*};
 
 /// A Node (Layer 2): a path shape whose geometry and fill are animated.
@@ -80,6 +80,54 @@ impl PathNode {
         self.stroke_width = width.into_animated();
         self.stroke_color = color.into_animated();
         self
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        let fill = self.fill;
+        let stroke_color = self.stroke_color;
+        let stroke_multiplier = multiplier.clone();
+        PathNode {
+            fill: Animated::new(move |t| {
+                let mut color = fill.resolve(t);
+                color.a *= multiplier.resolve(t);
+                color
+            }),
+            stroke_color: Animated::new(move |t| {
+                let mut color = stroke_color.resolve(t);
+                color.a *= stroke_multiplier.resolve(t);
+                color
+            }),
+            ..self
+        }
+    }
+
+    pub(crate) fn ease(self, curve: TimeCurve) -> Self {
+        let path_curve = curve.clone();
+        let fill_curve = curve.clone();
+        let stroke_width_curve = curve.clone();
+        PathNode {
+            path: Animated::new(move |t| self.path.resolve(path_curve(t))),
+            fill: Animated::new(move |t| self.fill.resolve(fill_curve(t))),
+            stroke_width: Animated::new(move |t| self.stroke_width.resolve(stroke_width_curve(t))),
+            stroke_color: Animated::new(move |t| self.stroke_color.resolve(curve(t))),
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Self {
+        PathNode {
+            path: tween(self.path.clone(), to.path.clone()),
+            fill: tween(self.fill.clone(), to.fill.clone()),
+            stroke_width: tween(self.stroke_width.clone(), to.stroke_width.clone()),
+            stroke_color: tween(self.stroke_color.clone(), to.stroke_color.clone()),
+        }
+    }
+
+    pub(crate) fn reveal(self, progress: Animated<f32>) -> Self {
+        let path = self.path;
+        PathNode {
+            path: Animated::new(move |t| path.resolve(t).prefix(progress.resolve(t))),
+            ..self
+        }
     }
 
     /// Apply a coordinated visual style.

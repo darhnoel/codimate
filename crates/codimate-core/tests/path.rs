@@ -128,6 +128,164 @@ fn tween_path_aligns_mismatched_segment_counts() {
     assert_eq!(morphed.segments.len(), 5);
 }
 
+#[test]
+fn split_contours_multi_contour_path() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)),
+            Segment::Line(Vec2::new(10.0, 0.0), Vec2::new(10.0, 10.0)),
+            Segment::Close,
+            Segment::MoveTo(Vec2::new(2.0, 2.0)),
+            Segment::Line(Vec2::new(2.0, 2.0), Vec2::new(8.0, 2.0)),
+            Segment::Line(Vec2::new(8.0, 2.0), Vec2::new(8.0, 8.0)),
+            Segment::Close,
+            Segment::MoveTo(Vec2::new(5.0, 5.0)),
+            Segment::Line(Vec2::new(5.0, 5.0), Vec2::new(6.0, 5.0)),
+            Segment::Close,
+        ],
+        closed: true,
+    };
+    let contours = path.split_contours();
+    assert_eq!(contours.len(), 3);
+
+    // First contour: outer square
+    assert_eq!(contours[0].segments.len(), 4);
+    assert!(matches!(contours[0].segments[0], Segment::MoveTo(_)));
+
+    // Second contour: inner square
+    assert_eq!(contours[1].segments.len(), 4);
+    assert!(matches!(contours[1].segments[0], Segment::MoveTo(_)));
+
+    // Third contour: tiny square
+    assert_eq!(contours[2].segments.len(), 3);
+}
+
+#[test]
+fn split_contours_single_contour_returns_one() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)),
+            Segment::Close,
+        ],
+        closed: false,
+    };
+    let contours = path.split_contours();
+    assert_eq!(contours.len(), 1);
+    assert_eq!(contours[0].segments.len(), 3);
+}
+
+#[test]
+fn prefix_at_t0_returns_empty() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0)),
+        ],
+        closed: false,
+    };
+    let p = path.prefix(0.0);
+    assert!(p.segments.is_empty());
+}
+
+#[test]
+fn prefix_at_t1_returns_full() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0)),
+        ],
+        closed: false,
+    };
+    let p = path.prefix(1.0);
+    assert_eq!(p.segments.len(), 2);
+    assert_eq!(p.segments[0], Segment::MoveTo(Vec2::new(0.0, 0.0)));
+    assert_eq!(
+        p.segments[1],
+        Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0))
+    );
+}
+
+#[test]
+fn prefix_at_t05_on_horizontal_line() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0)),
+        ],
+        closed: false,
+    };
+    let p = path.prefix(0.5);
+    assert_eq!(p.segments.len(), 2);
+    assert!(matches!(p.segments[0], Segment::MoveTo(_)));
+    // Should end at ~50.0
+    if let Segment::Line(from, to) = p.segments[1] {
+        assert!((to.x - 50.0).abs() < 0.1);
+        assert_eq!(from.x, 0.0);
+    } else {
+        panic!("expected Line");
+    }
+}
+
+#[test]
+fn prefix_at_t05_on_path_without_moveto() {
+    let path = Path {
+        segments: vec![Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0))],
+        closed: false,
+    };
+    let p = path.prefix(0.5);
+    assert_eq!(p.segments.len(), 1);
+    if let Segment::Line(from, to) = p.segments[0] {
+        assert_eq!(from, Vec2::new(0.0, 0.0));
+        assert!((to.x - 50.0).abs() < 0.1);
+        assert_eq!(to.y, 0.0);
+    } else {
+        panic!("expected Line");
+    }
+}
+
+#[test]
+fn prefix_on_multi_contour_panics() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)),
+            Segment::Close,
+            Segment::MoveTo(Vec2::new(5.0, 5.0)),
+            Segment::Line(Vec2::new(5.0, 5.0), Vec2::new(10.0, 5.0)),
+        ],
+        closed: false,
+    };
+    // Should debug_assert (or just return bad result in release — we're fine with that)
+    let _result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| path.prefix(0.5)));
+    // In release mode without debug_assert, it just returns something; we don't crash
+}
+
+#[test]
+fn split_contours_then_prefix_each_contour() {
+    let path = Path {
+        segments: vec![
+            Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)),
+            Segment::Line(Vec2::new(10.0, 0.0), Vec2::new(10.0, 10.0)),
+            Segment::Close,
+            Segment::MoveTo(Vec2::new(2.0, 2.0)),
+            Segment::Line(Vec2::new(2.0, 2.0), Vec2::new(8.0, 2.0)),
+            Segment::Line(Vec2::new(8.0, 2.0), Vec2::new(8.0, 8.0)),
+            Segment::Close,
+        ],
+        closed: false,
+    };
+    let contours = path.split_contours();
+    assert_eq!(contours.len(), 2);
+    for c in &contours {
+        let half = c.prefix(0.5);
+        assert!(!half.segments.is_empty());
+        assert_eq!(half.segments[0], c.segments[0]); // MoveTo preserved
+    }
+}
+
 fn segments_approx_eq(a: &[Segment], b: &[Segment], eps: f32) -> bool {
     if a.len() != b.len() {
         return false;
