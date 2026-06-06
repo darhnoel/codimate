@@ -21,49 +21,70 @@ fn main() {
     let glyphs: Vec<GlyphPaths> = block
         .glyphs
         .iter()
-        .map(|gn| {
-            let resolved = gn.resolve(0.0);
+        .map(|glyph| {
+            let resolved = glyph.resolve(0.0);
             let base = resolved.path.translate(ox, oy);
             let contours = base.split_contours();
             GlyphPaths { base, contours }
         })
         .collect();
+    let units = visual_units(&glyphs);
 
-    let n = glyphs.len() as f32;
-    let reveal_dur = 1.2;
+    let n = units.len() as f32;
+    let reveal_dur = 2.0;
     let wave_dur = 1.2;
     let stagger = 0.06;
     let wave_total = wave_dur + (n - 1.0) * stagger;
-    let glyph_reveal_span = 1.0 / n.max(1.0);
+    let unit_span = 1.0 / n.max(1.0);
+    let contour_fraction = 0.68;
 
     let mut reveal_scene = scene();
-    for (gi, glyph) in glyphs.iter().enumerate() {
-        let start = gi as f32 * glyph_reveal_span;
-        let end = start + glyph_reveal_span;
-        for path in &glyph.contours {
+    for (ui, unit) in units.iter().enumerate() {
+        let start = ui as f32 * unit_span;
+        let end = start + unit_span;
+        let contour_end = start + unit_span * contour_fraction;
+
+        for path in &unit.contours {
             let path = path.clone();
             let revealed = Animated::new(move |t| {
-                let local = ((t - start) / (end - start)).clamp(0.0, 1.0);
+                let local = ((t - start) / (contour_end - start)).clamp(0.0, 1.0);
                 path.prefix(local)
+            });
+            let stroke_color = Animated::new(move |t| {
+                let fill_t = ((t - contour_end) / (end - contour_end)).clamp(0.0, 1.0);
+                Color {
+                    a: 1.0 - fill_t,
+                    ..Color::WHITE
+                }
             });
             reveal_scene = reveal_scene.node(
                 path_node()
                     .path(revealed)
-                    .stroke(2.0, Color::WHITE)
+                    .stroke(2.0, stroke_color)
                     .fill(Color::TRANSPARENT),
             );
         }
+
+        let fill_path = unit.base.clone();
+        let fill_color = Animated::new(move |t| {
+            let fill_t = ((t - contour_end) / (end - contour_end)).clamp(0.0, 1.0);
+            Color {
+                a: fill_t,
+                ..Color::WHITE
+            }
+        });
+        reveal_scene = reveal_scene.node(path_node().path(fill_path).fill(fill_color));
     }
     let reveal_anim = animation("reveal khmer contours", reveal_dur, reveal_scene);
 
     let mut wave_scene = scene();
-    for (gi, glyph) in glyphs.iter().enumerate() {
-        let gi = gi as f32;
-        let base = glyph.base.clone();
+    for (ui, unit) in units.iter().enumerate() {
+        let ui = ui as f32;
+        let base = unit.base.clone();
 
         let path = Animated::new(move |t| {
             let secs = t * wave_total;
-            let local = secs - gi * stagger;
+            let local = secs - ui * stagger;
             if local <= 0.0 {
                 base.clone()
             } else if local < wave_dur {
@@ -93,4 +114,38 @@ fn main() {
         Ok(()) => println!("Written {}", output.display()),
         Err(e) => eprintln!("Export failed: {e}"),
     }
+}
+
+fn visual_units(glyphs: &[GlyphPaths]) -> Vec<GlyphPaths> {
+    let mut units = Vec::new();
+    let mut index = 0;
+
+    if glyphs.len() >= 2 {
+        units.push(combine_glyphs(&glyphs[0..2]));
+        index = 2;
+    }
+
+    for glyph in &glyphs[index..] {
+        units.push(GlyphPaths {
+            base: glyph.base.clone(),
+            contours: glyph.contours.clone(),
+        });
+    }
+
+    units
+}
+
+fn combine_glyphs(glyphs: &[GlyphPaths]) -> GlyphPaths {
+    let mut base = Path {
+        segments: Vec::new(),
+        closed: false,
+    };
+    let mut contours = Vec::new();
+
+    for glyph in glyphs {
+        base.segments.extend(glyph.base.segments.iter().copied());
+        contours.extend(glyph.contours.iter().cloned());
+    }
+
+    GlyphPaths { base, contours }
 }
