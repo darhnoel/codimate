@@ -2,8 +2,10 @@ use std::{env, fs, path::PathBuf};
 
 fn main() {
     let ws = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .parent().unwrap()
-        .parent().unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
         .to_path_buf();
     let manifest_path = ws.join("examples.manifest.toml");
     let manifest = fs::read_to_string(&manifest_path)

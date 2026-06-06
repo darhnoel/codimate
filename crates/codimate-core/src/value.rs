@@ -114,8 +114,6 @@ impl Default for Style {
     }
 }
 
-
-
 /// Layer 1 — a value that resolves at time `t ∈ [0.0, 1.0]`.
 ///
 /// Timeless (no `duration`) and pure (`resolve` depends only on `t`).

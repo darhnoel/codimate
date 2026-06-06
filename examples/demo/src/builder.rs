@@ -43,8 +43,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, trace, motion, timing) =
-            self.0.take().expect("demo: state, algorithm, motion required");
+        let (state, trace, motion, timing) = self
+            .0
+            .take()
+            .expect("demo: state, algorithm, motion required");
         build_demo(name, state, trace, motion, timing)
     }
 

@@ -5,8 +5,7 @@ use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-type Inner =
-    ExplanationBuilder<SwapAB, fn(SwapAB) -> SwapABTrace, SwapABMotion, SwapABTiming>;
+type Inner = ExplanationBuilder<SwapAB, fn(SwapAB) -> SwapABTrace, SwapABMotion, SwapABTiming>;
 
 pub struct ExplainBuilder(Inner);
 
@@ -37,8 +36,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("swap-a-b: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("swap-a-b: state, algorithm, motion required");
         build_swap_a_b(name, algorithm(state), motion, timing)
     }
 

@@ -1,7 +1,7 @@
 use codimate_animation::{animation, sequence, Animation, Playable};
 use codimate_core::{
-    circle_path, ease_in_out, manim, path_node, rect_path, scene, tween, Animated, Color, Path,
-    Scene, Style, ExplanationBuilder,
+    circle_path, ease_in_out, manim, path_node, rect_path, scene, tween, Animated, Color,
+    ExplanationBuilder, Path, Scene, Style,
 };
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
@@ -104,7 +104,8 @@ fn step_scene(step: ShapeStep, motion: ShapeMotion) -> Scene {
     }
 }
 
-type Inner = ExplanationBuilder<ShapeDemo, fn(ShapeDemo) -> Vec<ShapeStep>, ShapeMotion, ShapeTiming>;
+type Inner =
+    ExplanationBuilder<ShapeDemo, fn(ShapeDemo) -> Vec<ShapeStep>, ShapeMotion, ShapeTiming>;
 
 pub struct ExplainBuilder(Inner);
 
@@ -135,8 +136,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("circle-to-square: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("circle-to-square: state, algorithm, motion required");
         build_circle_to_square(name, algorithm(state), motion, timing)
     }
 

@@ -1,4 +1,6 @@
-use crate::{view::build_matrix_mult, MatrixMultMotion, MatrixMultTiming, MatrixMultiplication, MatrixTrace};
+use crate::{
+    view::build_matrix_mult, MatrixMultMotion, MatrixMultTiming, MatrixMultiplication, MatrixTrace,
+};
 use codimate_animation::Playable;
 use codimate_core::ExplanationBuilder;
 use codimate_export::{export_mp4, ExportConfig};
@@ -41,8 +43,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("matrix-mult: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("matrix-mult: state, algorithm, motion required");
         build_matrix_mult(name, state, algorithm(state), motion, timing)
     }
 

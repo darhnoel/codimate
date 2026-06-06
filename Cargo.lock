@@ -165,8 +165,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "codimate-arrange"
+version = "0.1.0"
+dependencies = [
+ "codimate-core",
+]
+
+[[package]]
 name = "codimate-core"
 version = "0.1.0"
+
+[[package]]
+name = "codimate-example-attention-is-all-you-need-architecture"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-layout",
+]
 
 [[package]]
 name = "codimate-example-circle-to-square"
@@ -344,6 +361,7 @@ name = "codimate-example-transformer"
 version = "0.1.0"
 dependencies = [
  "codimate-animation",
+ "codimate-arrange",
  "codimate-core",
  "codimate-export",
  "codimate-layout",
@@ -357,6 +375,7 @@ dependencies = [
  "codimate-core",
  "codimate-layout",
  "codimate-render",
+ "jpeg-encoder",
  "png",
 ]
 
@@ -382,6 +401,7 @@ version = "0.1.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",
+ "codimate-example-attention-is-all-you-need-architecture",
  "codimate-example-circle-to-square",
  "codimate-example-connection-pulse",
  "codimate-example-demo",
@@ -698,6 +718,12 @@ name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "jpeg-encoder"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b454d911ac55068f53495488d8ccd0646eaa540c033a28ee15b07838afafb01f"
 
 [[package]]
 name = "js-sys"

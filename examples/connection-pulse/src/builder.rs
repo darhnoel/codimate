@@ -26,10 +26,7 @@ impl ExplainBuilder {
         Self(self.0.state(state))
     }
 
-    pub fn algorithm(
-        mut self,
-        algorithm: fn(ConnectionPulse) -> ConnectionPulseTrace,
-    ) -> Self {
+    pub fn algorithm(mut self, algorithm: fn(ConnectionPulse) -> ConnectionPulseTrace) -> Self {
         let state = self
             .0
             .state

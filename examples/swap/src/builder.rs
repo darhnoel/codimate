@@ -36,8 +36,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, trace, motion, timing) =
-            self.0.take().expect("swap: state, algorithm, motion required");
+        let (state, trace, motion, timing) = self
+            .0
+            .take()
+            .expect("swap: state, algorithm, motion required");
         build_swap(name, state, trace, motion, timing)
     }
 

@@ -41,6 +41,13 @@ w = 1000.0
 h = 800.0
 
 [[example]]
+name = "attention-is-all-you-need-architecture"
+crate = "codimate_example_attention_is_all_you_need_architecture"
+desc = "Original Transformer architecture revealed step by step from sequence-to-sequence to the full paper diagram"
+w = 1280.0
+h = 720.0
+
+[[example]]
 name = "merge-sort"
 crate = "codimate_example_merge_sort"
 desc = "Merge sort with step-by-step comparisons and sliding animations"

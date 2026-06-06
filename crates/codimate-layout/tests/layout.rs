@@ -117,7 +117,7 @@ fn centered_text_places_text_at_slot_center_with_center_alignment() {
     let label = centered_text(&slot, "hello", 20.0, Color::WHITE).resolve(0.0);
 
     assert_eq!(label.x, 480.0);
-    assert!((label.y - 276.4).abs() < 0.001);
+    assert!((label.y - 276.8).abs() < 0.001);
     assert_eq!(label.text, "hello");
     assert_eq!(label.font_size, 20.0);
     assert_eq!(label.fill, Color::WHITE);

@@ -37,8 +37,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("neural-net: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("neural-net: state, algorithm, motion required");
         build_neural_net(name, state, algorithm(state), motion, timing)
     }
 

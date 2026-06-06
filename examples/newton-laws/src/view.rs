@@ -87,10 +87,6 @@ fn fade_in(color: Color, start: f32) -> Animated<Color> {
     })
 }
 
-
-
-
-
 fn add_background(mut sc: Scene, subtitle: &'static str) -> Scene {
     sc = sc.node(
         path_node()

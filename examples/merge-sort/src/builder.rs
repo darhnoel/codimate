@@ -5,7 +5,8 @@ use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-type Inner = ExplanationBuilder<MergeSort, fn(MergeSort) -> MergeTrace, MergeSortMotion, MergeSortTiming>;
+type Inner =
+    ExplanationBuilder<MergeSort, fn(MergeSort) -> MergeTrace, MergeSortMotion, MergeSortTiming>;
 
 pub struct ExplainBuilder(Inner);
 
@@ -36,8 +37,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("merge sort: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("merge sort: state, algorithm, motion required");
         build_merge_sort(name, state, algorithm(state), motion, timing)
     }
 

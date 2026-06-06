@@ -5,8 +5,7 @@ use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
 use std::path::Path;
 
-type Inner =
-    ExplanationBuilder<SymSpell, fn(SymSpell) -> SymTrace, SymSpellMotion, SymSpellTiming>;
+type Inner = ExplanationBuilder<SymSpell, fn(SymSpell) -> SymTrace, SymSpellMotion, SymSpellTiming>;
 
 pub struct ExplainBuilder(Inner);
 
@@ -37,8 +36,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("symspell: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("symspell: state, algorithm, motion required");
         build_symspell(name, state.clone(), algorithm(state), motion, timing)
     }
 

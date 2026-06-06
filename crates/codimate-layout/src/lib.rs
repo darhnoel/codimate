@@ -285,7 +285,13 @@ macro_rules! define_builder {
             }
 
             pub fn count(self, count: usize) -> $slots {
-                $slots(build_slots(self.origin, self.cell_size, self.gap, count, $is_col))
+                $slots(build_slots(
+                    self.origin,
+                    self.cell_size,
+                    self.gap,
+                    count,
+                    $is_col,
+                ))
             }
         }
     };
@@ -341,10 +347,7 @@ pub fn box_in(slot: &Slot) -> BoxBuilder {
 }
 
 /// Construct a `BoxBuilder` from an animated center and fixed size.
-pub fn box_at(
-    center: impl IntoAnimated<Vec2>,
-    size: Vec2,
-) -> BoxBuilder {
+pub fn box_at(center: impl IntoAnimated<Vec2>, size: Vec2) -> BoxBuilder {
     BoxBuilder {
         center: center.into_animated(),
         size,
@@ -417,40 +420,28 @@ fn rounded_rect_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> Path {
     let k = r * 0.552_284_9;
     Path {
         segments: vec![
-            Segment::Line(
-                Vec2::new(x + r, y),
-                Vec2::new(x + w - r, y),
-            ),
+            Segment::Line(Vec2::new(x + r, y), Vec2::new(x + w - r, y)),
             Segment::Cubic(
                 Vec2::new(x + w - r, y),
                 Vec2::new(x + w - r + k, y),
                 Vec2::new(x + w, y + r - k),
                 Vec2::new(x + w, y + r),
             ),
-            Segment::Line(
-                Vec2::new(x + w, y + r),
-                Vec2::new(x + w, y + h - r),
-            ),
+            Segment::Line(Vec2::new(x + w, y + r), Vec2::new(x + w, y + h - r)),
             Segment::Cubic(
                 Vec2::new(x + w, y + h - r),
                 Vec2::new(x + w, y + h - r + k),
                 Vec2::new(x + w - r + k, y + h),
                 Vec2::new(x + w - r, y + h),
             ),
-            Segment::Line(
-                Vec2::new(x + w - r, y + h),
-                Vec2::new(x + r, y + h),
-            ),
+            Segment::Line(Vec2::new(x + w - r, y + h), Vec2::new(x + r, y + h)),
             Segment::Cubic(
                 Vec2::new(x + r, y + h),
                 Vec2::new(x + r - k, y + h),
                 Vec2::new(x, y + h - r + k),
                 Vec2::new(x, y + h - r),
             ),
-            Segment::Line(
-                Vec2::new(x, y + h - r),
-                Vec2::new(x, y + r),
-            ),
+            Segment::Line(Vec2::new(x, y + h - r), Vec2::new(x, y + r)),
             Segment::Cubic(
                 Vec2::new(x, y + r),
                 Vec2::new(x, y + r - k),
@@ -476,7 +467,7 @@ pub fn centered_text(
     let content = content.into();
     let center = slot.center();
     let cx = center.clone().map(|v| v.x);
-    let cy = center.map(move |v| v.y + font_size * 0.32);
+    let cy = center.map(move |v| v.y + font_size * 0.34);
     text()
         .x(cx)
         .y(cy)
@@ -535,9 +526,6 @@ pub struct LayoutFrame {
 }
 
 /// Pure layout boundary: no rendering, no I/O.
-pub fn layout_scene(
-    scene: codimate_core::ConcreteScene,
-    viewport: Viewport,
-) -> LayoutFrame {
+pub fn layout_scene(scene: codimate_core::ConcreteScene, viewport: Viewport) -> LayoutFrame {
     LayoutFrame { viewport, scene }
 }

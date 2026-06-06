@@ -37,8 +37,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("quick-sort: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("quick-sort: state, algorithm, motion required");
         build_quick_sort(name, state, algorithm(state), motion, timing)
     }
 

@@ -26,10 +26,7 @@ impl ExplainBuilder {
         Self(self.0.state(state))
     }
 
-    pub fn algorithm(
-        self,
-        algorithm: fn(FasterDijkstra) -> FasterDijkstraTrace,
-    ) -> Self {
+    pub fn algorithm(self, algorithm: fn(FasterDijkstra) -> FasterDijkstraTrace) -> Self {
         Self(self.0.algorithm(algorithm))
     }
 
@@ -47,8 +44,10 @@ impl ExplainBuilder {
 
     pub fn build(self) -> (Box<dyn Playable>, Viewport) {
         let name = self.0.name;
-        let (state, algorithm, motion, timing) =
-            self.0.take().expect("faster-dijkstra: state, algorithm, motion required");
+        let (state, algorithm, motion, timing) = self
+            .0
+            .take()
+            .expect("faster-dijkstra: state, algorithm, motion required");
         build_faster_dijkstra(name, state, algorithm(state), motion, timing)
     }
 

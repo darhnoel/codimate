@@ -53,8 +53,7 @@ pub fn formula(latex: &str, fill: Color) -> Result<Formula, FormulaError> {
 
 impl Formula {
     fn from_glyphs(glyphs: Vec<PathNode>) -> Self {
-        let (mut min_x, mut min_y, mut max_x, mut max_y) =
-            (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+        let (mut min_x, mut min_y, mut max_x, mut max_y) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
         for g in &glyphs {
             let resolved = g.resolve(0.0);
             if let Some((xmin, ymin, xmax, ymax)) = resolved.path.bounding_box() {
