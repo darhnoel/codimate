@@ -17,8 +17,6 @@ members = [
     "examples/neural-net",
     "examples/matrix-mult",
     "examples/connection-pulse",
-    "examples/transformer",
-    "examples/attention-is-all-you-need-architecture",
     "examples/preview",
     "examples/merge-sort",
     "examples/swap",
