@@ -52,14 +52,22 @@ impl Bitmap {
 /// assert_eq!(img.pixel(32, 32), (255, 0, 0, 255)); // center of the circle is red
 /// ```
 pub fn rasterize(frame: &RenderFrame) -> Bitmap {
-    rasterize_commands(frame.viewport, &frame.commands)
+    rasterize_commands(frame.viewport, &frame.commands, 1.0)
 }
 
-fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap {
+/// Rasterize at `pixel_scale` times the viewport resolution.
+/// All scene coordinates remain unchanged; the scale transform makes them
+/// occupy proportionally more pixels, producing a crisper high-DPI output.
+pub fn rasterize_scaled(frame: &RenderFrame, pixel_scale: f32) -> Bitmap {
+    rasterize_commands(frame.viewport, &frame.commands, pixel_scale.max(1.0))
+}
+
+fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scale: f32) -> Bitmap {
     use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Rect as SkRect, Transform};
 
-    let width = viewport.width.round().max(1.0) as u32;
-    let height = viewport.height.round().max(1.0) as u32;
+    let width = (viewport.width * pixel_scale).round().max(1.0) as u32;
+    let height = (viewport.height * pixel_scale).round().max(1.0) as u32;
+    let transform = Transform::from_scale(pixel_scale, pixel_scale);
 
     let mut pixmap = Pixmap::new(width, height).expect("viewport is at least 1x1");
     pixmap.fill(tiny_skia::Color::from_rgba8(0, 0, 0, 255)); // opaque black background
@@ -81,7 +89,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
                         &path,
                         &paint,
                         FillRule::Winding,
-                        Transform::identity(),
+                        transform,
                         None,
                     );
                 }
@@ -95,7 +103,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
             } => {
                 paint.set_color(to_sk_color(*fill));
                 if let Some(rect) = SkRect::from_xywh(*x, *y, *w, *h) {
-                    pixmap.fill_rect(rect, &paint, Transform::identity(), None);
+                    pixmap.fill_rect(rect, &paint, transform, None);
                 }
             }
             RenderCommand::Path {
@@ -151,7 +159,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
                         &path,
                         &paint,
                         FillRule::Winding,
-                        Transform::identity(),
+                        transform,
                         None,
                     );
 
@@ -162,7 +170,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand]) -> Bitmap 
                             width: *stroke_width,
                             ..Default::default()
                         };
-                        pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+                        pixmap.stroke_path(&path, &paint, &stroke, transform, None);
                     }
                 }
             }
@@ -344,7 +352,7 @@ impl Renderer for RasterRenderer {
     type Error = core::convert::Infallible;
 
     fn render(&mut self, frame: &LayoutFrame) -> Result<(), Self::Error> {
-        self.last = Some(rasterize_commands(frame.viewport, &render_commands(frame)));
+        self.last = Some(rasterize_commands(frame.viewport, &render_commands(frame), 1.0));
         Ok(())
     }
 }

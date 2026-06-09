@@ -34,6 +34,5 @@ members = [
     "examples/newton-laws",
     "examples/khmer-fade-wave",
     "examples/word-appear",
-    "examples/transformer",
-    "examples/attention-is-all-you-need-architecture",
+    "examples/logo-animation",
 ]

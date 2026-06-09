@@ -14,16 +14,14 @@ codimate-example-demo = { path = "../../examples/demo" }
 codimate-example-connection-pulse = { path = "../../examples/connection-pulse" }
 codimate-example-matrix-mult = { path = "../../examples/matrix-mult" }
 codimate-example-neural-net = { path = "../../examples/neural-net" }
-codimate-example-transformer = { path = "../../examples/transformer" }
-codimate-example-attention-is-all-you-need-architecture = { path = "../../examples/attention-is-all-you-need-architecture" }
 codimate-example-merge-sort = { path = "../../examples/merge-sort" }
 codimate-example-swap-a-b = { path = "../../examples/swap-a-b" }
 codimate-example-dijkstra = { path = "../../examples/dijkstra" }
 codimate-example-knapsack = { path = "../../examples/knapsack" }
 codimate-example-faster-dijkstra = { path = "../../examples/faster-dijkstra" }
 codimate-example-newton-laws = { path = "../../examples/newton-laws" }
-
 codimate-example-word-appear = { path = "../../examples/word-appear" }
+codimate-example-logo-animation = { path = "../../examples/logo-animation" }
 minifb = { version = "0.25", default-features = false, features = ["x11"] }
 
 [build-dependencies]

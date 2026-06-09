@@ -16,6 +16,8 @@
 - `knapsack/` — 0/1 knapsack dynamic programming: the value table is filled one
   cell at a time as `max(skip, take)`, then backtracked to highlight which
   items make the optimal solution.
+- `logo-animation/` — Codimate logo mark animation: a white rounded card frames
+  the Khmer `ខ`, then keyboard pills type on and the mark settles.
 - `newton-laws/` — Newton's three laws of motion: inertia, force-driven
   acceleration, and equal/opposite action-reaction force pairs.
 

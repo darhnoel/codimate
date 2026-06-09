@@ -4,7 +4,7 @@
 
 use codimate_animation::Playable;
 use codimate_layout::{layout_scene, Viewport};
-use codimate_render::{rasterize, render_frame, RenderFrame};
+use codimate_render::{rasterize, rasterize_scaled, render_frame, RenderFrame};
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -21,6 +21,10 @@ pub struct ExportConfig {
     /// H.264 CRF (0–51). Lower = better quality, larger file.
     /// Default 23 is a good balance; use 10–15 for demo-quality exports.
     pub crf: u32,
+    /// Render at this many times the viewport resolution before encoding.
+    /// Use with `output_viewport` to produce crisp high-DPI output without
+    /// pixel upscaling artifacts. Default 1.0 (native viewport resolution).
+    pub pixel_scale: f32,
 }
 
 impl ExportConfig {
@@ -30,6 +34,7 @@ impl ExportConfig {
             viewport,
             output_viewport: None,
             crf: 23,
+            pixel_scale: 1.0,
         }
     }
 
@@ -40,6 +45,11 @@ impl ExportConfig {
 
     pub fn crf(mut self, crf: u32) -> Self {
         self.crf = crf;
+        self
+    }
+
+    pub fn pixel_scale(mut self, scale: f32) -> Self {
+        self.pixel_scale = scale;
         self
     }
 }
@@ -227,8 +237,9 @@ pub fn export_mp4(
     config: &ExportConfig,
     output: impl AsRef<Path>,
 ) -> Result<(), ExportError> {
-    let width = config.viewport.width.round().max(1.0) as u32;
-    let height = config.viewport.height.round().max(1.0) as u32;
+    let pixel_scale = config.pixel_scale.max(1.0);
+    let width = (config.viewport.width * pixel_scale).round().max(1.0) as u32;
+    let height = (config.viewport.height * pixel_scale).round().max(1.0) as u32;
     let fps = config.fps.max(1.0);
 
     let mut command = Command::new("ffmpeg");
@@ -246,9 +257,13 @@ pub fn export_mp4(
         .arg("-");
 
     if let Some(output_viewport) = config.output_viewport {
+        let render_viewport = Viewport::new(
+            config.viewport.width * pixel_scale,
+            config.viewport.height * pixel_scale,
+        );
         command
             .arg("-vf")
-            .arg(scale_pad_filter(config.viewport, output_viewport));
+            .arg(scale_pad_filter(render_viewport, output_viewport));
     }
 
     let mut child = command
@@ -265,8 +280,14 @@ pub fn export_mp4(
 
     let stdin = child.stdin.take().ok_or(ExportError::EncoderNotFound)?;
 
-    let frames = playable_frames(playable, *config);
-    write_raw_frames(frames, &mut &stdin)?;
+    for frame in playable_frames(playable, *config) {
+        let bitmap = if pixel_scale > 1.0 {
+            rasterize_scaled(&frame, pixel_scale)
+        } else {
+            rasterize(&frame)
+        };
+        (&stdin).write_all(&bitmap.rgba).map_err(ExportError::Io)?;
+    }
 
     // Drop stdin so ffmpeg sees EOF
     drop(stdin);
