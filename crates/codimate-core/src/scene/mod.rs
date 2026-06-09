@@ -12,6 +12,7 @@
 mod circle;
 mod connection;
 mod path;
+mod primitive;
 mod pulse;
 mod rect;
 mod text;
@@ -24,6 +25,7 @@ use crate::value::{Animated, IntoAnimated};
 pub use circle::{circle, Circle, ConcreteCircle};
 pub use connection::{connection, Connection};
 pub use path::{path_node, ConcretePath, PathNode};
+pub use primitive::{ConcreteGeometry, ConcretePrimitive, Geometry, Primitive, Transformable};
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};
 pub use text::{text, ConcreteText, Text, TextAlign};
