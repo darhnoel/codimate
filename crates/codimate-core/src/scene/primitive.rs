@@ -136,6 +136,111 @@ impl Geometry {
             },
         }
     }
+
+    pub(crate) fn ease_with(self, curve: super::TimeCurve) -> Self {
+        match self {
+            Geometry::Circle { radius } => Geometry::Circle {
+                radius: Animated::new(move |t| radius.resolve(curve(t))),
+            },
+            Geometry::Rect { width, height } => {
+                let width_curve = curve.clone();
+                Geometry::Rect {
+                    width: Animated::new(move |t| width.resolve(width_curve(t))),
+                    height: Animated::new(move |t| height.resolve(curve(t))),
+                }
+            }
+            Geometry::Path { path } => Geometry::Path {
+                path: Animated::new(move |t| path.resolve(curve(t))),
+            },
+            Geometry::Text {
+                text,
+                font_size,
+                align,
+            } => {
+                let text_curve = curve.clone();
+                Geometry::Text {
+                    text: Animated::new(move |t| text.resolve(text_curve(t))),
+                    font_size: Animated::new(move |t| font_size.resolve(curve(t))),
+                    align,
+                }
+            }
+        }
+    }
+
+    pub(crate) fn revealed(self, progress: Animated<f32>) -> Self {
+        match self {
+            Geometry::Path { path } => Geometry::Path {
+                path: Animated::new(move |t| path.resolve(t).prefix(progress.resolve(t))),
+            },
+            other => other,
+        }
+    }
+
+    pub(crate) fn lerp_to(&self, to: &Self) -> Result<Self, super::SceneTransformError> {
+        match (self, to) {
+            (Geometry::Circle { radius: from }, Geometry::Circle { radius: to }) => {
+                Ok(Geometry::Circle {
+                    radius: crate::value::tween(from.clone(), to.clone()),
+                })
+            }
+            (
+                Geometry::Rect {
+                    width: from_w,
+                    height: from_h,
+                },
+                Geometry::Rect {
+                    width: to_w,
+                    height: to_h,
+                },
+            ) => Ok(Geometry::Rect {
+                width: crate::value::tween(from_w.clone(), to_w.clone()),
+                height: crate::value::tween(from_h.clone(), to_h.clone()),
+            }),
+            (Geometry::Path { path: from }, Geometry::Path { path: to }) => Ok(Geometry::Path {
+                path: crate::value::tween(from.clone(), to.clone()),
+            }),
+            (
+                Geometry::Text {
+                    text: from_text,
+                    font_size: from_size,
+                    align: _,
+                },
+                Geometry::Text {
+                    text: to_text,
+                    font_size: to_size,
+                    align,
+                },
+            ) => {
+                let from_text = from_text.clone();
+                let to_text = to_text.clone();
+                Ok(Geometry::Text {
+                    text: Animated::new(move |t| {
+                        if t < 0.5 {
+                            from_text.resolve(t)
+                        } else {
+                            to_text.resolve(t)
+                        }
+                    }),
+                    font_size: crate::value::tween(from_size.clone(), to_size.clone()),
+                    align: *align,
+                })
+            }
+            (from, to) => Err(super::SceneTransformError::NodeKindMismatch {
+                index: 0,
+                from: from.kind_name(),
+                to: to.kind_name(),
+            }),
+        }
+    }
+
+    fn kind_name(&self) -> &'static str {
+        match self {
+            Geometry::Circle { .. } => "Circle",
+            Geometry::Rect { .. } => "Rect",
+            Geometry::Path { .. } => "Path",
+            Geometry::Text { .. } => "Text",
+        }
+    }
 }
 
 /// Named anchor on a center-origin half-extent box (y grows downward on screen).
@@ -227,6 +332,127 @@ impl Primitive {
             )
         })
     }
+
+    // --- geometry mutators (apply only to the matching geometry kind) ---
+
+    /// Set a circle's radius.
+    pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
+        if let Geometry::Circle { radius } = &mut self.geometry {
+            *radius = r.into_animated();
+        }
+        self
+    }
+
+    /// Set a rect's width.
+    pub fn width(mut self, w: impl IntoAnimated<f32>) -> Self {
+        if let Geometry::Rect { width, .. } = &mut self.geometry {
+            *width = w.into_animated();
+        }
+        self
+    }
+
+    /// Set a rect's height.
+    pub fn height(mut self, h: impl IntoAnimated<f32>) -> Self {
+        if let Geometry::Rect { height, .. } = &mut self.geometry {
+            *height = h.into_animated();
+        }
+        self
+    }
+
+    /// Set a path's geometry.
+    pub fn path_data(mut self, p: impl IntoAnimated<Path>) -> Self {
+        if let Geometry::Path { path } = &mut self.geometry {
+            *path = p.into_animated();
+        }
+        self
+    }
+
+    /// Set a text's content.
+    pub fn content(mut self, s: impl IntoAnimated<String>) -> Self {
+        if let Geometry::Text { text, .. } = &mut self.geometry {
+            *text = s.into_animated();
+        }
+        self
+    }
+
+    /// Set a text's font size.
+    pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
+        if let Geometry::Text { font_size, .. } = &mut self.geometry {
+            *font_size = size.into_animated();
+        }
+        self
+    }
+
+    /// Set a text's alignment.
+    pub fn align(mut self, a: TextAlign) -> Self {
+        if let Geometry::Text { align, .. } = &mut self.geometry {
+            *align = a;
+        }
+        self
+    }
+
+    // --- Scene-level operations (mirrors of the old per-node ops) ---
+
+    pub(crate) fn ease(self, curve: super::TimeCurve) -> Self {
+        Primitive {
+            transform: self.transform.ease(curve.clone()),
+            style: {
+                let style = self.style;
+                let style_curve = curve.clone();
+                Animated::new(move |t| style.resolve(style_curve(t)))
+            },
+            geometry: self.geometry.ease_with(curve),
+        }
+    }
+
+    pub(crate) fn with_opacity(self, multiplier: Animated<f32>) -> Self {
+        Primitive {
+            transform: self.transform.with_opacity_mul(multiplier),
+            ..self
+        }
+    }
+
+    /// Reveal: paths draw on progressively; opaque shapes fade in.
+    pub(crate) fn reveal(self, progress: Animated<f32>) -> Self {
+        match &self.geometry {
+            Geometry::Path { .. } => {
+                let geometry = self.geometry.revealed(progress);
+                Primitive { geometry, ..self }
+            }
+            _ => Primitive {
+                transform: self.transform.with_opacity(progress),
+                ..self
+            },
+        }
+    }
+
+    pub(crate) fn try_lerp_to(&self, to: &Self) -> Result<Self, super::SceneTransformError> {
+        Ok(Primitive {
+            transform: self.transform.lerp_to(&to.transform),
+            style: crate::value::tween(self.style.clone(), to.style.clone()),
+            geometry: self.geometry.lerp_to(&to.geometry)?,
+        })
+    }
+}
+
+/// Primitive-first free constructors (backward-compatible addition).
+///
+/// These mirror the old shape names but are prefixed to avoid breaking existing
+/// `circle()/rect()/path_node()/text()` APIs while migration is in progress.
+pub fn primitive_circle(radius: impl IntoAnimated<f32>) -> Primitive {
+    Primitive::circle(radius)
+}
+
+pub fn primitive_rect(width: impl IntoAnimated<f32>, height: impl IntoAnimated<f32>) -> Primitive {
+    Primitive::rect(width, height)
+}
+
+pub fn primitive_path(path: impl IntoAnimated<Path>) -> Primitive {
+    Primitive::path(path)
+}
+
+pub fn primitive_text(text: impl IntoAnimated<String>) -> Primitive {
+    Primitive::text(text)
 }
 
 /// The universal authoring surface, shared by every primitive (ADR 0006 §6).
@@ -304,11 +530,7 @@ pub trait Transformable: Sized {
     }
 
     /// Set just the stroke (width + color), keeping the fill.
-    fn stroke(
-        mut self,
-        width: impl IntoAnimated<f32>,
-        color: impl IntoAnimated<Color>,
-    ) -> Self {
+    fn stroke(mut self, width: impl IntoAnimated<f32>, color: impl IntoAnimated<Color>) -> Self {
         let style = std::mem::replace(self.style_mut(), Style::new().into_animated());
         let width = width.into_animated();
         let color = color.into_animated();
@@ -377,7 +599,10 @@ mod tests {
     fn world_anchor_at_identity_equals_local() {
         // radius 50, no transform: Right anchor is local (50, 0).
         let c = Primitive::circle(50.0);
-        assert_eq!(c.anchor(AnchorKind::Right).resolve(0.0), Vec2::new(50.0, 0.0));
+        assert_eq!(
+            c.anchor(AnchorKind::Right).resolve(0.0),
+            Vec2::new(50.0, 0.0)
+        );
     }
 
     #[test]

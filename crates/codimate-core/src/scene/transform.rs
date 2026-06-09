@@ -114,6 +114,48 @@ impl Transform {
         self.pivot
     }
 
+    /// Remap every animated field's time through `curve` (Scene-level `ease`).
+    pub(crate) fn ease(self, curve: super::TimeCurve) -> Self {
+        let pos = self.pos;
+        let scale = self.scale;
+        let rotation = self.rotation;
+        let opacity = self.opacity;
+        let (c1, c2, c3, c4) = (curve.clone(), curve.clone(), curve.clone(), curve);
+        Transform {
+            pos: Animated::new(move |t| pos.resolve(c1(t))),
+            scale: Animated::new(move |t| scale.resolve(c2(t))),
+            rotation: Animated::new(move |t| rotation.resolve(c3(t))),
+            opacity: Animated::new(move |t| opacity.resolve(c4(t))),
+            pivot: self.pivot,
+        }
+    }
+
+    /// Multiply opacity by `multiplier` at resolve time (Scene-level fade).
+    pub(crate) fn with_opacity_mul(self, multiplier: Animated<f32>) -> Self {
+        let opacity = self.opacity;
+        Transform {
+            opacity: Animated::new(move |t| opacity.resolve(t) * multiplier.resolve(t)),
+            ..self
+        }
+    }
+
+    /// Replace opacity outright (used by `reveal` on opaque shapes).
+    pub(crate) fn with_opacity(self, opacity: Animated<f32>) -> Self {
+        Transform { opacity, ..self }
+    }
+
+    /// Tween every field from `self` toward `to` (Scene morph). Pivot is taken
+    /// from `self`.
+    pub(crate) fn lerp_to(&self, to: &Self) -> Self {
+        Transform {
+            pos: crate::value::tween(self.pos.clone(), to.pos.clone()),
+            scale: crate::value::tween(self.scale.clone(), to.scale.clone()),
+            rotation: crate::value::tween(self.rotation.clone(), to.rotation.clone()),
+            opacity: crate::value::tween(self.opacity.clone(), to.opacity.clone()),
+            pivot: self.pivot,
+        }
+    }
+
     /// `f(t) → ConcreteTransform`. The caller supplies `pivot_point`, the
     /// local-space point named by [`pivot_kind`](Self::pivot_kind), resolved from
     /// the owning geometry's bounds.

@@ -1,7 +1,8 @@
 //! Layer 2 tests: Scene resolves a tree of Nodes into ConcreteScene.
 
 use codimate_core::{
-    circle, rect, scene, tween, Color, ConcreteCircle, ConcreteNode, ConcreteRect, Node,
+    circle, primitive_circle, rect, scene, tween, Color, ConcreteCircle, ConcreteGeometry,
+    ConcreteNode, ConcreteRect, Node, Transformable,
 };
 
 /// Golden test: a Scene resolves each child Node at the same `t`, preserving
@@ -61,4 +62,26 @@ fn node_trait_resolves_primitives_and_scene() {
     assert_eq!(resolve_node(&c, 0.5).x, 5.0);
     assert_eq!(resolve_node(&r, 0.5).width, 15.0);
     assert_eq!(resolve_node(&s, 0.5).children.len(), 2);
+}
+
+#[test]
+fn scene_add_is_alias_for_node() {
+    let s = scene().add(circle().radius(10.0).fill(Color::RED));
+    assert!(matches!(
+        s.resolve(0.0).children[0],
+        ConcreteNode::Circle(_)
+    ));
+}
+
+#[test]
+fn primitive_constructor_resolves_to_primitive_node() {
+    let s = scene().add(primitive_circle(12.0).fill(Color::CYAN).x(40.0));
+    match &s.resolve(0.0).children[0] {
+        ConcreteNode::Primitive(p) => {
+            assert_eq!(p.transform.pos.x, 40.0);
+            assert_eq!(p.style.fill, Color::CYAN);
+            assert_eq!(p.geometry, ConcreteGeometry::Circle { radius: 12.0 });
+        }
+        other => panic!("expected Primitive, got {other:?}"),
+    }
 }

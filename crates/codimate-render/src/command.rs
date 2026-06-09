@@ -6,7 +6,10 @@
 //! [`crate::raster`] adapter today, a GPU one tomorrow) consumes this behind
 //! the [`Renderer`] seam (ADR 0001).
 
-use codimate_core::{Color, ConcreteNode, Segment, TextAlign};
+use codimate_core::{
+    circle_path, rect_path, Color, ConcreteGeometry, ConcreteNode, ConcretePrimitive,
+    ConcreteTransform, Path, Segment, TextAlign, Vec2,
+};
 use codimate_layout::{LayoutFrame, Viewport};
 
 /// Renderer-neutral drawing command produced from a laid-out frame.
@@ -48,37 +51,146 @@ pub fn render_commands(frame: &LayoutFrame) -> Vec<RenderCommand> {
         .scene
         .children
         .iter()
-        .map(|node| match node {
-            ConcreteNode::Circle(circle) => RenderCommand::Circle {
+        .flat_map(|node| match node {
+            ConcreteNode::Primitive(primitive) => render_primitive_commands(primitive),
+            ConcreteNode::Circle(circle) => vec![RenderCommand::Circle {
                 x: circle.x,
                 y: circle.y,
                 radius: circle.radius,
                 fill: circle.fill,
-            },
-            ConcreteNode::Rect(rect) => RenderCommand::Rect {
+            }],
+            ConcreteNode::Rect(rect) => vec![RenderCommand::Rect {
                 x: rect.x,
                 y: rect.y,
                 width: rect.width,
                 height: rect.height,
                 fill: rect.fill,
-            },
-            ConcreteNode::Path(path) => RenderCommand::Path {
+            }],
+            ConcreteNode::Path(path) => vec![RenderCommand::Path {
                 segments: path.path.segments.clone(),
                 closed: path.path.closed,
                 fill: path.fill,
                 stroke_width: path.stroke_width,
                 stroke_color: path.stroke_color,
-            },
-            ConcreteNode::Text(text) => RenderCommand::Text {
+            }],
+            ConcreteNode::Text(text) => vec![RenderCommand::Text {
                 x: text.x,
                 y: text.y,
                 text: text.text.clone(),
                 font_size: text.font_size,
                 fill: text.fill,
                 align: text.align,
-            },
+            }],
         })
         .collect()
+}
+
+fn render_primitive_commands(primitive: &ConcretePrimitive) -> Vec<RenderCommand> {
+    let opacity = primitive.transform.opacity;
+    let mut fill = primitive.style.fill;
+    let mut stroke = primitive.style.stroke_color;
+    fill.a *= opacity;
+    stroke.a *= opacity;
+
+    let scale_factor = average_scale(&primitive.transform).max(0.0);
+
+    match &primitive.geometry {
+        ConcreteGeometry::Circle { radius } => {
+            let local = circle_path(0.0, 0.0, *radius);
+            let world = transform_path(&local, &primitive.transform);
+            vec![RenderCommand::Path {
+                segments: world.segments,
+                closed: world.closed,
+                fill,
+                stroke_width: primitive.style.stroke_width * scale_factor,
+                stroke_color: stroke,
+            }]
+        }
+        ConcreteGeometry::Rect { width, height } => {
+            let local = rect_path(-width / 2.0, -height / 2.0, *width, *height);
+            let world = transform_path(&local, &primitive.transform);
+            vec![RenderCommand::Path {
+                segments: world.segments,
+                closed: world.closed,
+                fill,
+                stroke_width: primitive.style.stroke_width * scale_factor,
+                stroke_color: stroke,
+            }]
+        }
+        ConcreteGeometry::Path { path } => {
+            let world = transform_path(path, &primitive.transform);
+            vec![RenderCommand::Path {
+                segments: world.segments,
+                closed: world.closed,
+                fill,
+                stroke_width: primitive.style.stroke_width * scale_factor,
+                stroke_color: stroke,
+            }]
+        }
+        ConcreteGeometry::Text {
+            text,
+            font_size,
+            align,
+        } => {
+            let origin = transform_point(Vec2::new(0.0, 0.0), &primitive.transform);
+            vec![RenderCommand::Text {
+                x: origin.x,
+                y: origin.y,
+                text: text.clone(),
+                font_size: *font_size * scale_factor.max(0.01),
+                fill,
+                align: *align,
+            }]
+        }
+    }
+}
+
+fn average_scale(transform: &ConcreteTransform) -> f32 {
+    (transform.scale.x.abs() + transform.scale.y.abs()) * 0.5
+}
+
+fn transform_path(path: &Path, transform: &ConcreteTransform) -> Path {
+    Path {
+        segments: path
+            .segments
+            .iter()
+            .copied()
+            .map(|segment| transform_segment(segment, transform))
+            .collect(),
+        closed: path.closed,
+    }
+}
+
+fn transform_segment(segment: Segment, transform: &ConcreteTransform) -> Segment {
+    match segment {
+        Segment::MoveTo(p) => Segment::MoveTo(transform_point(p, transform)),
+        Segment::Line(a, b) => {
+            Segment::Line(transform_point(a, transform), transform_point(b, transform))
+        }
+        Segment::Quad(a, c, b) => Segment::Quad(
+            transform_point(a, transform),
+            transform_point(c, transform),
+            transform_point(b, transform),
+        ),
+        Segment::Cubic(a, c1, c2, b) => Segment::Cubic(
+            transform_point(a, transform),
+            transform_point(c1, transform),
+            transform_point(c2, transform),
+            transform_point(b, transform),
+        ),
+        Segment::Close => Segment::Close,
+    }
+}
+
+fn transform_point(point: Vec2, transform: &ConcreteTransform) -> Vec2 {
+    let dx = (point.x - transform.pivot.x) * transform.scale.x;
+    let dy = (point.y - transform.pivot.y) * transform.scale.y;
+    let rad = transform.rotation_deg.to_radians();
+    let (sin, cos) = rad.sin_cos();
+    Vec2::new(
+        transform.pos.x + transform.pivot.x + dx * cos - dy * sin,
+        transform.pos.y + transform.pivot.y + dx * sin + dy * cos,
+    )
 }
 
 /// Renderer-neutral frame ready for a backend or export pipeline.
