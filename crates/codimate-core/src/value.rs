@@ -22,6 +22,13 @@ impl Vec2 {
     }
 }
 
+/// An `(x, y)` pair is a `Vec2` — lets authoring read `.pos((100.0, 200.0))`.
+impl From<(f32, f32)> for Vec2 {
+    fn from((x, y): (f32, f32)) -> Self {
+        Vec2 { x, y }
+    }
+}
+
 /// An RGBA color — a leaf value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Color {
@@ -191,6 +198,13 @@ impl From<Color> for Animated<Color> {
 impl From<Vec2> for Animated<Vec2> {
     fn from(v: Vec2) -> Self {
         Animated(Arc::new(move |_| v))
+    }
+}
+
+// `.pos((100.0, 200.0))` — a static `(x, y)` pair is a constant `Animated<Vec2>`.
+impl From<(f32, f32)> for Animated<Vec2> {
+    fn from((x, y): (f32, f32)) -> Self {
+        Animated(Arc::new(move |_| Vec2 { x, y }))
     }
 }
 

@@ -15,6 +15,7 @@ mod path;
 mod pulse;
 mod rect;
 mod text;
+mod transform;
 
 use std::sync::Arc;
 
@@ -26,6 +27,7 @@ pub use path::{path_node, ConcretePath, PathNode};
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};
 pub use text::{text, ConcreteText, Text, TextAlign};
+pub use transform::{ConcreteTransform, Transform};
 
 pub(crate) type TimeCurve = Arc<dyn Fn(f32) -> f32>;
 
