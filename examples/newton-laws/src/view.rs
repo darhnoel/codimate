@@ -88,23 +88,19 @@ fn fade_in(color: Color, start: f32) -> Animated<Color> {
 }
 
 fn add_background(mut sc: Scene, subtitle: &'static str) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
-    sc = sc.node(centered_label(
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         54.0,
         "Newton's Three Laws of Motion",
         30.0,
         INK,
     ));
-    sc.node(centered_label(VIEW_W / 2.0, 88.0, subtitle, 15.0, MUTED))
+    sc.add(centered_label(VIEW_W / 2.0, 88.0, subtitle, 15.0, MUTED))
 }
 
 fn add_floor(sc: Scene) -> Scene {
-    sc.node(
+    sc.add(
         connection(Vec2::new(145.0, FLOOR_Y), Vec2::new(1135.0, FLOOR_Y))
             .stroke(1.4, TRACK)
             .arrow(0.0),
@@ -123,20 +119,20 @@ fn add_cart(
     let wheel_a_y = center.clone();
     let wheel_b_x = center.clone();
     let wheel_b_y = center.clone();
-    sc = sc.node(
+    sc = sc.add(
         box_at(center, Vec2::new(CART_W, CART_H))
             .radius(CART_R)
             .fill(fill)
             .stroke(stroke_width, stroke),
     );
-    sc = sc.node(
+    sc = sc.add(
         circle()
             .x(Animated::new(move |t| wheel_a_x.resolve(t).x - 34.0))
             .y(Animated::new(move |t| wheel_a_y.resolve(t).y + 34.0))
             .radius(9.0)
             .fill(INK),
     );
-    sc.node(
+    sc.add(
         circle()
             .x(Animated::new(move |t| wheel_b_x.resolve(t).x + 34.0))
             .y(Animated::new(move |t| wheel_b_y.resolve(t).y + 34.0))
@@ -154,8 +150,8 @@ fn add_arrow(
     text_value: &'static str,
     text_pos: Vec2,
 ) -> Scene {
-    sc = sc.node(connection(start, end).stroke(width, color).arrow(6.0));
-    sc.node(centered_label(
+    sc = sc.add(connection(start, end).stroke(width, color).arrow(6.0));
+    sc.add(centered_label(
         text_pos.x, text_pos.y, text_value, 16.0, INK,
     ))
 }
@@ -167,15 +163,15 @@ fn bottom_takeaway(
     explanation: &'static str,
     accent: Color,
 ) -> Scene {
-    sc = sc.node(centered_label(VIEW_W / 2.0, 608.0, law, 20.0, accent));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(VIEW_W / 2.0, 608.0, law, 20.0, accent));
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         638.0,
         equation,
         18.0,
         fade_in(INK, 0.32),
     ));
-    sc.node(centered_label(
+    sc.add(centered_label(
         VIEW_W / 2.0,
         670.0,
         explanation,
@@ -212,14 +208,14 @@ fn intro_scene() -> Scene {
     {
         let slot = &cards[i];
         let cx = slot.top_left().resolve(0.0).x + 110.0;
-        sc = sc.node(
+        sc = sc.add(
             box_in(slot)
                 .radius(10.0)
                 .style(style(with_alpha(CARD, 0.70), 1.5, *color)),
         );
-        sc = sc.node(centered_label(cx, 265.0, *title, 34.0, *color));
-        sc = sc.node(centered_label(cx, 316.0, *line_a, 16.0, INK));
-        sc = sc.node(centered_label(cx, 342.0, *line_b, 16.0, INK));
+        sc = sc.add(centered_label(cx, 265.0, *title, 34.0, *color));
+        sc = sc.add(centered_label(cx, 316.0, *line_a, 16.0, INK));
+        sc = sc.add(centered_label(cx, 342.0, *line_b, 16.0, INK));
     }
     bottom_takeaway(
         sc,
@@ -259,7 +255,7 @@ fn first_law_scene(motion: NewtonLawsMotion) -> Scene {
         Vec2::new(930.0, FLOOR_Y - 112.0),
     );
     for node in centered_formula(r"F_{\text{net}} = 0", 640.0, 188.0, FORCE) {
-        sc = sc.node(node);
+        sc = sc.add(node);
     }
     bottom_takeaway(
         sc,
@@ -301,7 +297,7 @@ fn second_law_scene(step: &NewtonLawStep, motion: NewtonLawsMotion) -> Scene {
 
     sc = add_cart(sc, cart_pos, OBJECT, INK, motion.pulse(1.4, 2.7));
 
-    sc = sc.node(
+    sc = sc.add(
         connection(
             Animated::new(move |t| {
                 let c = c_tail.resolve(t);
@@ -316,7 +312,7 @@ fn second_law_scene(step: &NewtonLawStep, motion: NewtonLawsMotion) -> Scene {
         .arrow(6.0),
     );
     let fw = text_width("force", 16.0);
-    sc = sc.node(
+    sc = sc.add(
         text()
             .x(Animated::new(move |t| {
                 c_lx.resolve(t).x - half - gap - len / 2.0 - fw / 2.0
@@ -340,7 +336,7 @@ fn second_law_scene(step: &NewtonLawStep, motion: NewtonLawsMotion) -> Scene {
         step.force, step.mass, step.acceleration
     );
     for node in centered_formula(&eq_latex, 640.0, 184.0, INK) {
-        sc = sc.node(node);
+        sc = sc.add(node);
     }
     sc = bottom_takeaway(
         sc,
@@ -350,7 +346,7 @@ fn second_law_scene(step: &NewtonLawStep, motion: NewtonLawsMotion) -> Scene {
         ACCEL,
     );
     for node in centered_formula_fade(r"F = m a", VIEW_W / 2.0, 638.0, INK, 0.32) {
-        sc = sc.node(node);
+        sc = sc.add(node);
     }
     sc
 }
@@ -377,34 +373,31 @@ fn add_magnet(
     let c_lb_x = center.clone();
     let c_lb_y = center.clone();
 
-    sc = sc.node(
-        path_node()
-            .path(Animated::new(move |t| {
-                let c = c_left.resolve(t);
-                rect_path(c.x - hw, c.y - hh, hw, MAG_H)
-            }))
-            .fill(left_color),
+    sc = sc.add(
+        primitive_path(Animated::new(move |t| {
+            let c = c_left.resolve(t);
+            rect_path(c.x - hw, c.y - hh, hw, MAG_H)
+        }))
+        .fill(left_color),
     );
-    sc = sc.node(
-        path_node()
-            .path(Animated::new(move |t| {
-                let c = c_right.resolve(t);
-                rect_path(c.x, c.y - hh, hw, MAG_H)
-            }))
-            .fill(right_color),
+    sc = sc.add(
+        primitive_path(Animated::new(move |t| {
+            let c = c_right.resolve(t);
+            rect_path(c.x, c.y - hh, hw, MAG_H)
+        }))
+        .fill(right_color),
     );
-    sc = sc.node(
-        path_node()
-            .path(Animated::new(move |t| {
-                let c = c_outline.resolve(t);
-                rect_path(c.x - hw, c.y - hh, MAG_W, MAG_H)
-            }))
-            .style(style(with_alpha(BG, 0.0), 1.8, INK)),
+    sc = sc.add(
+        primitive_path(Animated::new(move |t| {
+            let c = c_outline.resolve(t);
+            rect_path(c.x - hw, c.y - hh, MAG_W, MAG_H)
+        }))
+        .style(style(with_alpha(BG, 0.0), 1.8, INK)),
     );
 
     let lw = text_width(left_label, 24.0);
     let rw = text_width(right_label, 24.0);
-    sc = sc.node(
+    sc = sc.add(
         text()
             .x(Animated::new(move |t| c_la_x.resolve(t).x - q - lw / 2.0))
             .y(Animated::new(move |t| c_la_y.resolve(t).y + 8.0))
@@ -412,7 +405,7 @@ fn add_magnet(
             .font_size(24.0)
             .fill(INK),
     );
-    sc.node(
+    sc.add(
         text()
             .x(Animated::new(move |t| c_lb_x.resolve(t).x + q - rw / 2.0))
             .y(Animated::new(move |t| c_lb_y.resolve(t).y + 8.0))
@@ -424,21 +417,20 @@ fn add_magnet(
 
 /// One field line in the gap: a vertical arc that bows outward and fades as the
 /// magnets drift apart (the field weakens with distance).
-fn field_line(x: f32, bow: f32, base_alpha: f32) -> PathNode {
+fn field_line(x: f32, bow: f32, base_alpha: f32) -> Primitive {
     let half = 24.0;
-    path_node()
-        .path(Path {
-            segments: vec![Segment::Quad(
-                Vec2::new(x, MAG_Y - half),
-                Vec2::new(x + bow, MAG_Y),
-                Vec2::new(x, MAG_Y + half),
-            )],
-            closed: false,
-        })
-        .stroke(
-            2.0,
-            Animated::new(move |t| with_alpha(FORCE, base_alpha * (1.0 - t))),
-        )
+    primitive_path(Path {
+        segments: vec![Segment::Quad(
+            Vec2::new(x, MAG_Y - half),
+            Vec2::new(x + bow, MAG_Y),
+            Vec2::new(x, MAG_Y + half),
+        )],
+        closed: false,
+    })
+    .stroke(
+        2.0,
+        Animated::new(move |t| with_alpha(FORCE, base_alpha * (1.0 - t))),
+    )
 }
 
 fn third_law_scene(motion: NewtonLawsMotion) -> Scene {
@@ -451,9 +443,9 @@ fn third_law_scene(motion: NewtonLawsMotion) -> Scene {
     let mag_b = motion.ease(Vec2::new(740.0, MAG_Y), Vec2::new(860.0, MAG_Y));
 
     // The field that carries the force across the empty gap.
-    sc = sc.node(field_line(618.0, -10.0, 0.45));
-    sc = sc.node(field_line(640.0, 0.0, 0.50));
-    sc = sc.node(field_line(662.0, 10.0, 0.45));
+    sc = sc.add(field_line(618.0, -10.0, 0.45));
+    sc = sc.add(field_line(640.0, 0.0, 0.50));
+    sc = sc.add(field_line(662.0, 10.0, 0.45));
 
     sc = add_magnet(sc, mag_a, OBJECT, REACTION, "S", "N");
     sc = add_magnet(sc, mag_b, REACTION, OBJECT, "N", "S");
@@ -478,7 +470,7 @@ fn third_law_scene(motion: NewtonLawsMotion) -> Scene {
         "force on B",
         Vec2::new(728.0, FLOOR_Y - 148.0),
     );
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         640.0,
         185.0,
         "no contact, yet equal and opposite",
@@ -499,7 +491,7 @@ fn third_law_scene(motion: NewtonLawsMotion) -> Scene {
         INK,
         0.32,
     ) {
-        sc = sc.node(node);
+        sc = sc.add(node);
     }
     sc
 }
@@ -537,19 +529,19 @@ fn summary_scene(step: &NewtonLawStep) -> Scene {
     {
         let slot = &cards[i];
         let cx = slot.top_left().resolve(0.0).x + 150.0;
-        sc = sc.node(
+        sc = sc.add(
             box_in(slot)
                 .radius(10.0)
                 .style(style(with_alpha(PANEL, 0.90), 1.5, *color)),
         );
-        sc = sc.node(centered_label(cx, 255.0, *title, 22.0, *color));
+        sc = sc.add(centered_label(cx, 255.0, *title, 22.0, *color));
         for node in centered_formula(equation, cx, 315.0, INK) {
-            sc = sc.node(node);
+            sc = sc.add(node);
         }
-        sc = sc.node(centered_label(cx, 370.0, *body, 15.0, MUTED));
+        sc = sc.add(centered_label(cx, 370.0, *body, 15.0, MUTED));
     }
 
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         495.0,
         format!(

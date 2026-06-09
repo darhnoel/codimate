@@ -389,6 +389,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "codimate-example-word-appear"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-fonts",
+ "codimate-glyph",
+ "codimate-layout",
+]
+
+[[package]]
 name = "codimate-export"
 version = "0.1.0"
 dependencies = [
@@ -452,6 +464,7 @@ dependencies = [
  "codimate-example-newton-laws",
  "codimate-example-swap-a-b",
  "codimate-example-transformer",
+ "codimate-example-word-appear",
  "codimate-export",
  "codimate-layout",
  "codimate-render",

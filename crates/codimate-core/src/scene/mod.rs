@@ -12,9 +12,11 @@
 mod circle;
 mod connection;
 mod path;
+mod primitive;
 mod pulse;
 mod rect;
 mod text;
+mod transform;
 
 use std::sync::Arc;
 
@@ -23,9 +25,14 @@ use crate::value::{Animated, IntoAnimated};
 pub use circle::{circle, Circle, ConcreteCircle};
 pub use connection::{connection, Connection};
 pub use path::{path_node, ConcretePath, PathNode};
+pub use primitive::{
+    primitive_circle, primitive_path, primitive_rect, primitive_text, ConcreteGeometry,
+    ConcretePrimitive, Geometry, Primitive, Transformable,
+};
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};
 pub use text::{text, ConcreteText, Text, TextAlign};
+pub use transform::{ConcreteTransform, Transform};
 
 pub(crate) type TimeCurve = Arc<dyn Fn(f32) -> f32>;
 
@@ -58,6 +65,7 @@ pub trait Node {
 /// A supported Node inside a Scene.
 #[derive(Clone)]
 pub enum SceneNode {
+    Primitive(Primitive),
     Circle(Circle),
     Rect(Rect),
     Path(PathNode),
@@ -69,6 +77,7 @@ pub enum SceneNode {
 /// A resolved Scene child — concrete data only, no rendering backend.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConcreteNode {
+    Primitive(ConcretePrimitive),
     Circle(ConcreteCircle),
     Rect(ConcreteRect),
     Path(ConcretePath),
@@ -90,6 +99,12 @@ pub enum SceneTransformError {
         from: usize,
         to: usize,
     },
+}
+
+impl From<Primitive> for SceneNode {
+    fn from(primitive: Primitive) -> Self {
+        SceneNode::Primitive(primitive)
+    }
 }
 
 impl From<Circle> for SceneNode {
@@ -133,6 +148,7 @@ impl Node for SceneNode {
 
     fn resolve(&self, t: f32) -> Self::Concrete {
         match self {
+            SceneNode::Primitive(primitive) => ConcreteNode::Primitive(primitive.resolve(t)),
             SceneNode::Circle(circle) => ConcreteNode::Circle(circle.resolve(t)),
             SceneNode::Rect(rect) => ConcreteNode::Rect(rect.resolve(t)),
             SceneNode::Path(path) => ConcreteNode::Path(path.resolve(t)),
@@ -146,6 +162,7 @@ impl Node for SceneNode {
 impl SceneNode {
     fn kind(&self) -> &'static str {
         match self {
+            SceneNode::Primitive(_) => "Primitive",
             SceneNode::Circle(_) => "Circle",
             SceneNode::Rect(_) => "Rect",
             SceneNode::Path(_) => "Path",
@@ -157,6 +174,9 @@ impl SceneNode {
 
     fn with_opacity(self, multiplier: Animated<f32>) -> Self {
         match self {
+            SceneNode::Primitive(primitive) => {
+                SceneNode::Primitive(primitive.with_opacity(multiplier))
+            }
             SceneNode::Circle(circle) => SceneNode::Circle(circle.with_opacity(multiplier)),
             SceneNode::Rect(rect) => SceneNode::Rect(rect.with_opacity(multiplier)),
             SceneNode::Path(path) => SceneNode::Path(path.with_opacity(multiplier)),
@@ -168,6 +188,7 @@ impl SceneNode {
 
     fn ease(self, curve: TimeCurve) -> Self {
         match self {
+            SceneNode::Primitive(primitive) => SceneNode::Primitive(primitive.ease(curve)),
             SceneNode::Circle(circle) => SceneNode::Circle(circle.ease(curve)),
             SceneNode::Rect(rect) => SceneNode::Rect(rect.ease(curve)),
             SceneNode::Path(path) => SceneNode::Path(path.ease(curve)),
@@ -179,6 +200,7 @@ impl SceneNode {
 
     fn reveal(self, progress: Animated<f32>) -> Self {
         match self {
+            SceneNode::Primitive(primitive) => SceneNode::Primitive(primitive.reveal(progress)),
             SceneNode::Circle(circle) => SceneNode::Circle(circle.with_opacity(progress)),
             SceneNode::Rect(rect) => SceneNode::Rect(rect.with_opacity(progress)),
             SceneNode::Path(path) => SceneNode::Path(path.reveal(progress)),
@@ -190,6 +212,9 @@ impl SceneNode {
 
     fn try_lerp_to(&self, to: &Self, index: usize) -> Result<Self, SceneTransformError> {
         match (self, to) {
+            (SceneNode::Primitive(from), SceneNode::Primitive(to)) => {
+                Ok(SceneNode::Primitive(from.try_lerp_to(to)?))
+            }
             (SceneNode::Circle(from), SceneNode::Circle(to)) => {
                 Ok(SceneNode::Circle(from.try_lerp_to(to)))
             }
@@ -250,6 +275,11 @@ impl Scene {
     pub fn node(mut self, node: impl Into<SceneNode>) -> Self {
         self.children.push(node.into());
         self
+    }
+
+    /// Alias for [`node`](Self::node), matching the refactor-plan authoring style.
+    pub fn add(self, node: impl Into<SceneNode>) -> Self {
+        self.node(node)
     }
 
     pub fn with_opacity(self, multiplier: impl IntoAnimated<f32>) -> Self {

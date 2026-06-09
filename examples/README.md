@@ -18,12 +18,15 @@
   items make the optimal solution.
 - `newton-laws/` — Newton's three laws of motion: inertia, force-driven
   acceleration, and equal/opposite action-reaction force pairs.
+
 - `attention-is-all-you-need-architecture/` — original Transformer architecture
   from the paper, progressively revealed from a sequence-to-sequence mental
   model to encoder, decoder, residual paths, cross-attention, Linear, Softmax,
   and output probabilities.
 - `swap-a-b/` — minimal layout-authoring example: fixed visual slots stay in
   place while stable concept items `A` and `B` swap their slot mapping.
+- `word-appear/` — Apple-style word-by-word text appearance: each word slides up
+  and fades in via staggered GlyphBlock animations.
 
 Run it with:
 

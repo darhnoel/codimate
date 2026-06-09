@@ -70,8 +70,21 @@ motion     tweens, paths, easing, pulses
 timing     durations
 ```
 
-Use `path_node` when one shape must transform into another shape. Use plain
-`circle()` or `rect()` when the shape type stays the same.
+Use `primitive_path(...)` when one shape must transform into another shape.
+Use plain `circle()` or `rect()` when the shape type stays the same.
+
+Minimal scene authoring pattern:
+
+```rust
+use codimate_core::{primitive_path, rect_path, scene, Color, Style, Transformable};
+
+let s = scene()
+    .add(
+        primitive_path(rect_path(0.0, 0.0, 1280.0, 720.0))
+            .style(Style::new().fill(Color::BLACK)),
+    )
+    .add(primitive_path(rect_path(540.0, 300.0, 200.0, 100.0)).fill(Color::WHITE));
+```
 
 ## Copy Next
 

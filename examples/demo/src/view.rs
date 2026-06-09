@@ -23,14 +23,14 @@ fn step_duration(step: DemoStep, timing: DemoTiming) -> f32 {
 
 fn step_scene(step: DemoStep, state: Demo, motion: DemoMotion) -> Scene {
     match step {
-        DemoStep::GrowCircle => scene().node(
+        DemoStep::GrowCircle => scene().add(
             circle()
                 .x(motion.travel(state.circle_start_x, state.circle_end_x))
                 .y(state.circle_y)
                 .radius(motion.travel(state.circle_start_radius, state.circle_end_radius))
                 .fill(RED),
         ),
-        DemoStep::MoveRect => scene().node(
+        DemoStep::MoveRect => scene().add(
             rect()
                 .x(state.rect_x)
                 .y(motion.travel(state.rect_start_y, state.rect_end_y))
@@ -38,9 +38,8 @@ fn step_scene(step: DemoStep, state: Demo, motion: DemoMotion) -> Scene {
                 .height(state.rect_h)
                 .fill(BLUE),
         ),
-        DemoStep::MorphPath => scene().node(
-            path_node()
-                .path(motion.travel(
+        DemoStep::MorphPath => scene().add(
+            primitive_path(motion.travel(
                     circle_path(400.0, 300.0, 80.0),
                     rect_path(300.0, 200.0, 200.0, 200.0),
                 ))

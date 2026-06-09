@@ -195,50 +195,49 @@ fn rounded_rect_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> Path {
 }
 
 fn add_background(sc: Scene) -> Scene {
-    sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     )
 }
 
 fn add_column_labels(mut sc: Scene) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         DICT_X + DICT_CARD_W / 2.0,
         110.0,
         "Dictionary",
         FONT_LG,
         INK,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         DICT_X + DICT_CARD_W / 2.0,
         138.0,
         "(precomputed)",
         FONT_SM,
         MUTED,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         INDEX_CENTER,
         110.0,
         "Delete Index",
         FONT_LG,
         INK,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         INDEX_CENTER,
         138.0,
         "(variant → words)",
         FONT_SM,
         MUTED,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         QUERY_X + QUERY_CARD_W / 2.0,
         110.0,
         "Query",
         FONT_LG,
         INK,
     ));
-    sc.node(centered_label(
+    sc.add(centered_label(
         QUERY_X + QUERY_CARD_W / 2.0,
         138.0,
         "(at lookup time)",
@@ -248,7 +247,7 @@ fn add_column_labels(mut sc: Scene) -> Scene {
 }
 
 fn add_header(mut sc: Scene, title: impl Into<String>, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(label(40.0, 32.0, title, FONT_LG + 4.0, INK));
+    sc = sc.add(label(40.0, 32.0, title, FONT_LG + 4.0, INK));
     add_subtitle(sc, subtitle)
 }
 
@@ -264,12 +263,11 @@ fn add_subtitle(mut sc: Scene, text_content: impl Into<String>) -> Scene {
     let bar_x = (VIEW_W - bar_w) / 2.0;
     let bar_y = VIEW_H - bar_h - 24.0;
 
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(bar_x, bar_y, bar_w, bar_h, 8.0))
+    sc = sc.add(
+        primitive_path(rounded_rect_path(bar_x, bar_y, bar_w, bar_h, 8.0))
             .style(style(SUBTITLE_BG, 1.0, PANEL_BORDER)),
     );
-    sc.node(centered_label(
+    sc.add(centered_label(
         VIEW_W / 2.0,
         bar_y + (bar_h - font) / 2.0,
         content,
@@ -289,9 +287,8 @@ fn add_dict_card(mut sc: Scene, entry_index: usize, word: &str, freq: u32, state
     };
 
     let card_r = 8.0;
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(
+    sc = sc.add(
+        primitive_path(rounded_rect_path(
                 pos.x,
                 pos.y,
                 DICT_CARD_W,
@@ -303,7 +300,7 @@ fn add_dict_card(mut sc: Scene, entry_index: usize, word: &str, freq: u32, state
 
     let line = format!("{}  {}", word, freq);
 
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         pos.x + DICT_CARD_W / 2.0,
         pos.y + (DICT_CARD_H - FONT_MD) / 2.0,
         line,
@@ -375,23 +372,20 @@ fn add_index_row(
 
     match glow_mode {
         "anim" => {
-            sc = sc.node(
-                path_node()
-                    .path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
+            sc = sc.add(
+                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
                     .style(tween(rest_s, glow_s).ease(ease_in_out)),
             );
         }
         "static" => {
-            sc = sc.node(
-                path_node()
-                    .path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
+            sc = sc.add(
+                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
                     .style(hit_s),
             );
         }
         _ => {
-            sc = sc.node(
-                path_node()
-                    .path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
+            sc = sc.add(
+                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
                     .style(rest_s),
             );
         }
@@ -406,7 +400,7 @@ fn add_index_row(
     let font = if hero { FONT_MD + 1.0 } else { FONT_SM + 1.0 };
     let text_lit = glow_mode != "";
     let text_fill = if has_words || text_lit { INK } else { MUTED };
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         pos.x + INDEX_ROW_W / 2.0,
         pos.y + (h - font) / 2.0,
         line,
@@ -441,9 +435,8 @@ fn add_query_card(mut sc: Scene, word: &str, highlight: bool) -> Scene {
     let fill = if highlight { DICT_ACTIVE } else { PANEL };
     let border = if highlight { ACCENT } else { PANEL_BORDER };
 
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(
+    sc = sc.add(
+        primitive_path(rounded_rect_path(
                 QUERY_X,
                 QUERY_CARD_Y,
                 QUERY_CARD_W,
@@ -453,7 +446,7 @@ fn add_query_card(mut sc: Scene, word: &str, highlight: bool) -> Scene {
             .style(style(fill, 1.5, border)),
     );
 
-    sc.node(centered_label(
+    sc.add(centered_label(
         QUERY_X + QUERY_CARD_W / 2.0,
         QUERY_CARD_Y + (QUERY_CARD_H - FONT_MD) / 2.0,
         word,
@@ -473,12 +466,11 @@ fn add_query_deletes(mut sc: Scene, deletes: &[String], show_all: bool) -> Scene
 
     for (i, d) in deletes.iter().enumerate() {
         let cx = start_x + i as f32 * (VAR_CHIP_W + chip_gap);
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(cx, chip_y, VAR_CHIP_W, VAR_CHIP_H, 5.0))
+        sc = sc.add(
+            primitive_path(rounded_rect_path(cx, chip_y, VAR_CHIP_W, VAR_CHIP_H, 5.0))
                 .style(style(PANEL, 1.0, PANEL_BORDER)),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             cx + VAR_CHIP_W / 2.0,
             chip_y + (VAR_CHIP_H - FONT_SM) / 2.0 + 1.0,
             d,
@@ -501,9 +493,8 @@ fn add_ranked_list(mut sc: Scene, ordered: &[(String, u32)], winner: Option<&str
         } else {
             (PANEL, PANEL_BORDER)
         };
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(
+        sc = sc.add(
+            primitive_path(rounded_rect_path(
                     QUERY_X,
                     y,
                     QUERY_CARD_W,
@@ -512,7 +503,7 @@ fn add_ranked_list(mut sc: Scene, ordered: &[(String, u32)], winner: Option<&str
                 ))
                 .style(style(fill, 1.0, border)),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             QUERY_X + QUERY_CARD_W / 2.0,
             y + (RANK_ITEM_H - FONT_SM) / 2.0,
             format!("{}  ({})", word, freq),
@@ -549,7 +540,7 @@ fn add_variant_connection(
     let conn = connection(from_v, growing_end)
         .stroke(stroke_w, INDEX_FIRE)
         .arrow(7.0);
-    sc.node(conn)
+    sc.add(conn)
 }
 
 fn intro_scene() -> Scene {
@@ -700,13 +691,13 @@ fn lookup_scene(
         // lookup line, landing pulse, and variant label at the row.
         Some(dock) => {
             let conn = connection(from_v, dock);
-            sc = sc.node(conn.clone().stroke(1.6, ACCENT));
-            sc = sc.node(
+            sc = sc.add(conn.clone().stroke(1.6, ACCENT));
+            sc = sc.add(
                 pulse_on(conn, _motion.hit_pulse_progress())
                     .radius(6.0)
                     .fill(PULSE_FILL),
             );
-            sc = sc.node(label(
+            sc = sc.add(label(
                 dock.x + 8.0,
                 dock.y - FONT_SM,
                 variant,
@@ -725,8 +716,8 @@ fn lookup_scene(
             let scan_bottom = Vec2::new(edge_x, col_bottom);
 
             let conn = connection(from_v, scan_bottom).via([scan_top]);
-            sc = sc.node(conn.clone().stroke(1.4, DIM));
-            sc = sc.node(
+            sc = sc.add(conn.clone().stroke(1.4, DIM));
+            sc = sc.add(
                 pulse_on(conn, _motion.pulse_progress())
                     .radius(5.0)
                     .fill(MISS_FILL),
@@ -734,7 +725,7 @@ fn lookup_scene(
 
             // Red rejection outline around the whole index column.
             sc = add_index_reject_outline(sc, col_top, col_bottom);
-            sc = sc.node(label(
+            sc = sc.add(label(
                 edge_x + 10.0,
                 col_bottom + 6.0,
                 format!("{}  ✕", variant),
@@ -764,9 +755,8 @@ fn add_index_reject_outline(sc: Scene, top: f32, bottom: f32) -> Scene {
     let y = top - pad;
     let w = INDEX_ROW_W + pad * 2.0;
     let h = (bottom - top) + pad * 2.0;
-    sc.node(
-        path_node()
-            .path(rounded_rect_path(x, y, w, h, 12.0))
+    sc.add(
+        primitive_path(rounded_rect_path(x, y, w, h, 12.0))
             .style(style(Color::TRANSPARENT, 2.5, REJECT)),
     )
 }
@@ -799,12 +789,11 @@ fn add_query_variant_chips(mut sc: Scene, current: &str) -> Scene {
         } else {
             (PANEL, PANEL_BORDER, MUTED)
         };
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(cx, chip_y, VAR_CHIP_W, VAR_CHIP_H, 5.0))
+        sc = sc.add(
+            primitive_path(rounded_rect_path(cx, chip_y, VAR_CHIP_W, VAR_CHIP_H, 5.0))
                 .style(style(fill, if active { 1.6 } else { 1.0 }, border)),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             cx + VAR_CHIP_W / 2.0,
             chip_y + (VAR_CHIP_H - FONT_SM) / 2.0,
             v,
@@ -893,9 +882,8 @@ fn answer_scene(
 
     let answer_h = 44.0;
     let answer_y = RANK_LIST_TOP + ordered.len() as f32 * RANK_ITEM_STRIDE + 16.0;
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(
+    sc = sc.add(
+        primitive_path(rounded_rect_path(
                 QUERY_X,
                 answer_y,
                 QUERY_CARD_W,
@@ -904,7 +892,7 @@ fn answer_scene(
             ))
             .style(style(CANDIDATE_FILL, 2.0, ACCENT)),
     );
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         QUERY_X + QUERY_CARD_W / 2.0,
         answer_y + (answer_h - FONT_LG) / 2.0,
         format!("→ {}", word),

@@ -138,27 +138,26 @@ fn center_from_top_left(
 }
 
 fn add_panel(sc: Scene) -> Scene {
-    sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(background_style()),
     )
 }
 
 fn add_header(mut sc: Scene, title: impl Into<String>) -> Scene {
-    sc = sc.node(label(54.0, HEADER_Y, "Merge Sort", 28.0, INK));
-    sc.node(label(54.0, 76.0, title, 16.0, MUTED))
+    sc = sc.add(label(54.0, HEADER_Y, "Merge Sort", 28.0, INK));
+    sc.add(label(54.0, 76.0, title, 16.0, MUTED))
 }
 
 fn add_lane_labels(mut sc: Scene) -> Scene {
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         SOURCE_Y + 25.0,
         "Source runs",
         15.0,
         MUTED,
     ));
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         OUTPUT_Y + 25.0,
         "Output buffer",
@@ -170,7 +169,7 @@ fn add_lane_labels(mut sc: Scene) -> Scene {
 
 fn add_slots(mut sc: Scene, y: f32) -> Scene {
     for i in 0..N {
-        sc = sc.node(
+        sc = sc.add(
             box_at(
                 Vec2::new(tile_x(i) + TILE_W / 2.0, y + TILE_H / 2.0),
                 Vec2::new(TILE_W, TILE_H),
@@ -191,7 +190,7 @@ fn add_band(mut sc: Scene, start: usize, end: usize, y: f32, fill: Color) -> Sce
     let x = tile_x(start) - pad_x;
     let w = tile_x(end - 1) + TILE_W - x + pad_x;
     let h = TILE_H + pad_y * 2.0;
-    sc = sc.node(
+    sc = sc.add(
         box_at(Vec2::new(x + w / 2.0, y - pad_y + h / 2.0), Vec2::new(w, h))
             .radius(TILE_RADIUS + 1.0)
             .style(band_style(fill)),
@@ -225,7 +224,7 @@ fn add_tile_with_text(
     let offset_x = (TILE_W - text_width(&content, TILE_FONT)) / 2.0;
     let offset_y = (TILE_H + TILE_FONT * 0.45) / 2.0;
 
-    sc = sc.node(
+    sc = sc.add(
         box_at(
             center_from_top_left(x, y, Vec2::new(TILE_W, TILE_H)),
             Vec2::new(TILE_W, TILE_H),
@@ -233,7 +232,7 @@ fn add_tile_with_text(
         .radius(TILE_RADIUS)
         .style(tile_style),
     );
-    sc.node(
+    sc.add(
         text()
             .x(Animated::new(move |t| text_x.resolve(t) + offset_x))
             .y(Animated::new(move |t| text_y.resolve(t) + offset_y))
@@ -294,7 +293,7 @@ fn add_output_row(mut sc: Scene, output_before: &[Option<i32>; N]) -> Scene {
 fn add_winner(mut sc: Scene, step: &MergeStep, motion: MergeSortMotion) -> Scene {
     let rest = tile_style(MOVING_FILL);
     let active = tile_style(PLACED_FILL);
-    sc = sc.node(
+    sc = sc.add(
         box_at(
             Vec2::new(tile_x(step.output) + TILE_W / 2.0, OUTPUT_Y + TILE_H / 2.0),
             Vec2::new(TILE_W + 8.0, TILE_H + 8.0),
@@ -317,13 +316,13 @@ fn add_comparison_guide(mut sc: Scene, step: &MergeStep) -> Scene {
         let rx = tile_x(right) + TILE_W / 2.0;
         let top_y = SOURCE_Y + TILE_H + 6.0;
         let bottom_y = SOURCE_Y + TILE_H + 28.0;
-        sc = sc.node(
+        sc = sc.add(
             connection(Vec2::new(lx, top_y), Vec2::new(rx, top_y))
                 .via([Vec2::new(lx, bottom_y), Vec2::new(rx, bottom_y)])
                 .stroke(1.8, ACCENT)
                 .arrow(4.0),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             (lx + rx) / 2.0,
             bottom_y + 22.0,
             "compare",
@@ -364,14 +363,14 @@ fn overview_scene(values: &[i32; N]) -> Scene {
 fn pass_transition_scene(pass: usize, values: &[i32; N], motion: MergeSortMotion) -> Scene {
     let mut sc = add_panel(scene());
     sc = add_header(sc, format!("Pass {} complete", pass + 1));
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         SOURCE_Y + 25.0,
         "Next source runs",
         15.0,
         MUTED,
     ));
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         OUTPUT_Y + 25.0,
         "Completed output",
@@ -399,14 +398,14 @@ fn pass_transition_scene(pass: usize, values: &[i32; N], motion: MergeSortMotion
 fn final_transition_scene(sorted: &[i32; N], motion: MergeSortMotion) -> Scene {
     let mut sc = add_panel(scene());
     sc = add_header(sc, "Final pass complete");
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         FINAL_Y + TILE_H / 2.0 + 5.0,
         "Sorted array",
         15.0,
         MUTED,
     ));
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         OUTPUT_Y + 25.0,
         "Final output",
@@ -434,7 +433,7 @@ fn final_transition_scene(sorted: &[i32; N], motion: MergeSortMotion) -> Scene {
 fn final_scene(sorted: &[i32; N]) -> Scene {
     let mut sc = add_panel(scene());
     sc = add_header(sc, "Sorted output");
-    sc = sc.node(label(
+    sc = sc.add(label(
         ROW_LABEL_X,
         FINAL_Y + TILE_H / 2.0 + 5.0,
         "Sorted array",

@@ -11,7 +11,7 @@ fn main() {
     let ball = animation(
         "ball",
         2.0,
-        scene().node(
+        scene().add(
             circle()
                 .x(tween(100.0, 700.0))
                 .y(300.0)
@@ -23,7 +23,7 @@ fn main() {
     let box_grow = animation(
         "box-grow",
         2.0,
-        scene().node(
+        scene().add(
             rect()
                 .x(300.0)
                 .y(100.0)
@@ -36,9 +36,8 @@ fn main() {
     let morph = animation(
         "morph",
         2.0,
-        scene().node(
-            path_node()
-                .path(tween(
+        scene().add(
+            primitive_path(tween(
                     circle_path(600.0, 400.0, 40.0),
                     rect_path(560.0, 360.0, 80.0, 80.0),
                 ))

@@ -1,4 +1,4 @@
-use codimate_core::{path_node, scene, Animated, Color, Scene};
+use codimate_core::{primitive_path, scene, Animated, Color, Scene, Transformable};
 
 use crate::{
     motion::{bounce, KhmerFadeWaveMotion},
@@ -29,9 +29,8 @@ pub fn reveal_view(state: &KhmerFadeWaveState, motion: KhmerFadeWaveMotion) -> S
                     ..Color::WHITE
                 }
             });
-            scene = scene.node(
-                path_node()
-                    .path(revealed)
+            scene = scene.add(
+                primitive_path(revealed)
                     .stroke(2.0, stroke_color)
                     .fill(Color::TRANSPARENT),
             );
@@ -45,7 +44,7 @@ pub fn reveal_view(state: &KhmerFadeWaveState, motion: KhmerFadeWaveMotion) -> S
                 ..Color::WHITE
             }
         });
-        scene = scene.node(path_node().path(fill_path).fill(fill_color));
+        scene = scene.add(primitive_path(fill_path).fill(fill_color));
     }
 
     scene
@@ -76,7 +75,7 @@ pub fn wave_view(
                 base.clone()
             }
         });
-        scene = scene.node(path_node().path(path).fill(Color::WHITE));
+        scene = scene.add(primitive_path(path).fill(Color::WHITE));
     }
 
     scene

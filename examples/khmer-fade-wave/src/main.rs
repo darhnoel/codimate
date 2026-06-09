@@ -1,15 +1,54 @@
-use codimate_export::{export_mp4, ExportConfig};
+use codimate_export::{export_frames, export_mp4, ExportConfig};
+use codimate_layout::Viewport;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RenderPreset {
+    Standard,
+    Hd60,
+}
 
 fn main() {
+    let preset = render_preset();
     let (playable, viewport) = codimate_example_khmer_fade_wave::create();
-    let output = std::path::Path::new("results/khmer-fade-wave.mp4");
-    if let Some(parent) = output.parent() {
-        std::fs::create_dir_all(parent).ok();
-    }
-    let cfg = ExportConfig::new(30.0, viewport).crf(18);
-    println!("Exporting {} ...", output.display());
-    match export_mp4(&playable, &cfg, output) {
-        Ok(()) => println!("Written {}", output.display()),
+    let (output, export_cfg) = match preset {
+        RenderPreset::Standard => (
+            "results/khmer-fade-wave.mp4",
+            ExportConfig::new(30.0, viewport).crf(18),
+        ),
+        RenderPreset::Hd60 => (
+            "results/khmer-fade-wave-1080p60.mp4",
+            ExportConfig::new(60.0, viewport)
+                .output_viewport(Viewport::new(1920.0, 1080.0))
+                .crf(12),
+        ),
+    };
+
+    let frames = export_frames(&playable, export_cfg);
+    println!("{} export frames", frames.len());
+
+    std::fs::create_dir_all("results").ok();
+    println!("Exporting {} ...", output);
+    match export_mp4(&playable, &export_cfg, output) {
+        Ok(()) => println!("Written {}", output),
         Err(e) => eprintln!("Export failed: {e}"),
     }
+}
+
+fn render_preset() -> RenderPreset {
+    let mut preset = RenderPreset::Standard;
+    for arg in std::env::args().skip(1) {
+        match arg.as_str() {
+            "--1080p60" | "--1080p" | "--hd60" => preset = RenderPreset::Hd60,
+            "--help" | "-h" => {
+                println!("usage: cargo run -p codimate-example-khmer-fade-wave -- [--1080p60]");
+                std::process::exit(0);
+            }
+            other => {
+                eprintln!("unknown option: {other}");
+                eprintln!("usage: cargo run -p codimate-example-khmer-fade-wave -- [--1080p60]");
+                std::process::exit(2);
+            }
+        }
+    }
+    preset
 }

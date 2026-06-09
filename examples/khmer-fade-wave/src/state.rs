@@ -2,7 +2,7 @@ use codimate_core::{Color, Path};
 use codimate_fonts::FontRegistry;
 use codimate_layout::Viewport;
 
-pub const TEXT: &str = "ជំរាបសួរ";
+pub const TEXT: &str = "ជម្រាបសួរ";
 
 #[derive(Clone, Debug)]
 pub struct KhmerFadeWave {

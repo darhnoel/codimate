@@ -173,37 +173,32 @@ fn chip_node(
     fill: impl IntoAnimated<Color>,
     stroke: impl IntoAnimated<Color>,
     stroke_width: impl IntoAnimated<f32>,
-) -> PathNode {
+) -> Primitive {
     let center = center.into_animated();
-    path_node()
-        .path(Animated::new(move |t| {
-            let c = center.resolve(t);
-            rounded_rect_path(
-                c.x - CHIP_W / 2.0,
-                c.y - CHIP_H / 2.0,
-                CHIP_W,
-                CHIP_H,
-                CHIP_R,
-            )
-        }))
-        .fill(fill)
-        .stroke(stroke_width, stroke)
+    primitive_path(Animated::new(move |t| {
+        let c = center.resolve(t);
+        rounded_rect_path(
+            c.x - CHIP_W / 2.0,
+            c.y - CHIP_H / 2.0,
+            CHIP_W,
+            CHIP_H,
+            CHIP_R,
+        )
+    }))
+    .fill(fill)
+    .stroke(stroke_width, stroke)
 }
 
 fn add_background(mut sc: Scene) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
-    sc = sc.node(centered_label(
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         52.0,
         "Faster Dijkstra: break the sorting barrier",
         28.0,
         INK,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         82.0,
         "BMSSP: bounded multi-source shortest paths",
@@ -224,8 +219,8 @@ fn add_color_key(mut sc: Scene) -> Scene {
         (1000.0, DANGER, "Dijkstra cost"),
     ];
     for (x, color, label_text) in items {
-        sc = sc.node(circle().x(x).y(112.0).radius(5.0).fill(color));
-        sc = sc.node(label(x + 12.0, 117.0, label_text, 11.0, MUTED));
+        sc = sc.add(circle().x(x).y(112.0).radius(5.0).fill(color));
+        sc = sc.add(label(x + 12.0, 117.0, label_text, 11.0, MUTED));
     }
     sc
 }
@@ -278,16 +273,14 @@ fn add_bound_region(mut sc: Scene, step: &FasterDijkstraStep) -> Scene {
         return sc;
     }
 
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(330.0, 150.0, 500.0, 355.0, 12.0))
-            .style(style(
-                with_alpha(WINDOW, 0.08),
-                1.8,
-                with_alpha(WINDOW, 0.65),
-            )),
+    sc = sc.add(
+        primitive_path(rounded_rect_path(330.0, 150.0, 500.0, 355.0, 12.0)).style(style(
+            with_alpha(WINDOW, 0.08),
+            1.8,
+            with_alpha(WINDOW, 0.65),
+        )),
     );
-    sc.node(label(350.0, 178.0, "bound B", 14.0, WINDOW))
+    sc.add(label(350.0, 178.0, "bound B", 14.0, WINDOW))
 }
 
 fn add_edge(
@@ -316,8 +309,8 @@ fn add_edge(
         1.3
     };
 
-    let mut sc = sc.node(connection(start, end).stroke(width, color).arrow(3.0));
-    sc = sc.node(centered_label(
+    let mut sc = sc.add(connection(start, end).stroke(width, color).arrow(3.0));
+    sc = sc.add(centered_label(
         mid.x,
         mid.y - 7.0,
         weight.to_string(),
@@ -432,20 +425,19 @@ fn add_node(mut sc: Scene, pos: Vec2, label_text: &str, role: NodeRole) -> Scene
         NodeRole::Done => DONE,
         _ => INK,
     };
-    sc = sc.node(
+    sc = sc.add(
         circle()
             .x(pos.x)
             .y(pos.y)
             .radius(NODE_R)
             .fill(node_fill(role)),
     );
-    sc = sc.node(
-        path_node()
-            .path(circle_path(pos.x, pos.y, NODE_R))
+    sc = sc.add(
+        primitive_path(circle_path(pos.x, pos.y, NODE_R))
             .fill(Color::TRANSPARENT)
             .stroke(if role == NodeRole::Dim { 1.2 } else { 2.2 }, stroke),
     );
-    sc.node(centered_label(pos.x, pos.y + 6.0, label_text, 17.0, INK))
+    sc.add(centered_label(pos.x, pos.y + 6.0, label_text, 17.0, INK))
 }
 
 fn add_structure(
@@ -469,8 +461,8 @@ fn add_structure(
 }
 
 fn add_source_fan(mut sc: Scene, pos: &[Vec2; NODE_COUNT]) -> Scene {
-    sc = sc.node(label(166.0, 510.0, "source", 14.0, SOURCE));
-    sc = sc.node(connection(Vec2::new(220.0, 505.0), pos[0]).stroke(1.2, SOURCE));
+    sc = sc.add(label(166.0, 510.0, "source", 14.0, SOURCE));
+    sc = sc.add(connection(Vec2::new(220.0, 505.0), pos[0]).stroke(1.2, SOURCE));
     sc
 }
 
@@ -493,8 +485,8 @@ fn add_chip(
     let center = center.into_animated();
     let label_center_x = center.clone();
     let label_center_y = center.clone();
-    sc = sc.node(chip_node(center, fill, stroke, 1.4));
-    sc.node(
+    sc = sc.add(chip_node(center, fill, stroke, 1.4));
+    sc.add(
         text()
             .x(Animated::new(move |t| {
                 label_center_x.resolve(t).x - text_width(text_value, 14.0) / 2.0
@@ -507,7 +499,7 @@ fn add_chip(
 }
 
 fn add_dijkstra_queue(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         QUEUE_X,
         143.0,
         "frontier order",
@@ -526,7 +518,7 @@ fn add_dijkstra_queue(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
         let fill = if i == 0 { DONE } else { FRONTIER };
         sc = add_chip(sc, center, value, fill, INK, INK);
     }
-    sc = sc.node(
+    sc = sc.add(
         connection(
             Vec2::new(QUEUE_X, queue_position(4).y + 24.0),
             Vec2::new(QUEUE_X, queue_position(5).y - 24.0),
@@ -534,7 +526,7 @@ fn add_dijkstra_queue(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
         .stroke(1.3, MUTED)
         .arrow(3.0),
     );
-    sc.node(centered_label(
+    sc.add(centered_label(
         QUEUE_X,
         queue_position(5).y + 46.0,
         "extract min",
@@ -560,12 +552,12 @@ fn add_queue_to_batch(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
             INK,
         );
     }
-    sc = sc.node(label(438.0, 581.0, "S", 15.0, SOURCE));
-    sc.node(label(675.0, 581.0, "inside B", 15.0, WINDOW))
+    sc = sc.add(label(438.0, 581.0, "S", 15.0, SOURCE));
+    sc.add(label(675.0, 581.0, "inside B", 15.0, WINDOW))
 }
 
 fn add_bounded_batch(mut sc: Scene) -> Scene {
-    sc = sc.node(label(438.0, 581.0, "source set S", 15.0, SOURCE));
+    sc = sc.add(label(438.0, 581.0, "source set S", 15.0, SOURCE));
     for (i, value) in ["a", "b"].iter().enumerate() {
         sc = add_chip(sc, batch_position(i), value, SOURCE, INK, INK);
     }
@@ -600,16 +592,15 @@ fn add_sources_enter_bound(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene
     sc
 }
 
-fn expanding_circle(center: Vec2, from: f32, to: f32, color: Color) -> PathNode {
-    path_node()
-        .path(Animated::new(move |t| {
-            circle_path(center.x, center.y, f32::lerp(from, to, t))
-        }))
-        .fill(Color::TRANSPARENT)
-        .stroke(
-            2.0,
-            Animated::new(move |t| with_alpha(color, 0.75 * (1.0 - t))),
-        )
+fn expanding_circle(center: Vec2, from: f32, to: f32, color: Color) -> Primitive {
+    primitive_path(Animated::new(move |t| {
+        circle_path(center.x, center.y, f32::lerp(from, to, t))
+    }))
+    .fill(Color::TRANSPARENT)
+    .stroke(
+        2.0,
+        Animated::new(move |t| with_alpha(color, 0.75 * (1.0 - t))),
+    )
 }
 
 fn add_relaxation_layers(
@@ -617,9 +608,9 @@ fn add_relaxation_layers(
     _motion: FasterDijkstraMotion,
     pos: &[Vec2; NODE_COUNT],
 ) -> Scene {
-    sc = sc.node(expanding_circle(pos[1], 35.0, 175.0, RELAX));
-    sc = sc.node(expanding_circle(pos[2], 35.0, 145.0, RELAX));
-    sc.node(label(702.0, 535.0, "k-step relaxation", 15.0, RELAX))
+    sc = sc.add(expanding_circle(pos[1], 35.0, 175.0, RELAX));
+    sc = sc.add(expanding_circle(pos[2], 35.0, 145.0, RELAX));
+    sc.add(label(702.0, 535.0, "k-step relaxation", 15.0, RELAX))
 }
 
 fn add_pivot_shrink(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
@@ -659,22 +650,26 @@ fn add_pivot_shrink(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
             },
         );
     }
-    sc.node(label(494.0, 581.0, "pivots P", 15.0, PIVOT))
+    sc.add(label(494.0, 581.0, "pivots P", 15.0, PIVOT))
 }
 
 fn add_recursive_regions(mut sc: Scene) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(514.0, 165.0, 300.0, 150.0, 12.0))
-            .style(style(with_alpha(PIVOT, 0.06), 1.6, with_alpha(PIVOT, 0.65))),
+    sc = sc.add(
+        primitive_path(rounded_rect_path(514.0, 165.0, 300.0, 150.0, 12.0)).style(style(
+            with_alpha(PIVOT, 0.06),
+            1.6,
+            with_alpha(PIVOT, 0.65),
+        )),
     );
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(520.0, 355.0, 305.0, 125.0, 12.0))
-            .style(style(with_alpha(PIVOT, 0.06), 1.6, with_alpha(PIVOT, 0.65))),
+    sc = sc.add(
+        primitive_path(rounded_rect_path(520.0, 355.0, 305.0, 125.0, 12.0)).style(style(
+            with_alpha(PIVOT, 0.06),
+            1.6,
+            with_alpha(PIVOT, 0.65),
+        )),
     );
-    sc = sc.node(label(822.0, 229.0, "smaller BMSSP", 14.0, PIVOT));
-    sc.node(label(830.0, 430.0, "smaller BMSSP", 14.0, PIVOT))
+    sc = sc.add(label(822.0, 229.0, "smaller BMSSP", 14.0, PIVOT));
+    sc.add(label(830.0, 430.0, "smaller BMSSP", 14.0, PIVOT))
 }
 
 fn add_batch_pull(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
@@ -691,12 +686,12 @@ fn add_batch_pull(mut sc: Scene, motion: FasterDijkstraMotion) -> Scene {
             INK,
         );
     }
-    sc.node(label(492.0, 581.0, "pull smallest batch", 15.0, FRONTIER))
+    sc.add(label(492.0, 581.0, "pull smallest batch", 15.0, FRONTIER))
 }
 
 fn add_result_compare(mut sc: Scene) -> Scene {
-    sc = sc.node(centered_label(360.0, 166.0, "Dijkstra", 20.0, INK));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(360.0, 166.0, "Dijkstra", 20.0, INK));
+    sc = sc.add(centered_label(
         360.0,
         196.0,
         "asks for the exact next minimum",
@@ -704,14 +699,14 @@ fn add_result_compare(mut sc: Scene) -> Scene {
         MUTED,
     ));
     sc = add_sorted_queue_recapped(sc, Vec2::new(360.0, 285.0));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         360.0,
         512.0,
         "full frontier order",
         15.0,
         DANGER,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         360.0,
         540.0,
         "sorting cost repeats",
@@ -719,8 +714,8 @@ fn add_result_compare(mut sc: Scene) -> Scene {
         MUTED,
     ));
 
-    sc = sc.node(centered_label(840.0, 166.0, "Faster method", 20.0, INK));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(840.0, 166.0, "Faster method", 20.0, INK));
+    sc = sc.add(centered_label(
         840.0,
         196.0,
         "asks which vertices finish inside B",
@@ -728,8 +723,8 @@ fn add_result_compare(mut sc: Scene) -> Scene {
         MUTED,
     ));
     sc = add_bmssp_recapped(sc, Vec2::new(840.0, 305.0));
-    sc = sc.node(centered_label(840.0, 512.0, "batch inside B", 15.0, WINDOW));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(840.0, 512.0, "batch inside B", 15.0, WINDOW));
+    sc = sc.add(centered_label(
         840.0,
         540.0,
         "then recurse from pivots",
@@ -737,14 +732,14 @@ fn add_result_compare(mut sc: Scene) -> Scene {
         PIVOT,
     ));
 
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         586.0,
         "Color meaning here: red = exact ordering cost, green = sources, purple = inside B, orange = pivots.",
         13.0,
         fade_in(MUTED, 0.45),
     ));
-    sc.node(centered_label(
+    sc.add(centered_label(
         VIEW_W / 2.0,
         610.0,
         "That is the shift: avoid building the entire sorted order when a bounded batch is enough.",
@@ -756,15 +751,12 @@ fn add_result_compare(mut sc: Scene) -> Scene {
 fn add_sorted_queue_recapped(mut sc: Scene, origin: Vec2) -> Scene {
     let x = origin.x;
     let y = origin.y;
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(x - 100.0, y - 75.0, 200.0, 160.0, 12.0))
-            .style(style(
-                with_alpha(DANGER, 0.05),
-                1.4,
-                with_alpha(DANGER, 0.55),
-            )),
-    );
+    sc =
+        sc.add(
+            primitive_path(rounded_rect_path(x - 100.0, y - 75.0, 200.0, 160.0, 12.0)).style(
+                style(with_alpha(DANGER, 0.05), 1.4, with_alpha(DANGER, 0.55)),
+            ),
+        );
     for (i, value) in ["b", "c", "d", "e"].iter().enumerate() {
         sc = add_chip(
             sc,
@@ -775,8 +767,8 @@ fn add_sorted_queue_recapped(mut sc: Scene, origin: Vec2) -> Scene {
             INK,
         );
     }
-    sc = sc.node(centered_label(x, y + 128.0, "extract one", 13.0, MUTED));
-    sc.node(
+    sc = sc.add(centered_label(x, y + 128.0, "extract one", 13.0, MUTED));
+    sc.add(
         connection(Vec2::new(x, y + 86.0), Vec2::new(x, y + 110.0))
             .stroke(1.2, MUTED)
             .arrow(3.0),
@@ -786,16 +778,13 @@ fn add_sorted_queue_recapped(mut sc: Scene, origin: Vec2) -> Scene {
 fn add_bmssp_recapped(mut sc: Scene, origin: Vec2) -> Scene {
     let x = origin.x;
     let y = origin.y;
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(x - 142.0, y - 88.0, 284.0, 130.0, 12.0))
-            .style(style(
-                with_alpha(WINDOW, 0.08),
-                1.5,
-                with_alpha(WINDOW, 0.62),
-            )),
-    );
-    sc = sc.node(label(x - 126.0, y - 62.0, "bound B", 13.0, WINDOW));
+    sc =
+        sc.add(
+            primitive_path(rounded_rect_path(x - 142.0, y - 88.0, 284.0, 130.0, 12.0)).style(
+                style(with_alpha(WINDOW, 0.08), 1.5, with_alpha(WINDOW, 0.62)),
+            ),
+        );
+    sc = sc.add(label(x - 126.0, y - 62.0, "bound B", 13.0, WINDOW));
     for (i, value) in ["a", "b"].iter().enumerate() {
         sc = add_chip(
             sc,
@@ -826,12 +815,12 @@ fn add_bmssp_recapped(mut sc: Scene, origin: Vec2) -> Scene {
             INK,
         );
     }
-    sc = sc.node(
+    sc = sc.add(
         connection(Vec2::new(x, y + 44.0), Vec2::new(x, y + 56.0))
             .stroke(1.2, MUTED)
             .arrow(3.0),
     );
-    sc.node(centered_label(
+    sc.add(centered_label(
         x,
         y + 114.0,
         "smaller subproblems",
@@ -844,8 +833,8 @@ fn add_subtitle(mut sc: Scene, step: &FasterDijkstraStep) -> Scene {
     let (question, answer, accent) = qa(step);
     let q = format!("Q: {question}");
     let a = format!("A: {answer}");
-    sc = sc.node(centered_label(VIEW_W / 2.0, 642.0, q, 18.0, accent));
-    sc.node(centered_label(
+    sc = sc.add(centered_label(VIEW_W / 2.0, 642.0, q, 18.0, accent));
+    sc.add(centered_label(
         VIEW_W / 2.0,
         674.0,
         a,
