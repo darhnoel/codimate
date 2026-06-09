@@ -151,57 +151,56 @@ fn cell_y(kind: MatrixKind, row: usize) -> f32 {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 48.0, "Matrix Multiplication", 28.0, INK));
-    sc.node(label(54.0, 82.0, subtitle, 16.0, MUTED))
+    sc = sc.add(label(54.0, 48.0, "Matrix Multiplication", 28.0, INK));
+    sc.add(label(54.0, 82.0, subtitle, 16.0, MUTED))
 }
 
 fn add_matrix_labels(mut sc: Scene) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         A_X + CELL_W * 1.5 + GAP,
         A_Y - 34.0,
         "A",
         22.0,
         INK,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         B_X + CELL_W + GAP / 2.0,
         B_Y - 34.0,
         "B",
         22.0,
         INK,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         C_X + CELL_W + GAP / 2.0,
         C_Y - 34.0,
         "C",
         22.0,
         INK,
     ));
-    sc = sc.node(centered_label(304.0, A_Y + 42.0, "x", 25.0, MUTED));
-    sc.node(centered_label(594.0, A_Y + 42.0, "=", 25.0, MUTED))
+    sc = sc.add(centered_label(304.0, A_Y + 42.0, "x", 25.0, MUTED));
+    sc.add(centered_label(594.0, A_Y + 42.0, "=", 25.0, MUTED))
 }
 
 fn add_dimensions(mut sc: Scene) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         A_X + CELL_W * 1.5 + GAP,
         A_Y + A_ROWS as f32 * (CELL_H + GAP) + 16.0,
         "2 x 3",
         12.0,
         MUTED,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         B_X + CELL_W + GAP / 2.0,
         B_Y + A_COLS as f32 * (CELL_H + GAP) + 16.0,
         "3 x 2",
         12.0,
         MUTED,
     ));
-    sc.node(centered_label(
+    sc.add(centered_label(
         C_X + CELL_W + GAP / 2.0,
         C_Y + A_ROWS as f32 * (CELL_H + GAP) + 16.0,
         "2 x 2",
@@ -231,12 +230,11 @@ fn add_cell(
     let x = cell_x(kind, col);
     let y = cell_y(kind, row);
     let text = value.into();
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(x, y, CELL_W, CELL_H, CELL_RADIUS))
+    sc = sc.add(
+        primitive_path(rounded_rect_path(x, y, CELL_W, CELL_H, CELL_RADIUS))
             .style(cell_style(fill, active)),
     );
-    sc.node(centered_label(
+    sc.add(centered_label(
         x + CELL_W / 2.0,
         y + CELL_H / 2.0 + FONT_SIZE * 0.33,
         text,
@@ -293,7 +291,7 @@ fn add_matrices(
 
 fn add_formula(sc: Scene, content: impl Into<String>) -> Scene {
     let content = content.into();
-    sc.node(centered_label(VIEW_W / 2.0, FORMULA_Y, content, 18.0, INK))
+    sc.add(centered_label(VIEW_W / 2.0, FORMULA_Y, content, 18.0, INK))
 }
 
 fn overview_scene(state: MatrixMultiplication) -> Scene {

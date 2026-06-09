@@ -216,14 +216,13 @@ fn add_cell(
         CellRole::Path => (CELL_PATH.into_animated(), true),
     };
 
-    let mut sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(x, y, CELL_W, CELL_H, CELL_RADIUS))
+    let mut sc = sc.add(
+        primitive_path(rounded_rect_path(x, y, CELL_W, CELL_H, CELL_RADIUS))
             .style(cell_style(fill, active)),
     );
 
     if step.filled[i][c] {
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             x + CELL_W / 2.0,
             y + CELL_H / 2.0 + FONT * 0.33,
             step.dp[i][c].to_string(),
@@ -237,14 +236,13 @@ fn add_cell(
 // ----- panels -----
 
 fn add_background(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 52.0, "0/1 Knapsack (DP)", 30.0, INK));
-    sc = sc.node(label(54.0, 88.0, subtitle(step, trace), 16.0, MUTED));
-    sc.node(label(54.0, VIEW_H - 26.0, answer_line(step), 16.0, MUTED))
+    sc = sc.add(label(54.0, 52.0, "0/1 Knapsack (DP)", 30.0, INK));
+    sc = sc.add(label(54.0, 88.0, subtitle(step, trace), 16.0, MUTED));
+    sc.add(label(54.0, VIEW_H - 26.0, answer_line(step), 16.0, MUTED))
 }
 
 fn item_name(k: usize) -> String {
@@ -253,7 +251,7 @@ fn item_name(k: usize) -> String {
 }
 
 fn add_items_panel(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) -> Scene {
-    sc = sc.node(label(54.0, 150.0, "Items (weight, value)", 17.0, MUTED));
+    sc = sc.add(label(54.0, 150.0, "Items (weight, value)", 17.0, MUTED));
 
     let active_item = match step.action {
         KnapsackAction::Fill { item, .. } => Some(item),
@@ -270,7 +268,7 @@ fn add_items_panel(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) ->
             INK
         };
         let mark = if step.chosen[k - 1] { " ✓" } else { "" };
-        sc = sc.node(label(
+        sc = sc.add(label(
             54.0,
             y,
             format!(
@@ -285,7 +283,7 @@ fn add_items_panel(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) ->
         ));
     }
 
-    sc.node(label(
+    sc.add(label(
         54.0,
         186.0 + ITEM_COUNT as f32 * 40.0 + 6.0,
         format!("Capacity W = {}", CAPACITY),
@@ -295,7 +293,7 @@ fn add_items_panel(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) ->
 }
 
 fn add_headers(mut sc: Scene) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         GRID_X0 + (COLS as f32 * (CELL_W + GAP)) / 2.0,
         GRID_Y0 - 40.0,
         "capacity  c  \u{2192}",
@@ -303,7 +301,7 @@ fn add_headers(mut sc: Scene) -> Scene {
         MUTED,
     ));
     for c in 0..COLS {
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             cell_x(c) + CELL_W / 2.0,
             GRID_Y0 - 14.0,
             c.to_string(),
@@ -317,7 +315,7 @@ fn add_headers(mut sc: Scene) -> Scene {
         } else {
             item_name(i)
         };
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             GRID_X0 - 26.0,
             cell_y(i) + CELL_H / 2.0 + FONT * 0.33,
             row_label,

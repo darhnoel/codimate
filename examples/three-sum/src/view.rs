@@ -160,20 +160,18 @@ fn centered_label(x: f32, y: f32, content: impl Into<String>, font_size: f32, fi
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 52.0, "3Sum", 30.0, INK));
-    sc.node(label(54.0, 88.0, subtitle, 16.0, MUTED))
+    sc = sc.add(label(54.0, 52.0, "3Sum", 30.0, INK));
+    sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
 
 fn add_slots(mut sc: Scene, y: f32) -> Scene {
     for index in 0..N {
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(
+        sc = sc.add(
+            primitive_path(rounded_rect_path(
                     tile_x(index),
                     y,
                     TILE_W,
@@ -201,8 +199,8 @@ fn add_tile(
     let offset_x = (TILE_W - text_width(&content, TILE_FONT)) / 2.0;
     let offset_y = (TILE_H + TILE_FONT * 0.45) / 2.0;
 
-    sc = sc.node(path_node().path(box_path(x, y)).style(tile_style));
-    sc.node(
+    sc = sc.add(primitive_path(box_path(x, y)).style(tile_style));
+    sc.add(
         text()
             .x(Animated::new(move |t| text_x.resolve(t) + offset_x))
             .y(Animated::new(move |t| text_y.resolve(t) + offset_y))
@@ -295,8 +293,8 @@ fn add_pointer(
 ) -> Scene {
     let x = x.into_animated();
     let label_x = x.clone();
-    let mut sc = sc.node(circle().x(x).y(POINTER_Y).radius(15.0).fill(fill));
-    sc = sc.node(
+    let mut sc = sc.add(circle().x(x).y(POINTER_Y).radius(15.0).fill(fill));
+    sc = sc.add(
         text()
             .x(Animated::new(move |t| {
                 label_x.resolve(t) - text_width(text_value, 13.0) / 2.0
@@ -315,13 +313,13 @@ fn add_compare_bracket(mut sc: Scene, step: &ThreeSumStep) -> Scene {
         let rx = tile_x(right) + TILE_W / 2.0;
         let top = ARRAY_Y - 24.0;
         let bottom = ARRAY_Y - 44.0;
-        sc = sc.node(
+        sc = sc.add(
             connection(Vec2::new(lx, top), Vec2::new(rx, top))
                 .via([Vec2::new(lx, bottom), Vec2::new(rx, bottom)])
                 .stroke(1.8, ACCENT)
                 .arrow(4.0),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             (lx + rx) / 2.0,
             bottom - 8.0,
             "compare",
@@ -333,7 +331,7 @@ fn add_compare_bracket(mut sc: Scene, step: &ThreeSumStep) -> Scene {
 }
 
 fn add_results(mut sc: Scene, results: &[[i32; 3]]) -> Scene {
-    sc = sc.node(label(94.0, RESULT_Y + 27.0, "Triplets", 15.0, MUTED));
+    sc = sc.add(label(94.0, RESULT_Y + 27.0, "Triplets", 15.0, MUTED));
     for (result_index, triplet) in results.iter().enumerate() {
         for (item_index, value) in triplet.iter().enumerate() {
             sc = add_tile(
@@ -371,22 +369,22 @@ fn add_found_motion(
 
 fn sort_scene(trace: &ThreeSumTrace, motion: ThreeSumMotion) -> Scene {
     let mut sc = add_background(scene(), "Sort first, then use two pointers");
-    sc = sc.node(label(94.0, INPUT_Y + 27.0, "Original input", 15.0, MUTED));
-    sc = sc.node(label(
+    sc = sc.add(label(94.0, INPUT_Y + 27.0, "Original input", 15.0, MUTED));
+    sc = sc.add(label(
         94.0,
         ARRAY_Y + 27.0,
         "Sorted copy for two pointers",
         15.0,
         MUTED,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         236.0,
         "sort ascending",
         15.0,
         ACCENT,
     ));
-    sc = sc.node(
+    sc = sc.add(
         connection(
             Vec2::new(VIEW_W / 2.0, INPUT_Y + TILE_H + 18.0),
             Vec2::new(VIEW_W / 2.0, ARRAY_Y - 18.0),
@@ -411,12 +409,12 @@ fn sort_scene(trace: &ThreeSumTrace, motion: ThreeSumMotion) -> Scene {
 
 fn intro_scene(trace: &ThreeSumTrace) -> Scene {
     let mut sc = add_background(scene(), "We need all unique triplets whose sum is zero");
-    sc = sc.node(label(94.0, INPUT_Y + 27.0, "Original input", 15.0, MUTED));
+    sc = sc.add(label(94.0, INPUT_Y + 27.0, "Original input", 15.0, MUTED));
     sc = add_slots(sc, INPUT_Y);
     for (index, value) in trace.input.iter().enumerate() {
         sc = add_tile(sc, *value, tile_x(index), INPUT_Y, tile_style(PANEL));
     }
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         ARRAY_Y + 18.0,
         "Next: sort the array so left and right pointers can move with meaning",
@@ -428,7 +426,7 @@ fn intro_scene(trace: &ThreeSumTrace) -> Scene {
 
 fn step_scene(trace: &ThreeSumTrace, step: &ThreeSumStep, motion: ThreeSumMotion) -> Scene {
     let mut sc = add_background(scene(), step.title(&trace.sorted));
-    sc = sc.node(label(94.0, ARRAY_Y + 27.0, "Sorted nums", 15.0, MUTED));
+    sc = sc.add(label(94.0, ARRAY_Y + 27.0, "Sorted nums", 15.0, MUTED));
     sc = add_slots(sc, ARRAY_Y);
     sc = add_array(sc, &trace.sorted, step);
     sc = add_pointers(sc, step, motion);
@@ -451,7 +449,7 @@ fn step_scene(trace: &ThreeSumTrace, step: &ThreeSumStep, motion: ThreeSumMotion
 
 fn final_scene(trace: &ThreeSumTrace) -> Scene {
     let mut sc = add_background(scene(), "Unique triplets that sum to zero");
-    sc = sc.node(label(94.0, ARRAY_Y + 27.0, "Sorted nums", 15.0, MUTED));
+    sc = sc.add(label(94.0, ARRAY_Y + 27.0, "Sorted nums", 15.0, MUTED));
     sc = add_slots(sc, ARRAY_Y);
     for (index, value) in trace.sorted.iter().enumerate() {
         sc = add_tile(sc, *value, tile_x(index), ARRAY_Y, tile_style(PANEL));

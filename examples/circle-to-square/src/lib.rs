@@ -1,7 +1,7 @@
 use codimate_animation::{animation, sequence, Animation, Playable};
 use codimate_core::{
-    circle_path, ease_in_out, manim, path_node, rect_path, scene, tween, Animated, Color,
-    ExplanationBuilder, Path, Scene, Style,
+    circle_path, ease_in_out, manim, primitive_path, rect_path, scene, tween, Animated, Color,
+    ExplanationBuilder, Path, Scene, Style, Transformable,
 };
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
@@ -92,14 +92,14 @@ fn step_scene(step: ShapeStep, motion: ShapeMotion) -> Scene {
                 .fill(Color::TRANSPARENT)
                 .stroke(6.0, manim::BLUE);
 
-            scene().node(path_node().path(motion.circle_to_square()).style(outline))
+            scene().add(primitive_path(motion.circle_to_square()).style(outline))
         }
         ShapeStep::MorphSquareToCircle => {
             let outline = Style::new()
                 .fill(Color::TRANSPARENT)
                 .stroke(6.0, manim::GREEN);
 
-            scene().node(path_node().path(motion.square_to_circle()).style(outline))
+            scene().add(primitive_path(motion.square_to_circle()).style(outline))
         }
     }
 }

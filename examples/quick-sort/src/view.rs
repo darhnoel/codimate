@@ -175,23 +175,21 @@ fn arced_y(base: f32, height: f32, direction: f32) -> Animated<f32> {
 }
 
 fn add_panel(sc: Scene) -> Scene {
-    sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(background_style()),
     )
 }
 
 fn add_header(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(label(54.0, HEADER_Y, "Quick Sort", 28.0, INK));
-    sc.node(label(54.0, 76.0, subtitle, 16.0, MUTED))
+    sc = sc.add(label(54.0, HEADER_Y, "Quick Sort", 28.0, INK));
+    sc.add(label(54.0, 76.0, subtitle, 16.0, MUTED))
 }
 
 fn add_slots(mut sc: Scene) -> Scene {
     for i in 0..N {
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(
+        sc = sc.add(
+            primitive_path(rounded_rect_path(
                     tile_x(i),
                     ARRAY_Y,
                     TILE_W,
@@ -200,7 +198,7 @@ fn add_slots(mut sc: Scene) -> Scene {
                 ))
                 .style(slot_style()),
         );
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             tile_x(i) + TILE_W / 2.0,
             INDEX_Y,
             i.to_string(),
@@ -222,9 +220,8 @@ fn add_range_band(sc: Scene, low: usize, high: usize, depth: usize) -> Scene {
     let y = ARRAY_Y - pad_y - depth_offset;
     let w = tile_x(high) + TILE_W - x + pad_x;
     let h = TILE_H + pad_y * 2.0 + depth_offset;
-    sc.node(
-        path_node()
-            .path(rounded_rect_path(x, y, w, h, TILE_RADIUS + 2.0))
+    sc.add(
+        primitive_path(rounded_rect_path(x, y, w, h, TILE_RADIUS + 2.0))
             .style(range_style()),
     )
 }
@@ -272,8 +269,8 @@ fn add_tile_with_text(
     let offset_x = (TILE_W - text_width(&content, TILE_FONT)) / 2.0;
     let offset_y = (TILE_H + TILE_FONT * 0.45) / 2.0;
 
-    sc = sc.node(path_node().path(box_path(x, y)).style(tile_style));
-    sc.node(
+    sc = sc.add(primitive_path(box_path(x, y)).style(tile_style));
+    sc.add(
         text()
             .x(Animated::new(move |t| text_x.resolve(t) + offset_x))
             .y(Animated::new(move |t| text_y.resolve(t) + offset_y))
@@ -316,12 +313,11 @@ fn add_legend(mut sc: Scene) -> Scene {
     .enumerate()
     {
         let x = 346.0 + i as f32 * 120.0;
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(x, y, 18.0, 18.0, 5.0))
+        sc = sc.add(
+            primitive_path(rounded_rect_path(x, y, 18.0, 18.0, 5.0))
                 .style(tile_style(fill)),
         );
-        sc = sc.node(label(x + 28.0, y + 14.0, name, 13.0, MUTED));
+        sc = sc.add(label(x + 28.0, y + 14.0, name, 13.0, MUTED));
     }
     sc
 }
@@ -379,14 +375,14 @@ fn swap_scene(step: &QuickStep, motion: QuickSortMotion, left: usize, right: usi
 }
 
 fn add_step_markers(mut sc: Scene, step: &QuickStep) -> Scene {
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         tile_x(step.pivot_index) + TILE_W / 2.0,
         ARRAY_Y - 24.0,
         "pivot",
         12.0,
         PIVOT_FILL,
     ));
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         tile_x(step.store_index) + TILE_W / 2.0,
         ARRAY_Y + TILE_H + 56.0,
         "store",
@@ -394,7 +390,7 @@ fn add_step_markers(mut sc: Scene, step: &QuickStep) -> Scene {
         SMALL_FILL,
     ));
     if let QuickAction::Compare { index } = step.action {
-        sc = sc.node(centered_label(
+        sc = sc.add(centered_label(
             tile_x(index) + TILE_W / 2.0,
             ARRAY_Y - 48.0,
             "candidate",

@@ -184,13 +184,12 @@ fn moving_target_center(state: &[Vec<usize>; 3], to_peg: usize) -> Vec2 {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 52.0, "Tower of Hanoi", 30.0, INK));
-    sc.node(label(54.0, 88.0, subtitle, 16.0, MUTED))
+    sc = sc.add(label(54.0, 52.0, "Tower of Hanoi", 30.0, INK));
+    sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
 
 fn add_pegs(mut sc: Scene, active: Option<(usize, usize)>) -> Scene {
@@ -202,14 +201,12 @@ fn add_pegs(mut sc: Scene, active: Option<(usize, usize)>) -> Scene {
         } else {
             PANEL_BORDER
         };
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(peg.x - 132.0, BASE_Y, 264.0, 12.0, 6.0))
+        sc = sc.add(
+            primitive_path(rounded_rect_path(peg.x - 132.0, BASE_Y, 264.0, 12.0, 6.0))
                 .style(style(PANEL, 1.2, color)),
         );
-        sc = sc.node(
-            path_node()
-                .path(rounded_rect_path(
+        sc = sc.add(
+            primitive_path(rounded_rect_path(
                     peg.x - PEG_W / 2.0,
                     BASE_Y - PEG_H,
                     PEG_W,
@@ -218,7 +215,7 @@ fn add_pegs(mut sc: Scene, active: Option<(usize, usize)>) -> Scene {
                 ))
                 .style(style(PANEL, 1.2, color)),
         );
-        sc = sc.node(centered_label(peg.x, BASE_Y + 48.0, peg.label, 18.0, MUTED));
+        sc = sc.add(centered_label(peg.x, BASE_Y + 48.0, peg.label, 18.0, MUTED));
     }
     sc
 }
@@ -226,9 +223,8 @@ fn add_pegs(mut sc: Scene, active: Option<(usize, usize)>) -> Scene {
 fn add_disk(sc: Scene, disk: usize, center: impl IntoAnimated<Vec2>, active: bool) -> Scene {
     let fill = DISK_COLORS[disk];
     let stroke = if active { MOVING } else { DISK_STROKE };
-    sc.node(
-        path_node()
-            .path(box_path(center, disk_width(disk), DISK_H, DISK_RADIUS))
+    sc.add(
+        primitive_path(box_path(center, disk_width(disk), DISK_H, DISK_RADIUS))
             .style(style(fill, if active { 2.6 } else { 1.6 }, stroke)),
     )
 }
@@ -246,7 +242,7 @@ fn add_disks(mut sc: Scene, state: &[Vec<usize>; 3], hidden_disk: Option<usize>)
 }
 
 fn add_move_counter(sc: Scene, movement: &HanoiMove, total: usize) -> Scene {
-    sc.node(centered_label(
+    sc.add(centered_label(
         VIEW_W / 2.0,
         132.0,
         format!("Move {} of {}", movement.step, total),

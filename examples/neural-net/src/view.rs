@@ -112,13 +112,12 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 52.0, "Neural Net", 30.0, INK));
-    sc.node(label(54.0, 88.0, subtitle, 16.0, MUTED))
+    sc = sc.add(label(54.0, 52.0, "Neural Net", 30.0, INK));
+    sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
 
 fn edge_order(edge: Edge, trace: &NeuralTrace) -> usize {
@@ -193,11 +192,10 @@ fn add_edge(
 ) -> Scene {
     let (from, to) = edge_points(edge, net);
     match edge_state(edge, step, trace) {
-        EdgeState::Dim => sc.node(path_node().path(edge_path(from, to, 2.0)).fill(EDGE_DIM)),
-        EdgeState::Fired => sc.node(path_node().path(edge_path(from, to, 3.0)).fill(EDGE_FIRE)),
-        EdgeState::Active => sc.node(
-            path_node()
-                .path(active_edge_path(from, to, motion))
+        EdgeState::Dim => sc.add(primitive_path(edge_path(from, to, 2.0)).fill(EDGE_DIM)),
+        EdgeState::Fired => sc.add(primitive_path(edge_path(from, to, 3.0)).fill(EDGE_FIRE)),
+        EdgeState::Active => sc.add(
+            primitive_path(active_edge_path(from, to, motion))
                 .fill(EDGE_FIRE),
         ),
     }
@@ -242,23 +240,22 @@ fn add_neuron(
 ) -> Scene {
     let stroke_width = if active { 3.0 } else { 1.6 };
     let label_text = label_text.into();
-    let mut sc = sc.node(
+    let mut sc = sc.add(
         circle()
             .x(pos.x)
             .y(pos.y)
             .radius(if active { NEURON_R + 2.0 } else { NEURON_R })
             .fill(fill),
     );
-    sc = sc.node(
-        path_node()
-            .path(circle_path(
+    sc = sc.add(
+        primitive_path(circle_path(
                 pos.x,
                 pos.y,
                 if active { NEURON_R + 2.0 } else { NEURON_R },
             ))
             .style(style(Color::TRANSPARENT, stroke_width, STROKE)),
     );
-    sc.node(centered_label(pos.x, pos.y + 6.0, label_text, 13.0, INK))
+    sc.add(centered_label(pos.x, pos.y + 6.0, label_text, 13.0, INK))
 }
 
 fn step_scene(step: &NeuralStep, trace: &NeuralTrace, motion: NeuralNetMotion) -> Scene {
@@ -324,9 +321,9 @@ fn step_scene(step: &NeuralStep, trace: &NeuralTrace, motion: NeuralNetMotion) -
         sc = add_neuron(sc, pos, fill, active, format!("y{}", i + 1));
     }
 
-    sc = sc.node(centered_label(INPUT_X, 522.0, "inputs", 14.0, MUTED));
-    sc = sc.node(centered_label(HIDDEN_X, 522.0, "hidden layer", 14.0, MUTED));
-    sc.node(centered_label(OUTPUT_X, 522.0, "outputs", 14.0, MUTED))
+    sc = sc.add(centered_label(INPUT_X, 522.0, "inputs", 14.0, MUTED));
+    sc = sc.add(centered_label(HIDDEN_X, 522.0, "hidden layer", 14.0, MUTED));
+    sc.add(centered_label(OUTPUT_X, 522.0, "outputs", 14.0, MUTED))
 }
 
 fn subtitle(step: &NeuralStep) -> String {

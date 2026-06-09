@@ -48,7 +48,7 @@ fn pulse_scene(state: ConnectionPulse, motion: ConnectionPulseMotion) -> Scene {
         .radius(6.0)
         .fill(PULSE);
 
-    scene().node(box_a).node(box_b).node(conn).node(pulse)
+    scene().add(box_a).add(box_b).add(conn).add(pulse)
 }
 
 fn step_scene(

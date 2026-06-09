@@ -97,14 +97,13 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 }
 
 fn add_background(mut sc: Scene, step: &DijkstraStep) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 52.0, "Dijkstra's Shortest Path", 30.0, INK));
-    sc = sc.node(label(54.0, 88.0, subtitle(step), 16.0, MUTED));
-    sc.node(label(
+    sc = sc.add(label(54.0, 52.0, "Dijkstra's Shortest Path", 30.0, INK));
+    sc = sc.add(label(54.0, 88.0, subtitle(step), 16.0, MUTED));
+    sc.add(label(
         54.0,
         VIEW_H - 28.0,
         distances_line(step),
@@ -194,17 +193,16 @@ fn add_edge(
 
     let (line, weight_color): (Scene, Color) = match edge_state(a, b, step) {
         EdgeState::Dim => (
-            sc.node(path_node().path(edge_path(from, to, 2.0)).fill(EDGE_DIM)),
+            sc.add(primitive_path(edge_path(from, to, 2.0)).fill(EDGE_DIM)),
             MUTED,
         ),
         EdgeState::Tree => (
-            sc.node(path_node().path(edge_path(from, to, 4.0)).fill(EDGE_TREE)),
+            sc.add(primitive_path(edge_path(from, to, 4.0)).fill(EDGE_TREE)),
             INK,
         ),
         EdgeState::Relax => (
-            sc.node(
-                path_node()
-                    .path(edge_path(from, to, 5.0))
+            sc.add(
+                primitive_path(edge_path(from, to, 5.0))
                     .fill(motion.ease(EDGE_DIM, EDGE_RELAX)),
             ),
             EDGE_RELAX,
@@ -212,7 +210,7 @@ fn add_edge(
     };
 
     // Nudge the weight off the line so it stays readable.
-    line.node(centered_label(
+    line.add(centered_label(
         mid.x,
         mid.y - 8.0,
         weight.to_string(),
@@ -260,23 +258,22 @@ fn add_node(sc: Scene, n: usize, pos: Vec2, step: &DijkstraStep, motion: Dijkstr
         1.6
     };
 
-    let mut sc = sc.node(
+    let mut sc = sc.add(
         circle()
             .x(pos.x)
             .y(pos.y)
             .radius(radius)
             .fill(node_fill(n, step, motion)),
     );
-    sc = sc.node(
-        path_node()
-            .path(circle_path(pos.x, pos.y, NODE_R + 2.0))
+    sc = sc.add(
+        primitive_path(circle_path(pos.x, pos.y, NODE_R + 2.0))
             .style(style(Color::TRANSPARENT, stroke_width, STROKE)),
     );
 
     // Node name inside, distance below.
-    sc = sc.node(centered_label(pos.x, pos.y + 6.0, NODE_NAMES[n], 22.0, INK));
+    sc = sc.add(centered_label(pos.x, pos.y + 6.0, NODE_NAMES[n], 22.0, INK));
     let dist_color: Color = if step.improved[n] { DIST_IMPROVED } else { INK };
-    sc.node(centered_label(
+    sc.add(centered_label(
         pos.x,
         pos.y + NODE_R + 24.0,
         format!("d={}", dist_text(n, step)),

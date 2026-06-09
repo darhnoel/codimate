@@ -188,13 +188,12 @@ fn ball_color(ball: Ball) -> Color {
 }
 
 fn background(mut sc: Scene) -> Scene {
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(label(54.0, 58.0, "Swap", 32.0, INK));
-    sc.node(label(
+    sc = sc.add(label(54.0, 58.0, "Swap", 32.0, INK));
+    sc.add(label(
         54.0,
         92.0,
         "Use temp so one value is never overwritten",
@@ -206,12 +205,11 @@ fn background(mut sc: Scene) -> Scene {
 fn add_slot(mut sc: Scene, slot: Slot, active: Option<Color>) -> Scene {
     let stroke = active.unwrap_or(SLOT_STROKE);
     let width = if active.is_some() { 3.2 } else { 1.5 };
-    sc = sc.node(
-        path_node()
-            .path(rounded_rect_path(slot.x, SLOT_Y, SLOT_W, SLOT_H, 18.0))
+    sc = sc.add(
+        primitive_path(rounded_rect_path(slot.x, SLOT_Y, SLOT_W, SLOT_H, 18.0))
             .style(slot_style(stroke, width)),
     );
-    sc.node(centered_label(
+    sc.add(centered_label(
         slot.x + SLOT_W / 2.0,
         SLOT_Y + SLOT_H + 36.0,
         slot.label,
@@ -256,14 +254,14 @@ fn add_ball_at(
     let label = ball.label;
     let font_size = 30.0;
 
-    sc = sc.node(
+    sc = sc.add(
         circle()
             .x(Animated::new(move |t| circle_pos.resolve(t).x))
             .y(Animated::new(move |t| position.resolve(t).y))
             .radius(radius)
             .fill(ball_color(ball)),
     );
-    sc.node(
+    sc.add(
         text()
             .x(Animated::new(move |t| {
                 text_x_pos.resolve(t).x - text_width(label, font_size) / 2.0
@@ -293,7 +291,7 @@ fn add_state_balls(mut sc: Scene, state: SwapState, moving: Option<Ball>) -> Sce
 
 fn state_scene(title: &'static str, state: SwapState) -> Scene {
     let mut sc = background(scene());
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         SCENE_LABEL_Y,
         title,
@@ -316,7 +314,7 @@ fn move_scene(
     let from_center = slot_center(slot(from));
     let to_center = slot_center(slot(to));
 
-    sc = sc.node(centered_label(
+    sc = sc.add(centered_label(
         VIEW_W / 2.0,
         SCENE_LABEL_Y,
         title,

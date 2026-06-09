@@ -92,13 +92,12 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 
 fn background(mut sc: Scene) -> Scene {
     let text_slots = header_text_slots();
-    sc = sc.node(
-        path_node()
-            .path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
+    sc = sc.add(
+        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
             .style(style(BG, 0.0, BG)),
     );
-    sc = sc.node(centered_text(&text_slots[0], "Swap A B", 32.0, INK));
-    sc.node(centered_text(
+    sc = sc.add(centered_text(&text_slots[0], "Swap A B", 32.0, INK));
+    sc.add(centered_text(
         &text_slots[1],
         "items have identity; layout slots stay fixed",
         16.0,
@@ -117,12 +116,12 @@ fn add_slots(mut sc: Scene, active: Option<(SlotId, SlotId)>) -> Scene {
         } else {
             SLOT_STROKE
         };
-        sc = sc.node(
+        sc = sc.add(
             box_in(visual_slot)
                 .radius(SLOT_R)
                 .style(style(SLOT_FILL, 1.8, stroke)),
         );
-        sc = sc.node(centered_text(&label_slot, label_text, 15.0, SLOT_TEXT));
+        sc = sc.add(centered_text(&label_slot, label_text, 15.0, SLOT_TEXT));
     }
     sc
 }
@@ -145,13 +144,13 @@ fn add_item(
     let text_x = center.clone();
     let text_y = center.clone();
     let label = item.label();
-    sc = sc.node(
+    sc = sc.add(
         box_at(center, Vec2::new(ITEM_W, ITEM_H))
             .radius(ITEM_R)
             .style(style(item_color(item), 1.8, INK))
             .stroke(stroke_width, stroke),
     );
-    sc.node(
+    sc.add(
         text()
             .x(Animated::new(move |t| text_x.resolve(t).x))
             .y(Animated::new(move |t| text_y.resolve(t).y + 10.0))
@@ -172,8 +171,8 @@ fn add_mapping(mut sc: Scene, mapping: [(ItemId, SlotId); 2]) -> Scene {
 
 fn bottom_text(mut sc: Scene, line_a: &'static str, line_b: &'static str) -> Scene {
     let text_slots = bottom_text_slots();
-    sc = sc.node(centered_text(&text_slots[0], line_a, 19.0, INK));
-    sc.node(centered_text(&text_slots[1], line_b, 16.0, MUTED))
+    sc = sc.add(centered_text(&text_slots[0], line_a, 19.0, INK));
+    sc.add(centered_text(&text_slots[1], line_b, 16.0, MUTED))
 }
 
 fn static_scene(
