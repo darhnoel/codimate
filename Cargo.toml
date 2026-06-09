@@ -12,6 +12,9 @@ members = [
     "crates/codimate-arrange",
     "crates/codimate-fonts",
     "crates/codimate-glyph",
+
+    # --- examples below are temporarily unlisted during the uniform-transform
+    # --- refactor (ADR 0006); re-added in migrated batches. See refactor-plan.md.
     "examples/circle-to-square",
     "examples/demo",
     "examples/neural-net",
@@ -30,4 +33,7 @@ members = [
     "examples/faster-dijkstra",
     "examples/newton-laws",
     "examples/khmer-fade-wave",
+    "examples/word-appear",
+    "examples/transformer",
+    "examples/attention-is-all-you-need-architecture",
 ]

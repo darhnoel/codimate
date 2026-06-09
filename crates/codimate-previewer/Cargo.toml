@@ -22,6 +22,8 @@ codimate-example-dijkstra = { path = "../../examples/dijkstra" }
 codimate-example-knapsack = { path = "../../examples/knapsack" }
 codimate-example-faster-dijkstra = { path = "../../examples/faster-dijkstra" }
 codimate-example-newton-laws = { path = "../../examples/newton-laws" }
+
+codimate-example-word-appear = { path = "../../examples/word-appear" }
 minifb = { version = "0.25", default-features = false, features = ["x11"] }
 
 [build-dependencies]
