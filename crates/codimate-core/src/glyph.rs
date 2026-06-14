@@ -31,6 +31,15 @@ impl fmt::Debug for GlyphBlock {
 impl GlyphBlock {
     /// Construct from positioned glyph path nodes, computing the bounding box.
     pub fn from_glyphs(glyphs: Vec<PathNode>) -> Self {
+        Self::from_glyphs_and_width(glyphs, None)
+    }
+
+    /// Construct from positioned glyph path nodes with an explicit advance width.
+    pub fn from_glyphs_with_width(glyphs: Vec<PathNode>, width: f32) -> Self {
+        Self::from_glyphs_and_width(glyphs, Some(width))
+    }
+
+    fn from_glyphs_and_width(glyphs: Vec<PathNode>, explicit_width: Option<f32>) -> Self {
         let (mut min_x, mut min_y, mut max_x, mut max_y) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
         for g in &glyphs {
             let resolved = g.resolve(0.0);
@@ -43,7 +52,15 @@ impl GlyphBlock {
         }
         Self {
             glyphs,
-            width: if max_x > min_x { max_x - min_x } else { 0.0 },
+            width: explicit_width.unwrap_or_else(
+                || {
+                    if max_x > min_x {
+                        max_x - min_x
+                    } else {
+                        0.0
+                    }
+                },
+            ),
             height: if max_y > min_y { max_y - min_y } else { 0.0 },
         }
     }

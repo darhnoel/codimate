@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/codimate-core",
     "crates/codimate-animation",
+    "crates/codimate",
     "crates/codimate-effects",
     "crates/codimate-layout",
     "crates/codimate-math",
@@ -32,6 +33,7 @@ members = [
     "examples/knapsack",
     "examples/faster-dijkstra",
     "examples/newton-laws",
+    "examples/insertion-sort",
     "examples/khmer-fade-wave",
     "examples/word-appear",
     "examples/logo-animation",

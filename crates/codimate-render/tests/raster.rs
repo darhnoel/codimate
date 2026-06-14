@@ -1,6 +1,7 @@
 //! Render-pipeline test: rasterize a frame into pixels (tiny-skia backend).
 
 use codimate_core::{circle_path, Color, Segment, TextAlign, Vec2};
+use codimate_fonts::FontRegistry;
 use codimate_layout::Viewport;
 use codimate_render::{rasterize, RenderCommand, RenderFrame};
 
@@ -126,6 +127,143 @@ fn rasterize_japanese_text_uses_real_glyphs_not_missing_boxes() {
     assert_ne!(
         japanese.rgba, missing.rgba,
         "Japanese text rendered like repeated missing-glyph boxes"
+    );
+}
+
+#[test]
+fn rasterize_khmer_text_matches_harfbuzz_shaped_paths() {
+    let text = "គន្លឹះ";
+    let x = 20.0;
+    let y = 64.0;
+    let font_size = 38.0;
+    let font_id = FontRegistry::global().char_font('គ');
+    let block = codimate_glyph::shape(text, font_id, font_size, Color::RED)
+        .expect("Khmer text should shape through HarfBuzz");
+
+    let text_frame = RenderFrame {
+        name: "khmer-text-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(220.0, 96.0),
+        commands: vec![RenderCommand::Text {
+            x,
+            y,
+            text: text.to_string(),
+            font_size,
+            fill: Color::RED,
+            align: TextAlign::Left,
+        }],
+    };
+
+    let path_commands = block
+        .glyphs
+        .iter()
+        .map(|glyph| {
+            let resolved = glyph.resolve(0.0);
+            RenderCommand::Path {
+                segments: resolved
+                    .path
+                    .segments
+                    .iter()
+                    .map(|segment| segment.translate(x, y))
+                    .collect(),
+                closed: resolved.path.closed,
+                fill: resolved.fill,
+                stroke_width: resolved.stroke_width,
+                stroke_color: resolved.stroke_color,
+            }
+        })
+        .collect();
+
+    let shaped_frame = RenderFrame {
+        name: "khmer-shaped-path-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(220.0, 96.0),
+        commands: path_commands,
+    };
+
+    assert_eq!(
+        rasterize(&text_frame).rgba,
+        rasterize(&shaped_frame).rgba,
+        "Khmer Text commands should use shaped glyph outlines"
+    );
+}
+
+#[test]
+fn rasterize_khmer_text_with_ascii_number_uses_font_runs() {
+    let khmer = "គន្លឹះ ";
+    let number = "8";
+    let text = format!("{khmer}{number}");
+    let x = 20.0;
+    let y = 64.0;
+    let font_size = 38.0;
+
+    let khmer_block = codimate_glyph::shape(
+        khmer,
+        FontRegistry::global().char_font('គ'),
+        font_size,
+        Color::RED,
+    )
+    .expect("Khmer run should shape");
+    let number_block = codimate_glyph::shape(
+        number,
+        FontRegistry::global().char_font('8'),
+        font_size,
+        Color::RED,
+    )
+    .expect("ASCII number run should shape");
+
+    let text_frame = RenderFrame {
+        name: "khmer-number-text-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(260.0, 96.0),
+        commands: vec![RenderCommand::Text {
+            x,
+            y,
+            text,
+            font_size,
+            fill: Color::RED,
+            align: TextAlign::Left,
+        }],
+    };
+
+    let path_commands = khmer_block
+        .glyphs
+        .iter()
+        .map(|glyph| (glyph, x))
+        .chain(
+            number_block
+                .glyphs
+                .iter()
+                .map(|glyph| (glyph, x + khmer_block.width)),
+        )
+        .map(|(glyph, run_x)| {
+            let resolved = glyph.resolve(0.0);
+            RenderCommand::Path {
+                segments: resolved
+                    .path
+                    .segments
+                    .iter()
+                    .map(|segment| segment.translate(run_x, y))
+                    .collect(),
+                closed: resolved.path.closed,
+                fill: resolved.fill,
+                stroke_width: resolved.stroke_width,
+                stroke_color: resolved.stroke_color,
+            }
+        })
+        .collect();
+
+    let shaped_frame = RenderFrame {
+        name: "khmer-number-shaped-path-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(260.0, 96.0),
+        commands: path_commands,
+    };
+
+    assert_eq!(
+        rasterize(&text_frame).rgba,
+        rasterize(&shaped_frame).rgba,
+        "Khmer plus ASCII numbers should render as separate shaped font runs"
     );
 }
 

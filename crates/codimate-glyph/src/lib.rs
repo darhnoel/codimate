@@ -81,7 +81,7 @@ pub fn shape(
         cursor_x += advance;
     }
 
-    Ok(GlyphBlock::from_glyphs(glyph_nodes))
+    Ok(GlyphBlock::from_glyphs_with_width(glyph_nodes, cursor_x))
 }
 
 /// Converts TTF outline callbacks into [`Segment`]s, applying offset + y-flip.

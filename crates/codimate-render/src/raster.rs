@@ -5,10 +5,10 @@
 //! neutral model lives in [`crate::command`]. Pure and deterministic — no I/O.
 
 use crate::command::{render_commands, RenderCommand, RenderFrame, Renderer};
-use codimate_core::{Color, Segment, TextAlign};
+use codimate_core::{Color, Path, Segment, TextAlign};
 use codimate_layout::{LayoutFrame, Viewport};
 
-use codimate_fonts::FontRegistry;
+use codimate_fonts::{FontId, FontRegistry};
 
 /// A finished image in memory: straight RGBA8, 4 bytes per pixel, row-major,
 /// top-left origin.
@@ -85,13 +85,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                 let mut builder = PathBuilder::new();
                 builder.push_circle(*x, *y, *radius);
                 if let Some(path) = builder.finish() {
-                    pixmap.fill_path(
-                        &path,
-                        &paint,
-                        FillRule::Winding,
-                        transform,
-                        None,
-                    );
+                    pixmap.fill_path(&path, &paint, FillRule::Winding, transform, None);
                 }
             }
             RenderCommand::Rect {
@@ -113,66 +107,18 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                 stroke_width,
                 stroke_color,
             } => {
-                let mut builder = PathBuilder::new();
-                let mut first = true;
-                let mut saw_close = false;
-                for segment in segments.iter() {
-                    match segment {
-                        Segment::MoveTo(p) => {
-                            builder.move_to(p.x, p.y);
-                            first = false;
-                        }
-                        Segment::Close => {
-                            builder.close();
-                            saw_close = true;
-                        }
-                        Segment::Line(from, to) => {
-                            if first {
-                                builder.move_to(from.x, from.y);
-                                first = false;
-                            }
-                            builder.line_to(to.x, to.y);
-                        }
-                        Segment::Quad(from, ctrl, to) => {
-                            if first {
-                                builder.move_to(from.x, from.y);
-                                first = false;
-                            }
-                            builder.quad_to(ctrl.x, ctrl.y, to.x, to.y);
-                        }
-                        Segment::Cubic(from, ctrl1, ctrl2, to) => {
-                            if first {
-                                builder.move_to(from.x, from.y);
-                                first = false;
-                            }
-                            builder.cubic_to(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
-                        }
-                    }
-                }
-                if *closed && !saw_close {
-                    builder.close();
-                }
-                if let Some(path) = builder.finish() {
-                    // Fill
-                    paint.set_color(to_sk_color(*fill));
-                    pixmap.fill_path(
-                        &path,
-                        &paint,
-                        FillRule::Winding,
-                        transform,
-                        None,
-                    );
-
-                    // Stroke (when width > 0)
-                    if *stroke_width > 0.0 {
-                        paint.set_color(to_sk_color(*stroke_color));
-                        let stroke = tiny_skia::Stroke {
-                            width: *stroke_width,
-                            ..Default::default()
-                        };
-                        pixmap.stroke_path(&path, &paint, &stroke, transform, None);
-                    }
-                }
+                render_path(
+                    &mut pixmap,
+                    &mut paint,
+                    &Path {
+                        segments: segments.clone(),
+                        closed: *closed,
+                    },
+                    *fill,
+                    *stroke_width,
+                    *stroke_color,
+                    transform,
+                );
             }
             RenderCommand::Text {
                 x,
@@ -204,6 +150,71 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
     }
 }
 
+fn render_path(
+    pixmap: &mut tiny_skia::Pixmap,
+    paint: &mut tiny_skia::Paint,
+    path: &Path,
+    fill: Color,
+    stroke_width: f32,
+    stroke_color: Color,
+    transform: tiny_skia::Transform,
+) {
+    use tiny_skia::{FillRule, PathBuilder};
+
+    let mut builder = PathBuilder::new();
+    let mut first = true;
+    let mut saw_close = false;
+    for segment in path.segments.iter() {
+        match segment {
+            Segment::MoveTo(p) => {
+                builder.move_to(p.x, p.y);
+                first = false;
+            }
+            Segment::Close => {
+                builder.close();
+                saw_close = true;
+            }
+            Segment::Line(from, to) => {
+                if first {
+                    builder.move_to(from.x, from.y);
+                    first = false;
+                }
+                builder.line_to(to.x, to.y);
+            }
+            Segment::Quad(from, ctrl, to) => {
+                if first {
+                    builder.move_to(from.x, from.y);
+                    first = false;
+                }
+                builder.quad_to(ctrl.x, ctrl.y, to.x, to.y);
+            }
+            Segment::Cubic(from, ctrl1, ctrl2, to) => {
+                if first {
+                    builder.move_to(from.x, from.y);
+                    first = false;
+                }
+                builder.cubic_to(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
+            }
+        }
+    }
+    if path.closed && !saw_close {
+        builder.close();
+    }
+    if let Some(path) = builder.finish() {
+        paint.set_color(to_sk_color(fill));
+        pixmap.fill_path(&path, paint, FillRule::Winding, transform, None);
+
+        if stroke_width > 0.0 {
+            paint.set_color(to_sk_color(stroke_color));
+            let stroke = tiny_skia::Stroke {
+                width: stroke_width,
+                ..Default::default()
+            };
+            pixmap.stroke_path(&path, paint, &stroke, transform, None);
+        }
+    }
+}
+
 fn render_text(
     pixmap: &mut tiny_skia::Pixmap,
     x: f32,
@@ -213,6 +224,10 @@ fn render_text(
     fill: Color,
     align: TextAlign,
 ) {
+    if render_shaped_text(pixmap, x, y, text, font_size, fill, align) {
+        return;
+    }
+
     use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
 
     let registry = FontRegistry::global();
@@ -290,6 +305,117 @@ fn render_text(
     }
 }
 
+fn render_shaped_text(
+    pixmap: &mut tiny_skia::Pixmap,
+    x: f32,
+    y: f32,
+    text: &str,
+    font_size: f32,
+    fill: Color,
+    align: TextAlign,
+) -> bool {
+    let Some(runs) = shaped_runs(text, font_size, fill) else {
+        return false;
+    };
+    if runs.is_empty() {
+        return false;
+    }
+    let width = runs.iter().map(|run| run.block.width).sum::<f32>();
+
+    let x_offset = match align {
+        TextAlign::Left => x,
+        TextAlign::Center => x - width / 2.0,
+    };
+    let transform = tiny_skia::Transform::identity();
+    let mut paint = tiny_skia::Paint {
+        anti_alias: true,
+        ..Default::default()
+    };
+
+    let mut cursor_x = x_offset;
+    for run in runs {
+        for glyph in run.block.glyphs {
+            let mut resolved = glyph.resolve(0.0);
+            translate_path(&mut resolved.path, cursor_x, y);
+            render_path(
+                pixmap,
+                &mut paint,
+                &resolved.path,
+                resolved.fill,
+                resolved.stroke_width,
+                resolved.stroke_color,
+                transform,
+            );
+        }
+        cursor_x += run.block.width;
+    }
+
+    true
+}
+
+struct ShapedRun {
+    block: codimate_core::GlyphBlock,
+}
+
+fn shaped_runs(text: &str, font_size: f32, fill: Color) -> Option<Vec<ShapedRun>> {
+    let registry = FontRegistry::global();
+    let mut runs = Vec::new();
+    let mut current_font: Option<FontId> = None;
+    let mut current_text = String::new();
+
+    for ch in text.chars() {
+        let font = if ch.is_whitespace() {
+            current_font.unwrap_or_else(|| registry.char_font('A'))
+        } else {
+            registry.char_font(ch)
+        };
+
+        if current_font.is_some_and(|active| active != font) && !current_text.is_empty() {
+            push_shaped_run(
+                &mut runs,
+                &current_text,
+                current_font.unwrap(),
+                font_size,
+                fill,
+            )?;
+            current_text.clear();
+        }
+
+        current_font = Some(font);
+        current_text.push(ch);
+    }
+
+    if !current_text.is_empty() {
+        push_shaped_run(
+            &mut runs,
+            &current_text,
+            current_font.unwrap_or_else(|| registry.char_font('A')),
+            font_size,
+            fill,
+        )?;
+    }
+
+    Some(runs)
+}
+
+fn push_shaped_run(
+    runs: &mut Vec<ShapedRun>,
+    text: &str,
+    font: FontId,
+    font_size: f32,
+    fill: Color,
+) -> Option<()> {
+    let block = codimate_glyph::shape(text, font, font_size, fill).ok()?;
+    runs.push(ShapedRun { block });
+    Some(())
+}
+
+fn translate_path(path: &mut Path, dx: f32, dy: f32) {
+    for segment in &mut path.segments {
+        *segment = segment.translate(dx, dy);
+    }
+}
+
 fn font_for_char<'a, 'font>(
     ch: char,
     primary: &'a ab_glyph::FontRef<'font>,
@@ -352,7 +478,11 @@ impl Renderer for RasterRenderer {
     type Error = core::convert::Infallible;
 
     fn render(&mut self, frame: &LayoutFrame) -> Result<(), Self::Error> {
-        self.last = Some(rasterize_commands(frame.viewport, &render_commands(frame), 1.0));
+        self.last = Some(rasterize_commands(
+            frame.viewport,
+            &render_commands(frame),
+            1.0,
+        ));
         Ok(())
     }
 }

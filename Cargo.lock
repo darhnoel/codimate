@@ -158,6 +158,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
+name = "codimate"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-export",
+ "codimate-layout",
+]
+
+[[package]]
 name = "codimate-animation"
 version = "0.1.0"
 dependencies = [
@@ -241,6 +251,13 @@ dependencies = [
  "codimate-core",
  "codimate-export",
  "codimate-layout",
+]
+
+[[package]]
+name = "codimate-example-insertion-sort"
+version = "0.1.0"
+dependencies = [
+ "codimate",
 ]
 
 [[package]]
@@ -449,6 +466,7 @@ dependencies = [
  "codimate-example-faster-dijkstra",
  "codimate-example-knapsack",
  "codimate-example-logo-animation",
+ "codimate-example-insertion-sort",
  "codimate-example-matrix-mult",
  "codimate-example-merge-sort",
  "codimate-example-neural-net",
@@ -469,6 +487,7 @@ dependencies = [
  "ab_glyph",
  "codimate-core",
  "codimate-fonts",
+ "codimate-glyph",
  "codimate-layout",
  "tiny-skia",
 ]
