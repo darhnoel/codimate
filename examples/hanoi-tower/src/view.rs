@@ -1,7 +1,7 @@
 use crate::{style::*, HanoiMotion, HanoiMove, HanoiTiming, HanoiTrace, PEG_COUNT};
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 1000.0;
 const VIEW_H: f32 = 620.0;
@@ -184,10 +184,7 @@ fn moving_target_center(state: &[Vec<usize>; 3], to_peg: usize) -> Vec2 {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 52.0, "Tower of Hanoi", 30.0, INK));
     sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
@@ -207,13 +204,13 @@ fn add_pegs(mut sc: Scene, active: Option<(usize, usize)>) -> Scene {
         );
         sc = sc.add(
             primitive_path(rounded_rect_path(
-                    peg.x - PEG_W / 2.0,
-                    BASE_Y - PEG_H,
-                    PEG_W,
-                    PEG_H,
-                    5.0,
-                ))
-                .style(style(PANEL, 1.2, color)),
+                peg.x - PEG_W / 2.0,
+                BASE_Y - PEG_H,
+                PEG_W,
+                PEG_H,
+                5.0,
+            ))
+            .style(style(PANEL, 1.2, color)),
         );
         sc = sc.add(centered_label(peg.x, BASE_Y + 48.0, peg.label, 18.0, MUTED));
     }
@@ -224,8 +221,11 @@ fn add_disk(sc: Scene, disk: usize, center: impl IntoAnimated<Vec2>, active: boo
     let fill = DISK_COLORS[disk];
     let stroke = if active { MOVING } else { DISK_STROKE };
     sc.add(
-        primitive_path(box_path(center, disk_width(disk), DISK_H, DISK_RADIUS))
-            .style(style(fill, if active { 2.6 } else { 1.6 }, stroke)),
+        primitive_path(box_path(center, disk_width(disk), DISK_H, DISK_RADIUS)).style(style(
+            fill,
+            if active { 2.6 } else { 1.6 },
+            stroke,
+        )),
     )
 }
 

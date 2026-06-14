@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_knapsack::{
     explain, knapsack_algorithm, knapsack_motion, knapsack_view, Knapsack, KnapsackTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

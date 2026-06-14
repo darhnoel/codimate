@@ -2,9 +2,9 @@ use crate::{
     style::*, Dijkstra as DijkstraState, DijkstraAction, DijkstraMotion, DijkstraStep,
     DijkstraTiming, DijkstraTrace, NODE_COUNT,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 900.0;
 const VIEW_H: f32 = 600.0;
@@ -97,10 +97,7 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 }
 
 fn add_background(mut sc: Scene, step: &DijkstraStep) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 52.0, "Dijkstra's Shortest Path", 30.0, INK));
     sc = sc.add(label(54.0, 88.0, subtitle(step), 16.0, MUTED));
     sc.add(label(
@@ -202,8 +199,7 @@ fn add_edge(
         ),
         EdgeState::Relax => (
             sc.add(
-                primitive_path(edge_path(from, to, 5.0))
-                    .fill(motion.ease(EDGE_DIM, EDGE_RELAX)),
+                primitive_path(edge_path(from, to, 5.0)).fill(motion.ease(EDGE_DIM, EDGE_RELAX)),
             ),
             EDGE_RELAX,
         ),
@@ -266,8 +262,11 @@ fn add_node(sc: Scene, n: usize, pos: Vec2, step: &DijkstraStep, motion: Dijkstr
             .fill(node_fill(n, step, motion)),
     );
     sc = sc.add(
-        primitive_path(circle_path(pos.x, pos.y, NODE_R + 2.0))
-            .style(style(Color::TRANSPARENT, stroke_width, STROKE)),
+        primitive_path(circle_path(pos.x, pos.y, NODE_R + 2.0)).style(style(
+            Color::TRANSPARENT,
+            stroke_width,
+            STROKE,
+        )),
     );
 
     // Node name inside, distance below.

@@ -1,10 +1,8 @@
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::{
-    circle_path, ease_in_out, manim, primitive_path, rect_path, scene, tween, Animated, Color,
-    ExplanationBuilder, Path, Scene, Style, Transformable,
+use codimate::{
+    animation, circle_path, ease_in_out, export_mp4, manim, primitive_path, rect_path, scene,
+    sequence, tween, Animated, Animation, Color, ExplanationBuilder, ExportConfig, Path, Playable,
+    Scene, Style, Transformable, Viewport,
 };
-use codimate_export::{export_mp4, ExportConfig};
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy)]
 pub struct ShapeDemo;

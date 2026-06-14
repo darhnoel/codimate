@@ -6,8 +6,8 @@ mod style;
 mod timing;
 mod view;
 
-use codimate_animation::Playable;
-use codimate_layout::Viewport;
+use codimate::Playable;
+use codimate::Viewport;
 
 pub use algorithm::{neural_net_algorithm, Edge, NeuralAction, NeuralStep, NeuralTrace};
 pub use builder::{explain, ExplainBuilder};

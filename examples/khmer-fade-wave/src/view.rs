@@ -1,4 +1,4 @@
-use codimate_core::{primitive_path, scene, Animated, Color, Scene, Transformable};
+use codimate::{primitive_path, scene, Animated, Color, Scene, Transformable};
 
 use crate::{
     motion::{bounce, KhmerFadeWaveMotion},

@@ -1,5 +1,5 @@
-use codimate_export::{export_frames, export_mp4, ExportConfig};
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::{export_frames, export_mp4, ExportConfig};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

@@ -1,9 +1,9 @@
 use crate::{
     style::*, QuickAction, QuickSort, QuickSortMotion, QuickSortTiming, QuickStep, QuickTrace, N,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 use std::f32::consts::PI;
 
 const VIEW_W: f32 = 1000.0;
@@ -175,10 +175,7 @@ fn arced_y(base: f32, height: f32, direction: f32) -> Animated<f32> {
 }
 
 fn add_panel(sc: Scene) -> Scene {
-    sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(background_style()),
-    )
+    sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(background_style()))
 }
 
 fn add_header(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
@@ -190,13 +187,13 @@ fn add_slots(mut sc: Scene) -> Scene {
     for i in 0..N {
         sc = sc.add(
             primitive_path(rounded_rect_path(
-                    tile_x(i),
-                    ARRAY_Y,
-                    TILE_W,
-                    TILE_H,
-                    TILE_RADIUS,
-                ))
-                .style(slot_style()),
+                tile_x(i),
+                ARRAY_Y,
+                TILE_W,
+                TILE_H,
+                TILE_RADIUS,
+            ))
+            .style(slot_style()),
         );
         sc = sc.add(centered_label(
             tile_x(i) + TILE_W / 2.0,
@@ -220,10 +217,7 @@ fn add_range_band(sc: Scene, low: usize, high: usize, depth: usize) -> Scene {
     let y = ARRAY_Y - pad_y - depth_offset;
     let w = tile_x(high) + TILE_W - x + pad_x;
     let h = TILE_H + pad_y * 2.0 + depth_offset;
-    sc.add(
-        primitive_path(rounded_rect_path(x, y, w, h, TILE_RADIUS + 2.0))
-            .style(range_style()),
-    )
+    sc.add(primitive_path(rounded_rect_path(x, y, w, h, TILE_RADIUS + 2.0)).style(range_style()))
 }
 
 fn tile_fill(step: Option<&QuickStep>, index: usize, final_state: bool) -> Color {
@@ -313,10 +307,8 @@ fn add_legend(mut sc: Scene) -> Scene {
     .enumerate()
     {
         let x = 346.0 + i as f32 * 120.0;
-        sc = sc.add(
-            primitive_path(rounded_rect_path(x, y, 18.0, 18.0, 5.0))
-                .style(tile_style(fill)),
-        );
+        sc = sc
+            .add(primitive_path(rounded_rect_path(x, y, 18.0, 18.0, 5.0)).style(tile_style(fill)));
         sc = sc.add(label(x + 28.0, y + 14.0, name, 13.0, MUTED));
     }
     sc

@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_three_sum::{
     explain, three_sum_algorithm, three_sum_motion, three_sum_view, ThreeSum, ThreeSumTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

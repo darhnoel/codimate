@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_quick_sort::{
     explain, quick_sort_algorithm, quick_sort_motion, quick_sort_view, QuickSort, QuickSortTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

@@ -1,5 +1,5 @@
+use codimate::{export_mp4, ExportConfig};
 use codimate_example_connection_pulse::create;
-use codimate_export::{export_mp4, ExportConfig};
 
 fn main() {
     let (play, viewport) = create();

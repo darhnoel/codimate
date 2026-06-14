@@ -12,35 +12,26 @@ state -> algorithm -> steps -> view -> motion -> timing -> video
 
 ## Start Here
 
-Run the smallest example first:
+Follow the canonical onboarding path:
+
+- [Daily Workflow](docs/daily-workflow.md) — beginner path to first custom
+  animation in less than 30 minutes.
+
+Two-stage beginner flow:
+
+1. **First win:** run `circle-to-square`
+2. **Real template:** build from `swap`
 
 ```bash
 cargo run -p codimate-example-circle-to-square
-```
-
-For 1080p at 60 fps:
-
-```bash
-cargo run -p codimate-example-circle-to-square -- --1080p60
-```
-
-Or preview it:
-
-```bash
+cargo run -p codimate-example-box-arrow
+cargo run -p codimate-example-swap
 cargo run -p codimate-previewer -- circle-to-square
 ```
 
-The example draws an outlined circle, morphs it into a square, then morphs it
-back into a circle. Open `examples/circle-to-square/src/lib.rs` and start by
-changing one thing:
-
-```text
-circle_path(...)       where the circle starts
-rect_path(...)         where the square appears
-manim::BLUE            outline color
-1.4                    duration of each morph
-ShapeStep              steps in the explanation
-```
+The `circle-to-square` example is the fast confidence check.
+The `box-arrow` example is the primitive-first API tutorial (box + arrow + t1..t2 flow).
+The `swap` example is the canonical daily authoring template.
 
 ## The Shape
 
@@ -76,7 +67,7 @@ Use plain `circle()` or `rect()` when the shape type stays the same.
 Minimal scene authoring pattern:
 
 ```rust
-use codimate_core::{primitive_path, rect_path, scene, Color, Style, Transformable};
+use codimate::*;
 
 let s = scene()
     .add(
@@ -88,27 +79,31 @@ let s = scene()
 
 ## Copy Next
 
-After `circle-to-square`, look at these examples:
+After the two-stage start, move through examples by intent:
 
-- `examples/demo` — tiny tour of circle, rectangle, and path animation
-- `examples/swap` — values moving through a temporary slot
-- `examples/merge-sort` — algorithm steps becoming a full explanation
-- `examples/matrix-mult` — repeated computation steps
-- `examples/neural-net` — signal flow through layers
+- `examples/box-arrow` — primitive-first API tutorial (draw box, connect arrow, animate flow)
+- `examples/swap` — canonical daily template (copy this split first)
+- `examples/demo` — compact authoring tour
+- `examples/merge-sort` — algorithm-heavy trace
+- `examples/matrix-mult` — repeated compute flow
+- `examples/neural-net` — layered signal flow
 
-For the normal project layout, split the pieces like this:
+Canonical module split for new explanations:
 
 ```text
-state.rs      data
-algorithm.rs  data -> steps
-motion.rs     tweens, paths, easing
-timing.rs     durations
-view.rs       step -> scene
-builder.rs    wires everything together
-main.rs       calls create() or render()
+state.rs      concept data
+algorithm.rs  concept logic -> trace
+view.rs       state + trace event -> scene
+motion.rs     timeless movement/style
+timing.rs     durations only
+builder.rs    explain(...).state(...).view(...).algorithm(...).motion(...).timing(...)
+lib.rs        create() entry
+main.rs       run/preview/export entry
 ```
 
 Deeper context:
 
+- [Daily Workflow](docs/daily-workflow.md)
 - [Authoring Model](docs/authoring-model.md)
+- [Examples](examples/README.md)
 - [Domain Context](CONTEXT.md)

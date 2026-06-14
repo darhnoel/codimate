@@ -1,11 +1,11 @@
 use crate::{style::*, timing::WordAppearTiming, WordAppearTrace};
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::{
+use codimate::Viewport;
+use codimate::{animation, sequence, Animation, Playable};
+use codimate::{
     easing::{back, ease_in_out, ease_out},
     primitive_path, scene, tween, Animated, Color, GlyphBlock, Path, Segment, Transformable, Vec2,
 };
 use codimate_fonts::FontRegistry;
-use codimate_layout::Viewport;
 
 /// Layout parameters that scale with viewport width.
 /// Base (`vp_width: 960.0`) matches the original hardcoded constants.
@@ -252,12 +252,12 @@ fn scale_path(path: &Path, factor: f32, center: Vec2) -> Path {
 fn black_rect(w: f32, h: f32) -> Path {
     Path {
         segments: vec![
-            codimate_core::Segment::MoveTo(Vec2::new(0.0, 0.0)),
-            codimate_core::Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(w, 0.0)),
-            codimate_core::Segment::Line(Vec2::new(w, 0.0), Vec2::new(w, h)),
-            codimate_core::Segment::Line(Vec2::new(w, h), Vec2::new(0.0, h)),
-            codimate_core::Segment::Line(Vec2::new(0.0, h), Vec2::new(0.0, 0.0)),
-            codimate_core::Segment::Close,
+            codimate::Segment::MoveTo(Vec2::new(0.0, 0.0)),
+            codimate::Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(w, 0.0)),
+            codimate::Segment::Line(Vec2::new(w, 0.0), Vec2::new(w, h)),
+            codimate::Segment::Line(Vec2::new(w, h), Vec2::new(0.0, h)),
+            codimate::Segment::Line(Vec2::new(0.0, h), Vec2::new(0.0, 0.0)),
+            codimate::Segment::Close,
         ],
         closed: true,
     }
@@ -606,7 +606,7 @@ pub(crate) fn build_word_appear_sequence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use codimate_core::{ConcreteGeometry, ConcreteNode};
+    use codimate::{ConcreteGeometry, ConcreteNode};
 
     fn node_fill_alpha(node: &ConcreteNode) -> Option<f32> {
         match node {

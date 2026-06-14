@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_dijkstra::{
     dijkstra_algorithm, dijkstra_motion, dijkstra_view, explain, Dijkstra, DijkstraTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

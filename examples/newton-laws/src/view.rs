@@ -1,9 +1,9 @@
 use crate::{
     style::*, NewtonLawAction, NewtonLawStep, NewtonLawTrace, NewtonLawsMotion, NewtonLawsTiming,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::{box_at, box_in, row, Viewport};
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
+use codimate::{box_at, box_in, row, Viewport};
 use codimate_math;
 
 const VIEW_W: f32 = 1280.0;

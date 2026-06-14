@@ -1,0 +1,24 @@
+name: onboarding-contract
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  onboarding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo fmt check
+        run: cargo fmt --check
+
+      - name: Onboarding contract tests
+        run: cargo test -p codimate-example-swap --test onboarding_contract
+
+      - name: Workspace check
+        run: cargo check --workspace

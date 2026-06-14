@@ -2,9 +2,9 @@ use crate::{
     style::*, MatrixMultMotion, MatrixMultTiming, MatrixMultiplication, MatrixStep, MatrixTrace,
     A_COLS, A_ROWS, B_COLS,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 900.0;
 const VIEW_H: f32 = 520.0;
@@ -151,10 +151,7 @@ fn cell_y(kind: MatrixKind, row: usize) -> f32 {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 48.0, "Matrix Multiplication", 28.0, INK));
     sc.add(label(54.0, 82.0, subtitle, 16.0, MUTED))
 }

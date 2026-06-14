@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_hanoi_tower::{
     explain, hanoi_algorithm, hanoi_motion, hanoi_view, HanoiTiming, HanoiTower,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

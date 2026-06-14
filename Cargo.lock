@@ -194,63 +194,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "codimate-example-box-arrow"
+version = "0.1.0"
+dependencies = [
+ "codimate",
+]
+
+[[package]]
 name = "codimate-example-circle-to-square"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-connection-pulse"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-demo"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-dijkstra"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-faster-dijkstra"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-hanoi-tower"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
@@ -264,75 +253,45 @@ dependencies = [
 name = "codimate-example-khmer-fade-wave"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
+ "codimate",
  "codimate-effects",
- "codimate-export",
  "codimate-fonts",
  "codimate-glyph",
- "codimate-layout",
 ]
 
 [[package]]
 name = "codimate-example-knapsack"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
-]
-
-[[package]]
-name = "codimate-example-logo-animation"
-version = "0.1.0"
-dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-fonts",
- "codimate-glyph",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-matrix-mult"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-merge-sort"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-neural-net"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-newton-laws"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
  "codimate-math",
 ]
 
@@ -340,9 +299,7 @@ dependencies = [
 name = "codimate-example-preview"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-layout",
+ "codimate",
  "codimate-previewer",
 ]
 
@@ -350,62 +307,44 @@ dependencies = [
 name = "codimate-example-quick-sort"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-swap"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-swap-a-b"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-symspell"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-three-sum"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
- "codimate-layout",
+ "codimate",
 ]
 
 [[package]]
 name = "codimate-example-word-appear"
 version = "0.1.0"
 dependencies = [
- "codimate-animation",
- "codimate-core",
- "codimate-export",
+ "codimate",
  "codimate-fonts",
  "codimate-glyph",
- "codimate-layout",
 ]
 
 [[package]]
@@ -459,14 +398,14 @@ version = "0.1.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",
+ "codimate-example-box-arrow",
  "codimate-example-circle-to-square",
  "codimate-example-connection-pulse",
  "codimate-example-demo",
  "codimate-example-dijkstra",
  "codimate-example-faster-dijkstra",
- "codimate-example-knapsack",
- "codimate-example-logo-animation",
  "codimate-example-insertion-sort",
+ "codimate-example-knapsack",
  "codimate-example-matrix-mult",
  "codimate-example-merge-sort",
  "codimate-example-neural-net",

@@ -1,6 +1,5 @@
+use codimate::{export_frames, export_mp4, ExportConfig, Viewport};
 use codimate_example_circle_to_square::create;
-use codimate_export::{export_frames, export_mp4, ExportConfig};
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

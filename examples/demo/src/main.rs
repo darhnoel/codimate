@@ -1,5 +1,5 @@
+use codimate::{export_frames, export_mp4, ExportConfig};
 use codimate_example_demo::create;
-use codimate_export::{export_frames, export_mp4, ExportConfig};
 
 fn main() {
     let (demo, viewport) = create();

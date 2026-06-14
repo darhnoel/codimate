@@ -31,6 +31,28 @@ acceptable for design constants, but repeated alignment math belongs in Slots.
 **Concept**: The idea being explained: a sort, a matrix multiplication, a
 network signal flow, a swap. Avoid treating the video timeline as the concept.
 
+**Explanation Author**: The primary human actor Codimate optimizes for. In the
+current product direction, this means a beginner Rust developer who can read
+Rust and wants a reliable daily workflow from concept to preview/export without
+learning renderer internals first.
+
+**Primary Job (Authoring)**: Build a new explanation from scratch by editing a
+small, predictable authoring split (`state`, `algorithm`, `view`, `motion`,
+`timing`) and repeatedly previewing/exporting until the concept reads clearly.
+
+**Canonical Onboarding Workflow**: The single recommended path a beginner
+Explanation Author follows from first run to first custom explanation. This
+workflow is documentation-first, maps to one starter example, and must match
+runnable commands in the repository.
+
+**Minimal API Stabilization (this pass)**: Stabilize the beginner authoring
+pattern (canonical builder chain + canonical module split) through docs and
+examples. This pass does not introduce a new facade crate.
+
+**Onboarding Success Metric**: A beginner Explanation Author can go from clone
+to first custom animation render/preview in less than 30 minutes via the
+Canonical Onboarding Workflow.
+
 **State**: The concept's data at a meaningful point in the explanation. State is
 domain data, not visual data and not renderer state.
 

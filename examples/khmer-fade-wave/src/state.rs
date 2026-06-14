@@ -1,6 +1,6 @@
-use codimate_core::{Color, Path};
+use codimate::Viewport;
+use codimate::{Color, Path};
 use codimate_fonts::FontRegistry;
-use codimate_layout::Viewport;
 
 pub const TEXT: &str = "ជម្រាបសួរ";
 

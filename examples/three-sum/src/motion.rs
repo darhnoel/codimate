@@ -1,4 +1,4 @@
-use codimate_core::{ease_in_out, tween, Animated, IntoAnimated, Lerp};
+use codimate::{ease_in_out, tween, Animated, IntoAnimated, Lerp};
 
 #[derive(Clone, Copy)]
 pub struct ThreeSumMotion;

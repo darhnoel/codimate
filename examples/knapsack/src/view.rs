@@ -2,9 +2,9 @@ use crate::{
     style::*, Knapsack as KnapsackState, KnapsackAction, KnapsackMotion, KnapsackStep,
     KnapsackTiming, KnapsackTrace, CAPACITY, COLS, ITEM_COUNT, ROWS,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 960.0;
 const VIEW_H: f32 = 600.0;
@@ -236,10 +236,7 @@ fn add_cell(
 // ----- panels -----
 
 fn add_background(mut sc: Scene, step: &KnapsackStep, trace: &KnapsackTrace) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 52.0, "0/1 Knapsack (DP)", 30.0, INK));
     sc = sc.add(label(54.0, 88.0, subtitle(step, trace), 16.0, MUTED));
     sc.add(label(54.0, VIEW_H - 26.0, answer_line(step), 16.0, MUTED))

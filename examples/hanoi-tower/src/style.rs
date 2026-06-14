@@ -1,5 +1,5 @@
 use crate::DISK_COUNT;
-use codimate_core::{manim, Color};
+use codimate::{manim, Color};
 
 pub(crate) const BG: Color = manim::BLACK;
 pub(crate) const PANEL: Color = manim::DARKER_GRAY;

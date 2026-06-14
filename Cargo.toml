@@ -21,6 +21,7 @@ members = [
     "examples/neural-net",
     "examples/matrix-mult",
     "examples/connection-pulse",
+    "examples/box-arrow",
     "examples/preview",
     "examples/merge-sort",
     "examples/swap",
@@ -36,5 +37,4 @@ members = [
     "examples/insertion-sort",
     "examples/khmer-fade-wave",
     "examples/word-appear",
-    "examples/logo-animation",
 ]

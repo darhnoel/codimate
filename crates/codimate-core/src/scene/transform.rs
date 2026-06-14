@@ -193,7 +193,10 @@ mod tests {
     #[test]
     fn x_and_y_are_independent() {
         let t = Transform::new().x(tween(0.0, 100.0)).y(50.0);
-        assert_eq!(t.resolve(0.0, Vec2::new(0.0, 0.0)).pos, Vec2::new(0.0, 50.0));
+        assert_eq!(
+            t.resolve(0.0, Vec2::new(0.0, 0.0)).pos,
+            Vec2::new(0.0, 50.0)
+        );
         assert_eq!(
             t.resolve(1.0, Vec2::new(0.0, 0.0)).pos,
             Vec2::new(100.0, 50.0)
@@ -203,13 +206,19 @@ mod tests {
     #[test]
     fn pos_accepts_tuple() {
         let t = Transform::new().pos((10.0, 20.0));
-        assert_eq!(t.resolve(0.0, Vec2::new(0.0, 0.0)).pos, Vec2::new(10.0, 20.0));
+        assert_eq!(
+            t.resolve(0.0, Vec2::new(0.0, 0.0)).pos,
+            Vec2::new(10.0, 20.0)
+        );
     }
 
     #[test]
     fn uniform_scale_sets_both_axes() {
         let t = Transform::new().scale(2.0);
-        assert_eq!(t.resolve(0.0, Vec2::new(0.0, 0.0)).scale, Vec2::new(2.0, 2.0));
+        assert_eq!(
+            t.resolve(0.0, Vec2::new(0.0, 0.0)).scale,
+            Vec2::new(2.0, 2.0)
+        );
     }
 
     #[test]

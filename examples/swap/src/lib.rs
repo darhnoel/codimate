@@ -6,8 +6,7 @@ mod style;
 mod timing;
 mod view;
 
-use codimate_animation::Playable;
-use codimate_layout::Viewport;
+use codimate::{Playable, Viewport};
 
 pub use algorithm::{swap_algorithm, SwapMove};
 pub use builder::{explain, ExplainBuilder};

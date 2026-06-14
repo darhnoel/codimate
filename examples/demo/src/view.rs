@@ -1,7 +1,7 @@
 use crate::{style::*, Demo, DemoMotion, DemoStep, DemoTiming, DemoTrace};
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 800.0;
 const VIEW_H: f32 = 600.0;
@@ -40,10 +40,10 @@ fn step_scene(step: DemoStep, state: Demo, motion: DemoMotion) -> Scene {
         ),
         DemoStep::MorphPath => scene().add(
             primitive_path(motion.travel(
-                    circle_path(400.0, 300.0, 80.0),
-                    rect_path(300.0, 200.0, 200.0, 200.0),
-                ))
-                .fill(RED),
+                circle_path(400.0, 300.0, 80.0),
+                rect_path(300.0, 200.0, 200.0, 200.0),
+            ))
+            .fill(RED),
         ),
     }
 }

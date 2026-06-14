@@ -3,9 +3,7 @@ use crate::{
     style::*,
     BallKey, Swap, SwapMotion, SwapMove, SwapTiming,
 };
-use codimate_animation::{animation, sequence, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::*;
 
 const VIEW_W: f32 = 960.0;
 const VIEW_H: f32 = 540.0;
@@ -188,10 +186,7 @@ fn ball_color(ball: Ball) -> Color {
 }
 
 fn background(mut sc: Scene) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 58.0, "Swap", 32.0, INK));
     sc.add(label(
         54.0,

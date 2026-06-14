@@ -2,9 +2,9 @@ use crate::{
     style::*, Edge, NeuralAction, NeuralNet, NeuralNetMotion, NeuralNetTiming, NeuralStep,
     NeuralTrace, HIDDEN_COUNT, INPUT_COUNT, OUTPUT_COUNT,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 900.0;
 const VIEW_H: f32 = 600.0;
@@ -112,10 +112,7 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 52.0, "Neural Net", 30.0, INK));
     sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
@@ -194,10 +191,9 @@ fn add_edge(
     match edge_state(edge, step, trace) {
         EdgeState::Dim => sc.add(primitive_path(edge_path(from, to, 2.0)).fill(EDGE_DIM)),
         EdgeState::Fired => sc.add(primitive_path(edge_path(from, to, 3.0)).fill(EDGE_FIRE)),
-        EdgeState::Active => sc.add(
-            primitive_path(active_edge_path(from, to, motion))
-                .fill(EDGE_FIRE),
-        ),
+        EdgeState::Active => {
+            sc.add(primitive_path(active_edge_path(from, to, motion)).fill(EDGE_FIRE))
+        }
     }
 }
 
@@ -249,11 +245,11 @@ fn add_neuron(
     );
     sc = sc.add(
         primitive_path(circle_path(
-                pos.x,
-                pos.y,
-                if active { NEURON_R + 2.0 } else { NEURON_R },
-            ))
-            .style(style(Color::TRANSPARENT, stroke_width, STROKE)),
+            pos.x,
+            pos.y,
+            if active { NEURON_R + 2.0 } else { NEURON_R },
+        ))
+        .style(style(Color::TRANSPARENT, stroke_width, STROKE)),
     );
     sc.add(centered_label(pos.x, pos.y + 6.0, label_text, 13.0, INK))
 }

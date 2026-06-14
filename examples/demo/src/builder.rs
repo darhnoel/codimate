@@ -1,8 +1,8 @@
 use crate::{view::build_demo, Demo, DemoMotion, DemoTiming, DemoTrace};
-use codimate_animation::Playable;
-use codimate_core::ExplanationBuilder;
-use codimate_export::{export_mp4, ExportConfig};
-use codimate_layout::Viewport;
+use codimate::ExplanationBuilder;
+use codimate::Playable;
+use codimate::Viewport;
+use codimate::{export_mp4, ExportConfig};
 use std::path::Path;
 
 type Inner = ExplanationBuilder<Demo, DemoTrace, DemoMotion, DemoTiming>;

@@ -6,8 +6,8 @@ mod style;
 mod timing;
 mod view;
 
-use codimate_animation::Playable;
-use codimate_layout::Viewport;
+use codimate::Playable;
+use codimate::Viewport;
 
 pub use algorithm::{newton_laws_algorithm, NewtonLawAction, NewtonLawStep, NewtonLawTrace};
 pub use builder::{explain, ExplainBuilder};

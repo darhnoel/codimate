@@ -6,8 +6,8 @@ mod style;
 mod timing;
 mod view;
 
-use codimate_animation::Playable;
-use codimate_layout::Viewport;
+use codimate::Playable;
+use codimate::Viewport;
 
 pub use algorithm::{symspell_algorithm, SymStep, SymTrace};
 pub use builder::{explain, ExplainBuilder};

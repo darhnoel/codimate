@@ -1,4 +1,4 @@
-use codimate_core::{manim, Color};
+use codimate::{manim, Color};
 
 pub(crate) const BG: Color = manim::BLACK;
 pub(crate) const CELL: Color = manim::DARKER_GRAY;

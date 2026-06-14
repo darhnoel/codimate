@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::{
     style::*, SymSpell, SymSpellMotion, SymSpellTiming, SymStep, SymTrace, DICT_ENTRIES, QUERY,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 1100.0;
 const VIEW_H: f32 = 640.0;
@@ -195,10 +195,7 @@ fn rounded_rect_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> Path {
 }
 
 fn add_background(sc: Scene) -> Scene {
-    sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    )
+    sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)))
 }
 
 fn add_column_labels(mut sc: Scene) -> Scene {
@@ -264,8 +261,11 @@ fn add_subtitle(mut sc: Scene, text_content: impl Into<String>) -> Scene {
     let bar_y = VIEW_H - bar_h - 24.0;
 
     sc = sc.add(
-        primitive_path(rounded_rect_path(bar_x, bar_y, bar_w, bar_h, 8.0))
-            .style(style(SUBTITLE_BG, 1.0, PANEL_BORDER)),
+        primitive_path(rounded_rect_path(bar_x, bar_y, bar_w, bar_h, 8.0)).style(style(
+            SUBTITLE_BG,
+            1.0,
+            PANEL_BORDER,
+        )),
     );
     sc.add(centered_label(
         VIEW_W / 2.0,
@@ -289,13 +289,13 @@ fn add_dict_card(mut sc: Scene, entry_index: usize, word: &str, freq: u32, state
     let card_r = 8.0;
     sc = sc.add(
         primitive_path(rounded_rect_path(
-                pos.x,
-                pos.y,
-                DICT_CARD_W,
-                DICT_CARD_H,
-                card_r,
-            ))
-            .style(style(fill, 1.5, border)),
+            pos.x,
+            pos.y,
+            DICT_CARD_W,
+            DICT_CARD_H,
+            card_r,
+        ))
+        .style(style(fill, 1.5, border)),
     );
 
     let line = format!("{}  {}", word, freq);
@@ -379,14 +379,12 @@ fn add_index_row(
         }
         "static" => {
             sc = sc.add(
-                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
-                    .style(hit_s),
+                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0)).style(hit_s),
             );
         }
         _ => {
             sc = sc.add(
-                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0))
-                    .style(rest_s),
+                primitive_path(rounded_rect_path(pos.x, pos.y, INDEX_ROW_W, h, 8.0)).style(rest_s),
             );
         }
     }
@@ -437,13 +435,13 @@ fn add_query_card(mut sc: Scene, word: &str, highlight: bool) -> Scene {
 
     sc = sc.add(
         primitive_path(rounded_rect_path(
-                QUERY_X,
-                QUERY_CARD_Y,
-                QUERY_CARD_W,
-                QUERY_CARD_H,
-                card_r,
-            ))
-            .style(style(fill, 1.5, border)),
+            QUERY_X,
+            QUERY_CARD_Y,
+            QUERY_CARD_W,
+            QUERY_CARD_H,
+            card_r,
+        ))
+        .style(style(fill, 1.5, border)),
     );
 
     sc.add(centered_label(
@@ -495,13 +493,13 @@ fn add_ranked_list(mut sc: Scene, ordered: &[(String, u32)], winner: Option<&str
         };
         sc = sc.add(
             primitive_path(rounded_rect_path(
-                    QUERY_X,
-                    y,
-                    QUERY_CARD_W,
-                    RANK_ITEM_H,
-                    6.0,
-                ))
-                .style(style(fill, 1.0, border)),
+                QUERY_X,
+                y,
+                QUERY_CARD_W,
+                RANK_ITEM_H,
+                6.0,
+            ))
+            .style(style(fill, 1.0, border)),
         );
         sc = sc.add(centered_label(
             QUERY_X + QUERY_CARD_W / 2.0,
@@ -756,8 +754,11 @@ fn add_index_reject_outline(sc: Scene, top: f32, bottom: f32) -> Scene {
     let w = INDEX_ROW_W + pad * 2.0;
     let h = (bottom - top) + pad * 2.0;
     sc.add(
-        primitive_path(rounded_rect_path(x, y, w, h, 12.0))
-            .style(style(Color::TRANSPARENT, 2.5, REJECT)),
+        primitive_path(rounded_rect_path(x, y, w, h, 12.0)).style(style(
+            Color::TRANSPARENT,
+            2.5,
+            REJECT,
+        )),
     )
 }
 
@@ -884,13 +885,13 @@ fn answer_scene(
     let answer_y = RANK_LIST_TOP + ordered.len() as f32 * RANK_ITEM_STRIDE + 16.0;
     sc = sc.add(
         primitive_path(rounded_rect_path(
-                QUERY_X,
-                answer_y,
-                QUERY_CARD_W,
-                answer_h,
-                8.0,
-            ))
-            .style(style(CANDIDATE_FILL, 2.0, ACCENT)),
+            QUERY_X,
+            answer_y,
+            QUERY_CARD_W,
+            answer_h,
+            8.0,
+        ))
+        .style(style(CANDIDATE_FILL, 2.0, ACCENT)),
     );
     sc = sc.add(centered_label(
         QUERY_X + QUERY_CARD_W / 2.0,

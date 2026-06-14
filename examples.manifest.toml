@@ -20,6 +20,13 @@ w = 600.0
 h = 360.0
 
 [[example]]
+name = "box-arrow"
+crate = "codimate_example_box_arrow"
+desc = "Primitive-first: draw two boxes, connect with an arrow, animate flow from t1 to t2"
+w = 900.0
+h = 540.0
+
+[[example]]
 name = "neural-net"
 crate = "codimate_example_neural_net"
 desc = "Neural network with signal propagation through layers"
@@ -88,10 +95,3 @@ crate = "codimate_example_word_appear"
 desc = "Apple-style word-by-word slide-up text appearance animation"
 w = 960.0
 h = 540.0
-
-[[example]]
-name = "logo-animation"
-crate = "codimate_example_logo_animation"
-desc = "Codimate logo mark: rounded card, Khmer glyph reveal, and keyboard pills typing on"
-w = 640.0
-h = 480.0

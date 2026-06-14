@@ -1,7 +1,7 @@
 use crate::{style::*, ItemId, SlotId, SwapABEvent, SwapABMotion, SwapABTiming, SwapABTrace};
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::{box_at, box_in, centered_text, Viewport};
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
+use codimate::{box_at, box_in, centered_text, Viewport};
 
 const VIEW_W: f32 = 960.0;
 const VIEW_H: f32 = 540.0;
@@ -64,23 +64,23 @@ pub(crate) fn build_swap_a_b(
     )
 }
 
-fn main_group_slot() -> codimate_layout::Slot {
+fn main_group_slot() -> codimate::Slot {
     Viewport::new(VIEW_W, VIEW_H)
         .slot()
         .centered_child(Vec2::new(GROUP_W, GROUP_H))
 }
 
-fn slots() -> Vec<codimate_layout::Slot> {
+fn slots() -> Vec<codimate::Slot> {
     main_group_slot().row(Vec2::new(SLOT_W, SLOT_H), SLOT_GAP, 2)
 }
 
-fn header_text_slots() -> Vec<codimate_layout::Slot> {
+fn header_text_slots() -> Vec<codimate::Slot> {
     let header = main_group_slot().above(Vec2::new(VIEW_W, HEADER_H), HEADER_GAP);
 
     header.column(Vec2::new(VIEW_W, HEADER_LINE_H), 0.0, 2)
 }
 
-fn bottom_text_slots() -> Vec<codimate_layout::Slot> {
+fn bottom_text_slots() -> Vec<codimate::Slot> {
     let bottom = main_group_slot().below(Vec2::new(VIEW_W, BOTTOM_H), BOTTOM_GAP);
 
     bottom.column(Vec2::new(VIEW_W, BOTTOM_LINE_H), 0.0, 2)
@@ -92,10 +92,7 @@ fn style(fill: Color, stroke_width: f32, stroke_color: Color) -> Style {
 
 fn background(mut sc: Scene) -> Scene {
     let text_slots = header_text_slots();
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(centered_text(&text_slots[0], "Swap A B", 32.0, INK));
     sc.add(centered_text(
         &text_slots[1],

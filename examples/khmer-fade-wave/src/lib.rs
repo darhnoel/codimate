@@ -4,8 +4,8 @@ mod state;
 mod timing;
 mod view;
 
-use codimate_animation::{animation, sequence, Playable};
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::{animation, sequence, Playable};
 
 pub use algorithm::{khmer_fade_wave_algorithm, KhmerFadeWaveEvent, KhmerFadeWaveTrace};
 pub use motion::{khmer_fade_wave_motion, KhmerFadeWaveMotion};

@@ -1,5 +1,5 @@
+use codimate::{export_mp4, ExportConfig};
 use codimate_example_word_appear::{create, create_hd, create_scene, create_scene_hd};
-use codimate_export::{export_mp4, ExportConfig};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

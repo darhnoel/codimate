@@ -1,8 +1,8 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_swap_a_b::{
     explain, swap_a_b_algorithm, swap_a_b_motion, swap_a_b_view, SwapAB, SwapABTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

@@ -1,9 +1,9 @@
 use crate::view::build_word_appear_sequence;
-use crate::{WordAppear, WordAppearTiming, WordAppearTrace, ViewParams};
-use codimate_animation::Playable;
-use codimate_core::ExplanationBuilder;
-use codimate_export::{export_mp4, ExportConfig};
-use codimate_layout::Viewport;
+use crate::{ViewParams, WordAppear, WordAppearTiming, WordAppearTrace};
+use codimate::ExplanationBuilder;
+use codimate::Playable;
+use codimate::Viewport;
+use codimate::{export_mp4, ExportConfig};
 use std::path::Path;
 
 type Inner =

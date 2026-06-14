@@ -1,4 +1,4 @@
-use codimate_core::{ease_in_out, tween, Animated, Vec2};
+use codimate::{ease_in_out, tween, Animated, Vec2};
 
 #[derive(Clone, Copy)]
 pub struct SwapABMotion;

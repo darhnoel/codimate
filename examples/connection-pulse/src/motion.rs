@@ -1,4 +1,4 @@
-use codimate_core::{tween, Animated};
+use codimate::{tween, Animated};
 
 #[derive(Clone, Copy)]
 pub struct ConnectionPulseMotion;

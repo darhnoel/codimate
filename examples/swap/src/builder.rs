@@ -1,8 +1,5 @@
 use crate::{view::build_swap, Swap, SwapMotion, SwapMove, SwapTiming};
-use codimate_animation::Playable;
-use codimate_core::ExplanationBuilder;
-use codimate_export::{export_mp4, ExportConfig};
-use codimate_layout::Viewport;
+use codimate::{export_mp4, ExplanationBuilder, ExportConfig, Playable, Viewport};
 use std::path::Path;
 
 type Inner = ExplanationBuilder<Swap, Vec<SwapMove>, SwapMotion, SwapTiming>;

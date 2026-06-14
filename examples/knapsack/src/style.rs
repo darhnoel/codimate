@@ -1,4 +1,4 @@
-use codimate_core::{manim, Color};
+use codimate::{manim, Color};
 
 // Canvas + text.
 pub(crate) const BG: Color = manim::BLACK;

@@ -6,8 +6,8 @@ mod style;
 mod timing;
 mod view;
 
-use codimate_animation::Playable;
-use codimate_layout::Viewport;
+use codimate::Playable;
+use codimate::Viewport;
 
 pub use algorithm::{merge_sort_algorithm, MergeStep, MergeTrace};
 pub use builder::{explain, ExplainBuilder};

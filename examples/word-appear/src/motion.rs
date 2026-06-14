@@ -1,4 +1,4 @@
-use codimate_core::{back, ease_out, tween, Animated, Vec2};
+use codimate::{back, ease_out, tween, Animated, Vec2};
 
 #[derive(Clone, Copy)]
 pub struct WordAppearMotion;

@@ -1,7 +1,7 @@
 use crate::{style::*, MergeSort, MergeSortMotion, MergeSortTiming, MergeStep, MergeTrace, N};
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::{box_at, Viewport};
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
+use codimate::{box_at, Viewport};
 
 const VIEW_W: f32 = 1000.0;
 const VIEW_H: f32 = 640.0;
@@ -138,10 +138,7 @@ fn center_from_top_left(
 }
 
 fn add_panel(sc: Scene) -> Scene {
-    sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(background_style()),
-    )
+    sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(background_style()))
 }
 
 fn add_header(mut sc: Scene, title: impl Into<String>) -> Scene {

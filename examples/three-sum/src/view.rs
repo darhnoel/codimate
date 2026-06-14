@@ -1,9 +1,9 @@
 use crate::{
     style::*, ThreeSumAction, ThreeSumMotion, ThreeSumStep, ThreeSumTiming, ThreeSumTrace, N,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 1000.0;
 const VIEW_H: f32 = 620.0;
@@ -160,10 +160,7 @@ fn centered_label(x: f32, y: f32, content: impl Into<String>, font_size: f32, fi
 }
 
 fn add_background(mut sc: Scene, subtitle: impl Into<String>) -> Scene {
-    sc = sc.add(
-        primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H))
-            .style(style(BG, 0.0, BG)),
-    );
+    sc = sc.add(primitive_path(rect_path(0.0, 0.0, VIEW_W, VIEW_H)).style(style(BG, 0.0, BG)));
     sc = sc.add(label(54.0, 52.0, "3Sum", 30.0, INK));
     sc.add(label(54.0, 88.0, subtitle, 16.0, MUTED))
 }
@@ -172,13 +169,13 @@ fn add_slots(mut sc: Scene, y: f32) -> Scene {
     for index in 0..N {
         sc = sc.add(
             primitive_path(rounded_rect_path(
-                    tile_x(index),
-                    y,
-                    TILE_W,
-                    TILE_H,
-                    TILE_RADIUS,
-                ))
-                .style(style(PANEL, 1.0, PANEL_BORDER)),
+                tile_x(index),
+                y,
+                TILE_W,
+                TILE_H,
+                TILE_RADIUS,
+            ))
+            .style(style(PANEL, 1.0, PANEL_BORDER)),
         );
     }
     sc

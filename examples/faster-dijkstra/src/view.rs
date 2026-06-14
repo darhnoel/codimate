@@ -2,9 +2,9 @@ use crate::{
     style::*, FasterDijkstra, FasterDijkstraAction, FasterDijkstraMotion, FasterDijkstraStep,
     FasterDijkstraTiming, FasterDijkstraTrace, NODE_COUNT,
 };
-use codimate_animation::{animation, sequence, Animation, Playable};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, sequence, Animation, Playable};
 
 const VIEW_W: f32 = 1280.0;
 const VIEW_H: f32 = 720.0;

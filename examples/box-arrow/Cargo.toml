@@ -1,0 +1,8 @@
+[package]
+name = "codimate-example-box-arrow"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+codimate = { path = "../../crates/codimate" }

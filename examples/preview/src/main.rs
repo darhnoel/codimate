@@ -1,6 +1,6 @@
-use codimate_animation::{animation, parallel};
-use codimate_core::*;
-use codimate_layout::Viewport;
+use codimate::Viewport;
+use codimate::*;
+use codimate::{animation, parallel};
 use codimate_previewer::{PreviewConfig, Previewer};
 
 mod style;
@@ -38,10 +38,10 @@ fn main() {
         2.0,
         scene().add(
             primitive_path(tween(
-                    circle_path(600.0, 400.0, 40.0),
-                    rect_path(560.0, 360.0, 80.0, 80.0),
-                ))
-                .fill(GREEN),
+                circle_path(600.0, 400.0, 40.0),
+                rect_path(560.0, 360.0, 80.0, 80.0),
+            ))
+            .fill(GREEN),
         ),
     );
 

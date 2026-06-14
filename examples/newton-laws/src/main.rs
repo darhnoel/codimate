@@ -1,9 +1,9 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_newton_laws::{
     explain, newton_laws_algorithm, newton_laws_motion, newton_laws_view, NewtonLaws,
     NewtonLawsTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

@@ -1,9 +1,9 @@
+use codimate::ExportConfig;
+use codimate::Viewport;
 use codimate_example_faster_dijkstra::{
     explain, faster_dijkstra_algorithm, faster_dijkstra_motion, faster_dijkstra_view,
     FasterDijkstra, FasterDijkstraTiming,
 };
-use codimate_export::ExportConfig;
-use codimate_layout::Viewport;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RenderPreset {

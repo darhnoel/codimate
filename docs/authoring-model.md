@@ -1,5 +1,8 @@
 # Codimate Authoring Model
 
+Before this conceptual deep dive, follow the practical onboarding path in
+[Daily Workflow](./daily-workflow.md).
+
 Codimate is fastest when you do not start by drawing frames.
 
 Start with the concept:
@@ -47,6 +50,7 @@ re-edited.
 
 ## The File Split
 
+`examples/swap` is the canonical daily template for this split.
 Use this split for examples and new explanations:
 
 ```text

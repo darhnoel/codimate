@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-codimate-core = { path = "../../crates/codimate-core" }
-codimate-animation = { path = "../../crates/codimate-animation" }
-codimate-layout = { path = "../../crates/codimate-layout" }
-codimate-export = { path = "../../crates/codimate-export" }
 codimate-glyph = { path = "../../crates/codimate-glyph" }
 codimate-fonts = { path = "../../crates/codimate-fonts" }
+codimate = { path = "../../crates/codimate" }
