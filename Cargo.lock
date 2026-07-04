@@ -332,6 +332,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "codimate-example-system-diagram"
+version = "0.1.0"
+dependencies = [
+ "codimate",
+]
+
+[[package]]
 name = "codimate-example-three-sum"
 version = "0.1.0"
 dependencies = [

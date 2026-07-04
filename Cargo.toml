@@ -37,4 +37,5 @@ members = [
     "examples/insertion-sort",
     "examples/khmer-fade-wave",
     "examples/word-appear",
+    "examples/system-diagram",
 ]

@@ -95,3 +95,10 @@ crate = "codimate_example_word_appear"
 desc = "Apple-style word-by-word slide-up text appearance animation"
 w = 960.0
 h = 540.0
+
+[[example]]
+name = "system-diagram"
+crate = "codimate_example_system_diagram"
+desc = "Microservices architecture: client -> gateway -> services -> DBs with an animated request flowing down the tiers"
+w = 1280.0
+h = 720.0
