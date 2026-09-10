@@ -1,5 +1,9 @@
 /target/
 **/*.rs.bk
+.venv/
+__pycache__/
+*.so
+*.egg-info/
 .claude/settings.local.json
 *.mp4
 /examples/attention-is-all-you-need-architecture/

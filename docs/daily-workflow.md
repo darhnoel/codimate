@@ -1,97 +1,180 @@
 # Codimate Daily Workflow
 
-This is the canonical onboarding path for a beginner Explanation Author.
+The canonical onboarding path for an Explanation Author.
 
-Goal: go from clone to first custom animation render/preview in **less than 30
-minutes**.
+Goal: clone to your own custom video in **less than 30 minutes**.
 
-## Stage 1 — First win (run before editing)
+## Stage 1 — First win (5 minutes)
 
-Run the smallest example exactly once:
-
-```bash
-cargo run -p codimate-example-circle-to-square
-```
-
-Optional:
+Build once and run the example. Nothing to edit yet.
 
 ```bash
-cargo run -p codimate-example-circle-to-square -- --1080p60
-cargo run -p codimate-previewer -- circle-to-square
+python3 -m venv .venv && .venv/bin/pip install maturin
+.venv/bin/maturin develop --release
+.venv/bin/python python/examples/bubble_sort.py
 ```
 
-What this stage proves:
+The `--release` matters: without it the engine runs about 17x slower. You only
+drop it when debugging the engine itself.
 
-- your toolchain is working,
-- export works,
-- preview works,
-- you can make a visible change quickly.
+Open `sort.mp4`. Bars slide when they swap, and the pair being compared turns
+orange.
 
-## Stage 2 — Primitive-first API tutorial (`box-arrow`)
+This proves your toolchain, the Rust build, `ffmpeg`, and export all work. If
+it fails here, fix it here — everything later assumes this worked.
 
-Learn the minimum visual vocabulary first:
+**`ffmpeg` not found?** `brew install ffmpeg` or `apt install ffmpeg`.
+**Rust missing?** <https://rustup.rs>.
+
+You only run `maturin develop` again if you change Rust. Editing Python needs
+no rebuild.
+
+## Stage 2 — Change things (10 minutes)
+
+Open [`python/examples/bubble_sort.py`](../examples/bubble_sort.py). Make one
+change at a time and re-run. Each of these teaches one of the four pieces.
+
+**Change the data** — the video regenerates from the algorithm:
+
+```python
+trace=bubble_sort(cm.items([5, 2, 8, 1, 9]))
+```
+
+**Change the timing** — make swaps linger:
+
+```python
+timing=cm.Timing(default=0.4, events={"swap": 1.5})
+```
+
+**Change the motion** — make bars slide through each other instead of arcing:
+
+```python
+motion=[cm.Rule("*", position="straight")]
+```
+
+**Change the view** — colour by size instead of by activity:
+
+```python
+color = "red" if item.value > 2 else "blue"
+```
+
+**Then break it on purpose.** In `bars()`, name the bar after its position
+instead of its value:
+
+```python
+for position, (slot, item) in enumerate(cm.row(frame.state, gap=40)):
+    bar = scene.group(position, slot)      # was scene.group(item.id, slot)
+```
+
+Re-run. Nothing slides any more — the bars change height in place. No error,
+just a different video. That is the single most important thing to understand
+about Codimate, and it is worth seeing once deliberately. See
+[the README](../README.md#the-one-thing-to-understand).
+
+Change it back.
+
+## Stage 3 — Your own explanation (15 minutes)
+
+Copy `bubble_sort.py` and replace the four pieces. Do them in this order.
+
+### 1. The algorithm
+
+Write it normally. Add `emit()` where something worth showing happens, **after**
+you change your data:
+
+```python
+@cm.trace()
+def insertion_sort(values):
+    for i in range(1, len(values)):
+        while i > 0 and values[i - 1] > values[i]:
+            values[i - 1], values[i] = values[i], values[i - 1]
+            cm.emit("shift", items=[values[i - 1]])
+            i -= 1
+```
+
+Call it with `cm.items([...])` so each value is a thing of its own that can
+move. Comparisons still read normally — `values[i - 1] > values[i]`.
+
+Anything you pass to `emit()` reaches your view as `frame.event.data`.
+`frame.items()` gives you back what an `items=[...]` event named, and
+`frame.is_("shift")` tells you which event this moment came from.
+
+Name events for what they *mean* — `shift`, `pivot`, `visit` — not `step_3`.
+Those names are what you give durations to later.
+
+### 2. The view
+
+One moment, one picture. Two rules:
+
+- **Let `cm.row()` and `scene.group()` do the layout.** A row divides the
+  canvas into slots; a group puts one thing in one slot. You never take a slot
+  apart, and everything on a group travels together.
+- **The group's name carries identity.** Name things after what they *are*, not
+  where they sit, unless you want them to stay put.
+
+```python
+def view(frame):
+    scene = cm.Scene()
+    active = frame.items()
+    for slot, item in cm.row(frame.state, gap=40):
+        bar = scene.group(item.id, slot)
+        bar.rect("bar", h=item.value * 70, bottom=0,
+                 color="orange" if item in active else "blue")
+        bar.text("label", item.value, top=20)
+    return scene
+```
+
+Inside a group, `0` is the group's own point — `bottom=0` stands the bar on it,
+`top=20` puts the label below it. Everything on the group travels together.
+
+Sizes and spacing come from the canvas, so this looks right at any resolution.
+Override them when you care: `cm.row(items, gap=10, w=120, bottom=600)`.
+
+`frame.event` is `None` for the opening moment, before anything has happened.
+`frame.items()` and `frame.is_()` handle that for you.
+
+### 3. Motion
+
+Only if the default straight line is not enough:
+
+```python
+motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
+```
+
+A pattern matches shape names with `*` and `?`; the first matching rule wins.
+A shape inside a group is named `group/child`, so `"3/*"` targets one group.
+Shapes that do not move are unaffected by any rule.
+
+### 4. Timing
+
+Give the events that matter more room:
+
+```python
+timing=cm.Timing(default=0.5, events={"shift": 0.9}, final_hold=1.5)
+```
+
+## The loop
 
 ```bash
-cargo run -p codimate-example-box-arrow
+.venv/bin/python my_explanation.py     # edit, run, watch, repeat
 ```
 
-This example teaches three primitives without extra architecture noise:
+There is no build step and no preview window yet — you render and watch. Keep
+your data small (4-6 items) while iterating, then grow it once it reads well.
 
-- draw a box,
-- connect box A -> box B with an arrow,
-- animate arrow flow only during a time window (`t1..t2`).
+## When something looks wrong
 
-## Stage 3 — Real daily template (`swap`)
+| What you see | Why |
+|---|---|
+| Nothing moves, shapes just resize | Names follow position, not identity — use `cm.items()` |
+| A shape pops in and out | Its name changes between moments — make it stable |
+| Everything jumps at the start of a step | Two consecutive moments differ more than one event's worth; emit more often |
+| Part of a thing moves without the rest | Draw it on one `scene.group()` so it travels as a unit |
+| `ValueError: unknown kind` | Codimate draws `rect`, `circle`, `text` |
+| `ValueError: two shapes share the name` | One name used twice in one Scene |
+| `RuntimeError: emit() called outside a @trace function` | The function needs the `@cm.trace()` decorator |
 
-For new explanations, copy the structure of `examples/swap`.
+## Next
 
-Canonical split:
-
-```text
-state.rs      concept data
-algorithm.rs  state -> trace events
-view.rs       state + trace event -> scene
-motion.rs     timeless movement/style choices
-timing.rs     durations and pacing only
-builder.rs    explain(...).state(...).view(...).algorithm(...).motion(...).timing(...)
-lib.rs        create() public entry
-main.rs       render/preview entry
-```
-
-Build the canonical template:
-
-```bash
-cargo run -p codimate-example-swap
-```
-
-## Stage 4 — Build your first custom explanation
-
-1. Copy `examples/swap` into a new example crate.
-2. Rename State, Trace Event, and view labels to your concept.
-3. Keep `main.rs` as the clean authoring chain.
-4. Keep durations only in `timing.rs`.
-5. Run after each small change.
-
-## Stage 5 — Iterate in a tight loop
-
-Use this loop for daily work:
-
-1. Change one concept detail (`state.rs` or `algorithm.rs`).
-2. Update one visual decision (`view.rs` or `motion.rs`).
-3. Run the example.
-4. Preview if needed.
-5. Repeat.
-
-## Troubleshooting quick checks
-
-- If movement feels wrong, check `motion.rs` first (timeless behavior).
-- If pacing feels wrong, check `timing.rs` (durations only).
-- If visuals are correct but concept is wrong, check `algorithm.rs`.
-- If labels/positions are messy, check `view.rs` and Slot usage.
-
-## See also
-
-- [Codimate README](../README.md)
-- [Authoring Model](./authoring-model.md)
-- [Examples catalog](../examples/README.md)
-- [Domain Context](../CONTEXT.md)
+- [Authoring Model](./authoring-model.md) — why it is shaped this way
+- [Domain Context](../CONTEXT.md) — the vocabulary this project uses

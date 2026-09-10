@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "codimate"
+version = "0.1.0"
+description = "Turn a running algorithm into an explainer video"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Education",
+]
+
+[tool.maturin]
+manifest-path = "crates/codimate-py/Cargo.toml"
+python-source = "python"
+module-name = "codimate._codimate"
+features = ["pyo3/extension-module"]

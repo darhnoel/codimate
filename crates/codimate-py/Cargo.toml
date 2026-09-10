@@ -1,0 +1,20 @@
+[package]
+name = "codimate-py"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "_codimate"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+codimate-core = { path = "../codimate-core" }
+codimate-animation = { path = "../codimate-animation" }
+codimate-layout = { path = "../codimate-layout" }
+codimate-export = { path = "../codimate-export" }
+pyo3 = "0.22"
+
+# maturin turns this on for wheels; leaving it off by default keeps
+# `cargo test` linkable.
+[features]
+extension-module = ["pyo3/extension-module"]

@@ -3,6 +3,11 @@
 Companion to [ADR 0006](adr/0006-uniform-transform-and-primitive-model.md)
 (model) and [ADR 0007](adr/0007-media-channel-audio-video-subtitle.md) (media).
 
+> **Engine-internal.** This plan concerns the Rust model. Since
+> [ADR 0008](adr/0008-python-authoring-surface.md) the Rust API is no longer an
+> authoring surface, so "ergonomics" here means ergonomics for Engine work, not
+> for Explanation Authors.
+
 **North star:** model-first as the means to ergonomics. The success metric is the
 hello-world bar below compiling and rendering.
 
