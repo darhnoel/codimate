@@ -173,6 +173,11 @@ and Pulse fade in.
 of every color-bearing Node without changing Scene structure. Effects may use
 Scene Opacity, but it is not Effect-specific.
 
+**Easing (Authoring Surface)**: `cm.ease(t)` returns the Engine's own curve.
+It exists so an Explanation Author drawing or reasoning about pacing calls into
+the Engine instead of keeping a second copy that can silently drift out of
+agreement with what the animation actually does.
+
 **Timing**: The Layer 3 durations assigned to Trace Events and holds. Timing is
 where pacing lives; never hide duration inside Motion or View.
 

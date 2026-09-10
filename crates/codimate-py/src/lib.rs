@@ -401,9 +401,20 @@ fn render(
         .map_err(|e| PyValueError::new_err(format!("export failed: {e:?}")))
 }
 
+/// The easing the Engine applies between two moments.
+///
+/// Exposed so an author can draw or reason about pacing without writing a
+/// second copy of the curve — a second copy can drift, and then a diagram
+/// about Codimate stops being about Codimate.
+#[pyfunction]
+fn ease(t: f32) -> f32 {
+    ease_in_out(t.clamp(0.0, 1.0))
+}
+
 #[pymodule]
 fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
+    m.add_function(wrap_pyfunction!(ease, m)?)?;
     Ok(())
 }
 

@@ -11,6 +11,9 @@ frame in between is computed:
 
 The playhead sweeping the timeline is itself moved by that formula. This trace
 records 28 instants; everything you see between them is worked out.
+
+The curve drawn below is `cm.ease` — the Engine's own easing, called into
+rather than copied, so the diagram cannot drift from what it describes.
 """
 
 import codimate as cm
@@ -36,11 +39,6 @@ DIM = "#2b3648"
 GHOST = "#38455c"
 LIVE = "orange"
 ACCENT = "#4a9eff"
-
-
-def ease_in_out(u):
-    """The same curve the Engine uses (crates/codimate-py/src/lib.rs)."""
-    return 2 * u * u if u < 0.5 else 1 - (-2 * u + 2) ** 2 / 2
 
 
 def mix(a, b, u):
@@ -105,7 +103,7 @@ def timeline(scene, clock, active):
 
 def easing_curve(scene, local):
     def at(u):
-        return (mix(CURVE_L, CURVE_R, u), mix(CURVE_BOT, CURVE_TOP, ease_in_out(u)))
+        return (mix(CURVE_L, CURVE_R, u), mix(CURVE_BOT, CURVE_TOP, cm.ease(u)))
 
     scene.line("axis_x", start=(CURVE_L, CURVE_BOT), end=(CURVE_R, CURVE_BOT), w=1.0, color=DIM)
     scene.line("axis_y", start=(CURVE_L, CURVE_BOT), end=(CURVE_L, CURVE_TOP), w=1.0, color=DIM)
@@ -130,7 +128,7 @@ def bars(scene, active, local):
     for index, slot in enumerate(cm.row(4, gap=26, within=CHART)):
         places[index] = slot
 
-    eased = ease_in_out(local)
+    eased = cm.ease(local)
 
     scene.text("chart_label", "computed, not stored", x=CHART.x, y=CHART.bottom - 6,
                size=20, color="grey")

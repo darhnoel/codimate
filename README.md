@@ -83,6 +83,10 @@ motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
 A shape inside a group is named `group/child`, so `"3/*"` targets one group.
 A rule cannot make something move that did not move.
 
+Every path eases in and out. `cm.ease(t)` calls into the Engine if you need
+the curve itself — to draw it, or to pace something by hand — so you never
+keep a second copy that can drift.
+
 **timing** — seconds per event, by event name.
 
 ```python

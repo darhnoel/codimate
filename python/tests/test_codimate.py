@@ -243,6 +243,29 @@ def mistakes():
     assert cm.Rule("*").pattern == "*"
 
 
+def engine_easing():
+    """cm.ease calls into the Engine, so a diagram of it cannot drift.
+
+    Skipped when the extension is not built — the rest of this file is pure
+    Python on purpose.
+    """
+    try:
+        cm.ease(0.5)
+    except ImportError:
+        print("(skipped cm.ease — extension not built)")
+        return
+
+    assert cm.ease(0.0) == 0.0
+    assert cm.ease(1.0) == 1.0
+    assert cm.ease(0.5) == 0.5, "ease_in_out is symmetric about its midpoint"
+    assert cm.ease(0.25) < 0.25 < cm.ease(0.75), "it starts slow and ends slow"
+    assert cm.ease(-1.0) == 0.0 and cm.ease(2.0) == 1.0, "t is clamped"
+
+    # Monotonic: a shape eased along a path never travels backwards.
+    seen = [cm.ease(i / 40) for i in range(41)]
+    assert all(b >= a for a, b in zip(seen, seen[1:])), seen
+
+
 def main():
     trace_and_timing()
     item_identity()
@@ -250,6 +273,7 @@ def main():
     layout()
     columns_and_lines()
     mistakes()
+    engine_easing()
     print("ok")
 
 

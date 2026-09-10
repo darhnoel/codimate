@@ -58,6 +58,19 @@ class Timing:
         return self.events.get(event.name, self.default)
 
 
+def ease(t: float) -> float:
+    """The easing curve the Engine applies between two moments.
+
+        cm.ease(0.5)  ->  0.5
+
+    This calls into the Engine, so it is the same curve your animation is
+    actually using — not a copy of it.
+    """
+    from . import _codimate
+
+    return _codimate.ease(float(t))
+
+
 class Explanation:
     def __init__(
         self,
