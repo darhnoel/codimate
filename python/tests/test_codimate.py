@@ -43,7 +43,8 @@ def trace_and_timing():
     # Every shape carries every field — the Engine's diff is uniform.
     shape = e.scenes[0]._payload()[0]
     assert set(shape) == {
-        "item", "kind", "x", "y", "w", "h", "r", "color", "text", "size", "layer", "opacity",
+        "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
+        "color", "text", "size", "layer", "opacity",
     }, sorted(shape)
 
     # Identity, not order, is what the Engine pairs on.
@@ -155,6 +156,63 @@ def layout():
     cm.canvas(1280, 720)
 
 
+def columns_and_lines():
+    cm.canvas(1280, 720)
+
+    slots = list(cm.column(4, gap=40, w=64, x=300))
+    assert len(slots) == 4
+    assert {s.x for s in slots} == {300.0}, "a column shares one x"
+
+    # Centred on the canvas: the margins match.
+    assert abs(slots[0].top - (cm.height() - slots[-1].bottom)) < 1e-6
+
+    # Evenly spaced by exactly the gap.
+    for a, b in zip(slots, slots[1:]):
+        assert abs((b.top - a.bottom) - 40) < 1e-6
+
+    # A column can be centred somewhere other than mid-canvas.
+    high = list(cm.column(4, gap=40, y=200))
+    assert abs(sum(s.y for s in high) / 4 - 200.0) < 1e-6
+
+    # A line carries both ends; there is no anchor to resolve.
+    s = cm.Scene()
+    s.line("wire", start=(10, 20), end=(110, 220), w=3.0, color="orange")
+    shape = s._payload()[0]
+    assert (shape["x"], shape["y"], shape["x2"], shape["y2"]) == (10.0, 20.0, 110.0, 220.0)
+    assert shape["kind"] == "line" and shape["w"] == 3.0
+
+    # Both ends of a line move with the group it is drawn on.
+    g = cm.Scene().group("net", cm.Slot(x=0.0, y=0.0, w=10.0, h=10.0))
+    g.line("wire", start=(10, 20), end=(110, 220))
+    flat = g._scene._payload()[0]
+    moved = cm.Scene().group("net", cm.Slot(x=5.0, y=7.0, w=10.0, h=10.0))
+    moved.line("wire", start=(10, 20), end=(110, 220))
+    after = moved._scene._payload()[0]
+    assert (after["x"] - flat["x"], after["y"] - flat["y"]) == (5.0, 7.0)
+    assert (after["x2"] - flat["x2"], after["y2"] - flat["y2"]) == (5.0, 7.0)
+
+    # A nested key flattens, so you write ("edge", src, dst) rather than
+    # concatenating tuples by hand.
+    s = cm.Scene()
+    s.line(("edge", (0, 1), (1, 2)), start=(0, 0), end=(1, 1))
+    assert s._payload()[0]["item"] == "edge/0/1/1/2", s._payload()[0]["item"]
+
+    # A line may take Slots as its ends — it joins the middles of two places.
+    a = cm.Slot(x=10.0, y=20.0, w=8.0, h=8.0)
+    b = cm.Slot(x=110.0, y=220.0, w=8.0, h=8.0)
+    from_slots = cm.Scene()
+    from_slots.line("wire", start=a, end=b)
+    from_points = cm.Scene()
+    from_points.line("wire", start=(10, 20), end=(110, 220))
+    assert from_slots._payload() == from_points._payload()
+
+    # Inside a group, a shape that says nothing sits at the group's point.
+    g2 = cm.Scene().group("n", cm.Slot(x=100.0, y=200.0, w=60.0, h=60.0))
+    g2.circle("body", r=30)
+    body = g2._scene._payload()[0]
+    assert (body["x"], body["y"]) == (100.0, 200.0)
+
+
 def mistakes():
     # A name means exactly one thing.
     try:
@@ -190,6 +248,7 @@ def main():
     item_identity()
     groups()
     layout()
+    columns_and_lines()
     mistakes()
     print("ok")
 

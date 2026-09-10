@@ -34,10 +34,10 @@ cm.explain(
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9}),
-).render("sort.mp4")
+).render("results/sort.mp4")
 ```
 
-That is the whole program. Run it, get `sort.mp4`.
+That is the whole program. Run it, get `results/sort.mp4`.
 
 ## Install
 
@@ -73,14 +73,15 @@ change your data; Codimate snapshots the result for you.
 (your data at that moment) and `frame.event` (what just happened). It runs once
 per event, not once per frame, so it can be as slow as you like.
 
-**motion** — patterns matched against item names. First match wins.
+**motion** — patterns matched against shape names. First match wins, and a
+straight line is the default, so most explanations need no rules at all.
 
 ```python
-motion=[
-    cm.Rule("bar_*", "lift_carry_drop", clearance=90),   # arcs over
-    cm.Rule("label_*", "straight"),                      # slides
-]
+motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
 ```
+
+A shape inside a group is named `group/child`, so `"3/*"` targets one group.
+A rule cannot make something move that did not move.
 
 **timing** — seconds per event, by event name.
 
@@ -134,6 +135,7 @@ position doesn't.
 scene.rect(name,   h=, w=, color=, layer=, opacity=)
 scene.circle(name, r=, color=, layer=, opacity=)
 scene.text(name, content, size=, color=, layer=, opacity=)
+scene.line(name, start=slot_or_point, end=slot_or_point, w=, color=)
 scene.group(name, slot)      # a place to draw a thing made of several shapes
 ```
 
@@ -157,8 +159,9 @@ size, colour or position tween. You do not ask for any of that.
 
 ## Where things sit
 
-You should not be inventing layout arithmetic. `cm.row()` divides the canvas
-and hands back one **slot** per item; `scene.group()` puts a thing in one:
+You should not be inventing layout arithmetic. `cm.row()` and `cm.column()`
+divide the canvas and hand back one **slot** per item; `scene.group()` puts a
+thing in one:
 
 ```python
 for slot, item in cm.row(frame.state, gap=40):
@@ -172,6 +175,14 @@ it; `top=20` puts the label 20 below it. `w` defaults to the group's width and
 `x` to its centre, so the only thing left to say is the one thing a bar and a
 label disagree about.
 
+**A name can be built from other names.** Nested keys flatten, so you never
+concatenate tuples by hand — and a line takes Slots directly rather than making
+you pull `.x` and `.y` out of them:
+
+```python
+scene.line(("edge", src, dst), start=at[src], end=at[dst])   # -> "edge/0/1/1/2"
+```
+
 **Everything on a group moves as one thing.** The bar and its label cannot come
 apart, because the Engine sees them as `3/bar` and `3/label` — one name, two
 shapes. Groups nest, so a thing made of a thing made of a thing still travels
@@ -181,8 +192,16 @@ A slot is a place, not a shape — nothing draws it. Hand one to `group()` and
 you never take it apart; read `slot.x`, `slot.bottom`, `slot.left`, `slot.top`,
 `slot.right`, `slot.w`, `slot.h` for the odd case that needs it.
 
+`cm.column()` stacks instead of spreading — layers of a network, levels of a
+tree — and its slots anchor at their centre rather than a baseline:
+
+```python
+for slot in cm.column(4, gap=44, x=640):
+    scene.group(("neuron", 1, i), slot).circle("body", r=30)
+```
+
 Widths, spacing and the baseline come from the canvas unless you override them
-(`w=`, `h=`, `bottom=`). The canvas is 1280x720 by default:
+(`w=`, `h=`, `bottom=`, `x=`). The canvas is 1280x720 by default:
 
 ```python
 cm.canvas(1920, 1080)     # everything below follows
@@ -229,6 +248,8 @@ python/codimate/           the Python package
 
 ## More
 
+- [`python/examples/`](python/examples/) — `bubble_sort.py` (things that move),
+  `neural_net.py` (things that stay put while signal travels)
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way
 - [Domain Context](CONTEXT.md) — the vocabulary

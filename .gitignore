@@ -6,6 +6,10 @@ __pycache__/
 *.egg-info/
 .claude/settings.local.json
 *.mp4
+
+# rendered output — the folder is tracked, its contents are not
+/results/*
+!/results/.gitkeep
 /examples/attention-is-all-you-need-architecture/
 /examples/transformer/
 /examples/logo-animation/

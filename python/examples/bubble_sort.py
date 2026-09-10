@@ -56,6 +56,6 @@ cm.explain(
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9, "done": 0.6}),
-).render("sort.mp4")
+).render("results/sort.mp4")
 
-print("wrote sort.mp4")
+print("wrote results/sort.mp4")

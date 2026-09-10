@@ -12,8 +12,8 @@ use std::collections::HashMap;
 
 use codimate_animation::Playable;
 use codimate_core::{
-    scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry, IntoAnimated, Primitive,
-    Scene, Style, TextAlign, Vec2,
+    scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry, IntoAnimated, Path,
+    Primitive, Scene, Segment, Style, TextAlign, Vec2,
 };
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
@@ -35,6 +35,10 @@ struct Shape {
     kind: String,
     x: f32,
     y: f32,
+    /// For a line, the far end. Unused by every other kind.
+    x2: f32,
+    y2: f32,
+    /// For a line, the stroke width.
     w: f32,
     h: f32,
     r: f32,
@@ -47,7 +51,18 @@ struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-const KINDS: [&str; 3] = ["rect", "circle", "text"];
+const KINDS: [&str; 4] = ["rect", "circle", "text", "line"];
+
+/// A line in local space: from the anchor to the far end.
+fn line_path(s: &Shape) -> Path {
+    Path {
+        segments: vec![Segment::Line(
+            Vec2::new(0.0, 0.0),
+            Vec2::new(s.x2 - s.x, s.y2 - s.y),
+        )],
+        closed: false,
+    }
+}
 
 impl Shape {
     fn geometry(&self, other: &Shape) -> Geometry {
@@ -61,12 +76,20 @@ impl Shape {
                 font_size: tween(self.size, other.size),
                 align: TextAlign::Center,
             },
+            "line" => Geometry::path(tween(line_path(self), line_path(other))),
+
             _ => Geometry::rect(tween(self.w, other.w), tween(self.h, other.h)),
         }
     }
 
     fn style(&self) -> PyResult<Style> {
-        Ok(Style::new().fill(parse_color(&self.color)?))
+        let color = parse_color(&self.color)?;
+        Ok(if self.kind == "line" {
+            // A line is drawn, not filled — `w` is its stroke width.
+            Style::new().fill(Color::TRANSPARENT).stroke(self.w, color)
+        } else {
+            Style::new().fill(color)
+        })
     }
 
     /// Python's `y` is always the **centre** of the shape. Rust text is
@@ -434,6 +457,8 @@ mod tests {
             kind: "rect".into(),
             x,
             y: 300.0,
+            x2: 0.0,
+            y2: 0.0,
             w: 60.0,
             h: 100.0,
             r: 0.0,

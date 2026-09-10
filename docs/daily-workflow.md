@@ -17,7 +17,7 @@ python3 -m venv .venv && .venv/bin/pip install maturin
 The `--release` matters: without it the engine runs about 17x slower. You only
 drop it when debugging the engine itself.
 
-Open `sort.mp4`. Bars slide when they swap, and the pair being compared turns
+Open `results/sort.mp4`. Bars slide when they swap, and the pair being compared turns
 orange.
 
 This proves your toolchain, the Rust build, `ffmpeg`, and export all work. If
@@ -106,8 +106,8 @@ Those names are what you give durations to later.
 
 One moment, one picture. Two rules:
 
-- **Let `cm.row()` and `scene.group()` do the layout.** A row divides the
-  canvas into slots; a group puts one thing in one slot. You never take a slot
+- **Let `cm.row()` / `cm.column()` and `scene.group()` do the layout.** A row
+  spreads and a column stacks; a group puts one thing in one slot. You never take a slot
   apart, and everything on a group travels together.
 - **The group's name carries identity.** Name things after what they *are*, not
   where they sit, unless you want them to stay put.
@@ -170,9 +170,16 @@ your data small (4-6 items) while iterating, then grow it once it reads well.
 | A shape pops in and out | Its name changes between moments — make it stable |
 | Everything jumps at the start of a step | Two consecutive moments differ more than one event's worth; emit more often |
 | Part of a thing moves without the rest | Draw it on one `scene.group()` so it travels as a unit |
-| `ValueError: unknown kind` | Codimate draws `rect`, `circle`, `text` |
+| `ValueError: unknown kind` | Codimate draws `rect`, `circle`, `text`, `line` |
 | `ValueError: two shapes share the name` | One name used twice in one Scene |
 | `RuntimeError: emit() called outside a @trace function` | The function needs the `@cm.trace()` decorator |
+
+## Two examples worth reading
+
+- `bubble_sort.py` — things **move**, so names follow the thing (`cm.items()`).
+- `neural_net.py` — neurons **stay put**, so names follow the place
+  (`("neuron", layer, index)`). Only the pulses travel, and they travel because
+  the trace says where they are at each moment.
 
 ## Next
 
