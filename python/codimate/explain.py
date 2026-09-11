@@ -11,7 +11,7 @@ from .trace import Event, Frame, Trace
 
 View = Callable[[Frame], Scene]
 
-PATHS = ("straight", "linear", "lift_carry_drop")
+PATHS = ("straight", "linear", "fall", "lift_carry_drop")
 
 
 class Rule:
@@ -30,6 +30,9 @@ class Rule:
     * ``linear`` — a straight line at constant speed. Use it when a thing is
       mid-journey at every event, like something turning: easing would make it
       accelerate and stop inside each segment.
+    * ``fall`` — a parabola: sideways at a constant rate, downwards
+      accelerating. What a dropped thing does, and what each hop of a falling
+      ball needs, since an eased path would settle gently instead of arriving.
     * ``lift_carry_drop`` — arcs up and over, then falls. Takes ``clearance``.
     """
 

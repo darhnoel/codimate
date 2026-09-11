@@ -213,6 +213,14 @@ fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> PyResult<Animate
         // inside each segment, or it judders once per event.
         "linear" => Animated::new(move |t| lerp(a, b, t)),
 
+        // A parabola: horizontal drift at a constant rate, vertical distance
+        // going as t squared. What a thing dropped from rest does, and what
+        // every hop of a falling ball should do — it must arrive fast, not
+        // settle gently the way an eased path does.
+        "fall" => Animated::new(move |t| {
+            Vec2::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t * t)
+        }),
+
         "lift_carry_drop" => {
             let clearance = opts.get("clearance").copied().unwrap_or(40.0);
             let top = a.y.min(b.y) - clearance;
@@ -231,7 +239,7 @@ fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> PyResult<Animate
 
         other => {
             return Err(PyValueError::new_err(format!(
-                "unknown motion path {other:?} — use \"straight\", \"linear\" or \"lift_carry_drop\""
+                "unknown motion path {other:?} — use \"straight\", \"linear\", \"fall\" or \"lift_carry_drop\""
             )))
         }
     })
@@ -493,6 +501,24 @@ mod tests {
         let mid = eased.resolve(0.55).x - eased.resolve(0.45).x;
         let edge = eased.resolve(0.1).x - eased.resolve(0.0).x;
         assert!(mid > edge * 1.5, "straight should still ease in and out");
+    }
+
+    #[test]
+    fn fall_accelerates_downwards_but_drifts_evenly() {
+        let (a, b) = (Vec2::new(0.0, 0.0), Vec2::new(100.0, 400.0));
+        let rules = vec![("*".to_string(), "fall".to_string(), HashMap::new())];
+        let path = motion_path(a, b, &rules, "ball").unwrap();
+
+        let step = |lo: f32, hi: f32| {
+            let (p, q) = (path.resolve(lo), path.resolve(hi));
+            (q.x - p.x, q.y - p.y)
+        };
+        let (first_x, first_y) = step(0.0, 0.1);
+        let (last_x, last_y) = step(0.9, 1.0);
+
+        assert!((first_x - last_x).abs() < 0.01, "sideways drift must not change");
+        assert!(last_y > first_y * 8.0, "downward speed must build: {first_y} -> {last_y}");
+        assert!((path.resolve(1.0).y - 400.0).abs() < 0.01, "and still arrive");
     }
 
     #[test]

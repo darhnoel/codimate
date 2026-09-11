@@ -45,6 +45,15 @@ The trace says where the spokes are every 15 degrees and the Engine fills in
 the rest, exactly as it does for a sliding bar. Rotation is just position over
 time. The README works through why 15 degrees and not 45.
 
+## Both at once
+
+**[`galton_board/`](galton_board/)** — where the bell curve comes from.
+
+Pegs and bins named after their place, balls named after themselves, a dozen in
+flight at any moment each on its own path. The falling is a real ballistic
+simulation sampled at a fixed time step, which is what lets balls at different
+depths move at different speeds.
+
 ## Under the hood
 
 **[`explain_codimate/`](explain_codimate/)** — Codimate explaining its own
