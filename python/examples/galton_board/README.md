@@ -4,7 +4,7 @@
 .venv/bin/python python/examples/galton_board/main.py
 ```
 
-Eighty balls are dropped through a triangle of pegs. At each peg a ball goes
+Four hundred balls are dropped through a triangle of pegs. At each peg a ball goes
 left or right with even chance, and lands in the bin counting how many times it
 went right. Nothing aims for a bell curve — it is what evenly-weighted coin
 flips add up to.
@@ -69,23 +69,48 @@ the simulation put it there. Easing between them would add a wobble the physics
 never asked for. Same reasoning as `dharma_wheel`: ease when each event is a
 discrete step, go linear when a thing is mid-journey at every one.
 
+## Why 400 balls and not 80
+
+Whether the histogram *looks* like a bell is arithmetic, not styling, and two
+things set it:
+
+**How many bins.** Six rows give seven bins, and seven bars can only ever be a
+coarse bell — the ideal shape is `1.6 · 9.4 · 23.4 · 31.2 · 23.4 · 9.4 · 1.6`
+percent. More rows give finer resolution and a denser thicket of pegs; this
+example keeps the pegs sparse and buys the shape elsewhere.
+
+**How much noise.** The tallest bar wobbles by about `sqrt(n·p·(1-p))`:
+
+| balls | tallest bar | wobble |
+|---|---|---|
+| 80 | 25 | ±4.1 — **17%**, which is why it looked lumpy |
+| 200 | 62 | ±6.6 — 10% |
+| **400** | **125** | **±9.3 — 7%** |
+
+So: same pegs, five times the balls. The grey line over the bars is the
+binomial the coin flips predict, drawn so the match is something you can see
+rather than something the caption claims.
+
+Bar heights are scaled so the *expected* peak fills the space
+(`BIN_UNIT = TALLEST_BAR / max(EXPECTED)`), fixed for the whole render. Bars
+that rescaled as counts arrived would animate a lie.
+
 ## Reproducible on purpose
 
 `SEED = 3` is fixed, so the video is identical every render — otherwise it
 would be a different video each time, which makes it useless to compare against
 when you change the engine.
 
-Eighty balls is a small sample and any one seed lands somewhere; the simulation
-itself is unbiased. Run it with 4000 balls and the histogram fits the binomial
-with a chi-square of 7.9 on 8 degrees of freedom, which is as close to expected
-as you could ask for.
+The simulation is unbiased: at 4000 balls the histogram fits the binomial with
+a chi-square of 7.9 on 8 degrees of freedom, about as close to expected as you
+could ask for.
 
 ## Try changing
 
 | Change | What happens |
 |---|---|
 | `ROWS = 12` | a finer, smoother curve — and a denser, wider board |
-| `BALLS = 400` | the shape settles; you may want a smaller `BIN_UNIT` |
+| `BALLS = 80` | the noisy version — the shape is there but lumpy |
 | `self.rng.random() < 0.65` | a biased peg: the whole curve slides right |
 | `BOUNCE = 0.9` | pegs barely slow the balls; they accelerate the whole way down |
 | `GRAVITY = 400` | a slow, lunar drop |

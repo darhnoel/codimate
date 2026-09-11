@@ -27,21 +27,29 @@ from dataclasses import dataclass
 import codimate as cm
 
 ROWS = 6
-BALLS = 80
+BALLS = 400
 SEED = 3                        # fixed, so the video is the same every render
 
 # Physics, in pixels and seconds.
 GRAVITY = 1400.0
 BOUNCE = 0.5                    # share of downward speed kept after a peg
 DT = 0.025                      # simulation and sampling step
-RELEASE_EVERY = 0.11
+RELEASE_EVERY = 0.025
 REST = 0.08                     # how long a ball sits before joining its bin
 
 CX = 640.0
 HALF = 50.0                     # half the gap between neighbouring slots
 TOP_Y, ROW_GAP = 208.0, 52.0    # TOP_Y is the first row of pegs
 SPAWN_Y = 160.0                 # balls are dropped from here, above the board
-BIN_BASE, BIN_W, BIN_UNIT = 676.0, 84.0, 5.0
+BIN_BASE, BIN_W, TALLEST_BAR = 676.0, 84.0, 132.0
+
+# What an even chance each way predicts: the binomial, which for this many rows
+# is already the bell the whole thing is about.
+EXPECTED = [BALLS * math.comb(ROWS, k) / 2 ** ROWS for k in range(ROWS + 1)]
+
+# Scale the bars so the expected peak just fills the space. Fixed for the whole
+# render — bars that rescaled as counts came in would animate a lie.
+BIN_UNIT = TALLEST_BAR / max(EXPECTED)
 BALL_R, PEG_R = 9.0, 7.0
 PERCH = BALL_R + PEG_R - 3.0    # a ball rides on top of the peg it just struck
 
@@ -177,7 +185,9 @@ def board_view(frame):
     board = frame.state
 
     scene.text("title", "Galton board", x=CX, y=56, size=38, color=INK)
-    scene.text("subtitle", f"{BALLS} balls, {ROWS} rows, an even chance each way",
+    scene.text("subtitle",
+               f"{BALLS} balls, {ROWS} rows — {sum(board.bins)} landed, "
+               f"the line is what an even chance predicts",
                x=CX, y=92, size=20, color="grey")
 
     # The hopper the balls are dropped from.
@@ -198,6 +208,13 @@ def board_view(frame):
                end=(slot_x(ROWS, ROWS) + BIN_W / 2 + 6, BIN_BASE),
                w=2.0, color=PEG)
 
+    # What the bars are heading towards, drawn over them so the match is
+    # something you can see rather than something the caption claims.
+    for k in range(ROWS):
+        scene.line(("expected", k),
+                   start=(slot_x(ROWS, k), BIN_BASE - EXPECTED[k] * BIN_UNIT),
+                   end=(slot_x(ROWS, k + 1), BIN_BASE - EXPECTED[k + 1] * BIN_UNIT),
+                   w=2.0, color="#6d7a94", layer=8)
     # Bins: also named after where they are. They grow, they do not travel.
     tallest = max(board.bins)
     for k, count in enumerate(board.bins):
