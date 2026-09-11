@@ -128,7 +128,19 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                 fill,
                 align,
             } => {
-                render_text(&mut pixmap, *x, *y, text, *font_size, *fill, *align);
+                // Glyphs are rasterized straight into the pixmap, so this
+                // cannot take a `Transform` the way the path commands do.
+                // For a uniform scale, scaling the inputs is equivalent —
+                // and without it, text ignores `pixel_scale` entirely.
+                render_text(
+                    &mut pixmap,
+                    *x * pixel_scale,
+                    *y * pixel_scale,
+                    text,
+                    *font_size * pixel_scale,
+                    *fill,
+                    *align,
+                );
             }
         }
     }
@@ -484,5 +496,80 @@ impl Renderer for RasterRenderer {
             1.0,
         ));
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+    use codimate_core::TextAlign;
+    use codimate_layout::Viewport;
+
+    /// Centre of mass of the non-black pixels, as a fraction of the bitmap.
+    fn ink_centre(bitmap: &Bitmap) -> (f32, f32) {
+        let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
+        for y in 0..bitmap.height {
+            for x in 0..bitmap.width {
+                let (r, g, b, _) = bitmap.pixel(x, y);
+                let lit = r as u32 + g as u32 + b as u32;
+                if lit > 60 {
+                    sx += x as f64 * lit as f64;
+                    sy += y as f64 * lit as f64;
+                    n += lit as f64;
+                }
+            }
+        }
+        assert!(n > 0.0, "nothing was drawn");
+        (
+            (sx / n) as f32 / bitmap.width as f32,
+            (sy / n) as f32 / bitmap.height as f32,
+        )
+    }
+
+    fn frame(commands: Vec<RenderCommand>) -> RenderFrame {
+        RenderFrame {
+            name: "t".into(),
+            elapsed_seconds: 0.0,
+            viewport: Viewport::new(200.0, 100.0),
+            commands,
+        }
+    }
+
+    /// `pixel_scale` must move text with everything else. It used to be the
+    /// one command that ignored the transform, so any high-DPI render put the
+    /// captions in the wrong place at the wrong size.
+    #[test]
+    fn text_follows_pixel_scale() {
+        let f = frame(vec![RenderCommand::Text {
+            x: 100.0,
+            y: 50.0,
+            text: "codimate".into(),
+            font_size: 20.0,
+            fill: Color::WHITE,
+            align: TextAlign::Center,
+        }]);
+
+        let (x1, y1) = ink_centre(&rasterize(&f));
+        let (x2, y2) = ink_centre(&rasterize_scaled(&f, 3.0));
+
+        assert!(
+            (x1 - x2).abs() < 0.02 && (y1 - y2).abs() < 0.02,
+            "text sat at ({x1:.3}, {y1:.3}) unscaled and ({x2:.3}, {y2:.3}) at 3x"
+        );
+    }
+
+    /// The same, for a shape — which always worked, and pins that it still does.
+    #[test]
+    fn shapes_follow_pixel_scale() {
+        let f = frame(vec![RenderCommand::Circle {
+            x: 150.0,
+            y: 25.0,
+            radius: 10.0,
+            fill: Color::WHITE,
+        }]);
+
+        let (x1, y1) = ink_centre(&rasterize(&f));
+        let (x2, y2) = ink_centre(&rasterize_scaled(&f, 3.0));
+        assert!((x1 - x2).abs() < 0.01 && (y1 - y2).abs() < 0.01);
     }
 }

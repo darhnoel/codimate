@@ -13,7 +13,8 @@ Run any of them from the repository root:
 .venv/bin/python python/examples/bubble_sort/main.py
 ```
 
-Each writes into [`results/`](../../results/), which is not committed.
+Each writes 1080p60 into [`results/`](../../results/), which is not committed.
+Resolution is a render argument (`scale=1.5`), not something the views know about.
 
 ## Start here
 

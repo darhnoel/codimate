@@ -160,6 +160,14 @@ timing=cm.Timing(default=0.5, events={"shift": 0.9}, final_hold=1.5)
 .venv/bin/python my_explanation.py     # edit, run, watch, repeat
 ```
 
+Render small while you iterate and turn it up when it reads well — `scale` and
+`fps` change nothing about your coordinates:
+
+```python
+.render("results/mine.mp4")                  # 720p30, quick
+.render("results/mine.mp4", fps=60, scale=1.5)   # 1080p60
+```
+
 There is no build step and no preview window yet — you render and watch. Keep
 your data small (4-6 items) while iterating, then grow it once it reads well.
 

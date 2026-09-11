@@ -4,13 +4,15 @@
 .venv/bin/python python/examples/dharma_wheel/main.py
 ```
 
-The wheel of the Noble Eightfold Path, turning. The spoke reaching the top
-brightens, and its factor is named below in Khmer.
+The wheel of the Noble Eightfold Path (អរិយអដ្ឋង្គិកមគ្គ), turning evenly. The
+factor belonging to the spoke at the top is named below, in Khmer, with its
+plain-Khmer meaning. Every spoke is drawn alike — the wheel is a symbol, not a
+chart.
 
-> **Please check the Khmer.** The eight factors are given in the Pali terms as
-> written in Khmer script (`សម្មាទិដ្ឋិ`, `សម្មាសង្កប្បៈ`, …), with the English
-> beside each in a comment in `main.py`. They are religious terms and I am not
-> a Khmer speaker — a wrong vowel sign would be easy to miss and worth fixing.
+The eight factors carry their Pali term as written in Khmer, their plain-Khmer
+meaning, and which of the three trainings (ត្រៃសិក្ខា) they belong to — the
+grouping is in `main.py` even though the video does not show it. The English is
+in a comment beside each. Terms checked against a native source.
 
 ## What it teaches
 

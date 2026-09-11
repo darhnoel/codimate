@@ -120,6 +120,6 @@ cm.explain(
         opening=0.9,
         final_hold=1.6,
     ),
-).render("results/neural_net.mp4")
+).render("results/neural_net.mp4", fps=60, scale=1.5)
 
 print("wrote results/neural_net.mp4")

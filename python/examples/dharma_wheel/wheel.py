@@ -18,12 +18,12 @@ GOLD_DEEP = "#d9a020"
 GOLD_LIT = "#fff1c4"
 GROUND = "black"
 
-RIM_OUT, RIM_IN = 180.0, 151.0
-FINIAL_R = 199.0
-DOT_R = 5.5
-HUB_OUT, HUB_IN = 53.0, 35.0
-SPOKE_W, SPOKE_EDGE = 13.0, 20.0
-ORNAMENT_IN, ORNAMENT_OUT = 92.0, 121.0
+RIM_OUT, RIM_IN = 167.0, 140.0
+FINIAL_R = 185.0
+DOT_R = 5.0
+HUB_OUT, HUB_IN = 49.0, 33.0
+SPOKE_W, SPOKE_EDGE = 12.0, 18.5
+ORNAMENT_IN, ORNAMENT_OUT = 86.0, 113.0
 
 _E = 4.0     # how far the dark edge shows beyond a gold shape
 
@@ -35,7 +35,7 @@ def polar(centre, degrees, radius):
 
 # One tall centre lobe with two smaller ones tucked beside it, so a finial
 # reads as a bud rather than as three beads in a row.
-_LOBES = ((0.0, 14.0, 17.0), (-10.5, -5.0, 11.0), (10.5, -5.0, 11.0))
+_LOBES = ((0.0, 13.0, 16.0), (-10.5, -4.5, 10.0), (10.5, -4.5, 10.0))
 
 
 def _finials(scene, centre, angle, spokes):
@@ -61,11 +61,9 @@ def _rim(scene, centre):
         scene.circle(("rim", name), x=centre[0], y=centre[1], r=radius, color=color, layer=layer)
 
 
-def _spokes(scene, centre, angle, leading, spokes):
+def _spokes(scene, centre, angle, spokes):
     for index in range(spokes):
         base = angle + index * (360 / spokes)
-        here = index == leading
-        fill = GOLD_LIT if here else GOLD
         # Tapered: a broad shaft from the hub, a narrower one out to the rim.
         hub_end = polar(centre, base, HUB_OUT - 6)
         waist = polar(centre, base, ORNAMENT_OUT - 6)
@@ -76,13 +74,13 @@ def _spokes(scene, centre, angle, leading, spokes):
             scene.line(("spoke", index, part, "edge"), start=a, end=b,
                        w=wide + (SPOKE_EDGE - SPOKE_W), color=EDGE, layer=7)
             scene.line(("spoke", index, part), start=a, end=b,
-                       w=wide, color=fill, layer=8)
+                       w=wide, color=GOLD, layer=8)
 
         # The diamond block partway along — a short, very thick line.
         a, b = polar(centre, base, ORNAMENT_IN), polar(centre, base, ORNAMENT_OUT)
-        scene.line(("ornament", index, "edge"), start=a, end=b, w=26.0, color=EDGE, layer=9)
-        scene.line(("ornament", index), start=a, end=b, w=19.0,
-                   color=fill if here else GOLD_DEEP, layer=10)
+        scene.line(("ornament", index, "edge"), start=a, end=b, w=24.0, color=EDGE, layer=9)
+        scene.line(("ornament", index), start=a, end=b, w=17.5,
+                   color=GOLD_DEEP, layer=10)
 
 
 def _studs(scene, centre, angle, spokes):
@@ -110,9 +108,9 @@ def _hub(scene, centre, angle):
         scene.circle(("swirl", lobe), x=x, y=y, r=9.5, color=GOLD, layer=18)
 
 
-def draw(scene, centre, angle, leading, spokes):
+def draw(scene, centre, angle, spokes):
     _finials(scene, centre, angle, spokes)
     _rim(scene, centre)
-    _spokes(scene, centre, angle, leading, spokes)
+    _spokes(scene, centre, angle, spokes)
     _studs(scene, centre, angle, spokes)
     _hub(scene, centre, angle)

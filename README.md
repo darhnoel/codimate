@@ -221,6 +221,16 @@ cm.canvas(1920, 1080)     # everything below follows
 cm.width(), cm.height()   # for the odd thing you place by hand
 ```
 
+**Output resolution is separate from your coordinates.** `scale` only changes
+how many pixels each coordinate becomes, so nothing in your view has to move:
+
+```python
+.render("out.mp4", fps=60, scale=1.5)   # 1080p60 from the default canvas
+```
+
+Frames are rasterized at the larger size rather than upscaled afterwards, so
+1080p is genuinely drawn at 1080p.
+
 ## How it works
 
 ```text
@@ -271,5 +281,5 @@ python/codimate/           the Python package
 
 ```bash
 cargo test                                  # the Engine
-.venv/bin/python python/tests/test_codimate.py   # the Authoring Surface
+.venv/bin/python python/tests/run.py             # the Authoring Surface
 ```

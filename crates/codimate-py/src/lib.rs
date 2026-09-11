@@ -343,7 +343,7 @@ impl Playable for Explanation {
 /// always `durations.len() + 1` long. Zero-length segments are dropped rather
 /// than producing an empty time interval.
 #[pyfunction]
-#[pyo3(signature = (scenes, rules, durations, output, width=1280.0, height=720.0, fps=30.0))]
+#[pyo3(signature = (scenes, rules, durations, output, width=1280.0, height=720.0, fps=30.0, scale=1.0))]
 #[allow(clippy::too_many_arguments)]
 fn render(
     scenes: Vec<Vec<Shape>>,
@@ -353,7 +353,11 @@ fn render(
     width: f32,
     height: f32,
     fps: f32,
+    scale: f32,
 ) -> PyResult<()> {
+    if scale <= 0.0 {
+        return Err(PyValueError::new_err("scale must be positive"));
+    }
     if scenes.len() != durations.len() + 1 {
         return Err(PyValueError::new_err(format!(
             "got {} scenes for {} durations — expected {}",
@@ -400,7 +404,9 @@ fn render(
         total: cursor,
     };
 
-    let config = ExportConfig::new(fps, Viewport::new(width, height));
+    // `pixel_scale` rasterizes at the larger size rather than upscaling
+    // afterwards, so 1080p is genuinely drawn at 1080p.
+    let config = ExportConfig::new(fps, Viewport::new(width, height)).pixel_scale(scale);
 
     export_mp4(&explanation, &config, &output)
         .map_err(|e| PyValueError::new_err(format!("export failed: {e:?}")))

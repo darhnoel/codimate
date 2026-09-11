@@ -67,6 +67,6 @@ cm.explain(
     trace=sweep(Clock()),
     view=explain_frame,
     timing=cm.Timing(default=0.13, opening=1.4, final_hold=2.0),
-).render("results/explain_codimate.mp4")
+).render("results/explain_codimate.mp4", fps=60, scale=1.5)
 
 print("wrote results/explain_codimate.mp4")

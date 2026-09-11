@@ -111,8 +111,16 @@ class Explanation:
     def duration(self) -> float:
         return sum(self.durations)
 
-    def render(self, output: str, *, fps: float = 30) -> str:
-        """Draw every frame and write the video. Size comes from `cm.canvas()`.
+    def render(self, output: str, *, fps: float = 30, scale: float = 1.0) -> str:
+        """Draw every frame and write the video.
+
+        Coordinates always mean what `cm.canvas()` says — `scale` only changes
+        how many pixels each one becomes, so nothing in your view has to move:
+
+            .render("out.mp4", fps=60, scale=1.5)   # 1080p60 from the default
+
+        Frames are rasterized at the larger size rather than upscaled
+        afterwards, so 1080p is genuinely drawn at 1080p.
 
         The folder is created if it does not exist, so `render("results/x.mp4")`
         works on a fresh clone.
@@ -131,6 +139,7 @@ class Explanation:
             width=width(),
             height=height(),
             fps=float(fps),
+            scale=float(scale),
         )
         return output
 
