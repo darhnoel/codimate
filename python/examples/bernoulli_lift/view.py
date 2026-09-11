@@ -24,11 +24,17 @@ def _wing(scene):
 def _labels(scene, flow):
     scene.text("title", "Bernoulli's principle — and the story that goes with it",
                x=640, y=48, size=30, color=INK)
-    scene.text("legend", "colour is speed:  slow        fast",
-               x=250, y=676, size=17, color=DIM)
+    # Laid out piece by piece. As one centred string the swatches, which are
+    # placed at fixed x, landed on top of the word they were labelling.
+    # The font runs about 12.1px per character at this size: "colour is speed"
+    # is 182px wide, not the 135 first guessed, which is how it came to sit on
+    # top of "slow".
+    scene.text("legend_what", "colour is speed", x=100, y=676, size=17, color=DIM)
+    scene.text("legend_slow", "slow", x=225, y=676, size=17, color=DIM)
     for i in range(16):
-        scene.line(("scale", i), start=(346 + i * 9, 676), end=(354 + i * 9, 676),
+        scene.line(("scale", i), start=(262 + i * 9, 676), end=(270 + i * 9, 676),
                    w=9.0, color=heat(0.55 + i * 0.06))
+    scene.text("legend_fast", "fast", x=440, y=676, size=17, color=DIM)
 
     over, under = flow.arrived.get("over"), flow.arrived.get("under")
     if flow.pair_released:
