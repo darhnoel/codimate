@@ -272,8 +272,12 @@ python/codimate/           the Python package
 ## More
 
 - [`python/examples/`](python/examples/) — one folder each, with notes:
-  `bubble_sort/` (things that move), `neural_net/` (things that stay put while
-  signal travels), `explain_codimate/` (Codimate explaining its own maths)
+  - `bubble_sort/` — things that move
+  - `neural_net/` — things that stay put while signal travels
+  - `galton_board/` — both at once, with real ballistics
+  - `dharma_wheel/` — rotation, with no rotation in the API
+  - `helical_solar_system/` — the helical model, with the geometry right
+  - `explain_codimate/` — Codimate explaining its own maths
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way
 - [Domain Context](CONTEXT.md) — the vocabulary

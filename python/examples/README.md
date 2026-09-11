@@ -54,6 +54,16 @@ flight at any moment each on its own path. The falling is a real ballistic
 simulation sampled at a fixed time step, which is what lets balls at different
 depths move at different speeds.
 
+## Getting it right when the famous version does not
+
+**[`helical_solar_system/`](helical_solar_system/)** — the Sun moves, so every
+orbit is a helix.
+
+The popular "solar system is a vortex" video has the orbital plane square to
+the direction of travel and the planets trailing behind like a comet's tail.
+Neither is true. This one inclines the plane 60° and lets half of each orbit
+run ahead of the Sun, which is what actually happens.
+
 ## Under the hood
 
 **[`explain_codimate/`](explain_codimate/)** — Codimate explaining its own
