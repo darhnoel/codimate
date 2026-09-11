@@ -1,7 +1,7 @@
 # Codimate Authoring Model
 
-Before this deep dive, follow the practical path in
-[Daily Workflow](./daily-workflow.md).
+Before this deep dive, build one: [Tutorial](./tutorial.md) starts from an
+empty file. [Reference](./reference.md) is the lookup.
 
 Codimate is fastest when you do not start by drawing frames.
 

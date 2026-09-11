@@ -279,6 +279,8 @@ python/codimate/           the Python package
   - `helical_solar_system/` — the helical model, with the geometry right
   - `bernoulli_lift/` — why wings lift, and why the usual diagram is wrong
   - `explain_codimate/` — Codimate explaining its own maths
+- [Tutorial](docs/tutorial.md) — your first animation from an empty file, nothing copied
+- [Reference](docs/reference.md) — every call and parameter, one page
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way
 - [Domain Context](CONTEXT.md) — the vocabulary
