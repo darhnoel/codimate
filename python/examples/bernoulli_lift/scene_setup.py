@@ -1,5 +1,16 @@
 """Where the flow sits on the screen, and what everything looks like."""
 
+import math
+
+from airfoil import ALPHA
+
+# The maths puts the angle of attack into the free stream and leaves the wing
+# level, which draws air arriving uphill. Rotating the whole picture back by
+# the same angle is the view everyone actually means: the air comes in
+# horizontally and the wing sits nose-up in it. It changes nothing physical —
+# only which of the two you are standing still relative to.
+_C, _S = math.cos(-ALPHA), math.sin(-ALPHA)
+
 SCALE = 148.0
 ORIGIN = (616.0, 402.0)          # where (0, 0) of the airfoil plane lands
 
@@ -16,8 +27,11 @@ OVER, UNDER = "#4ade80", "#f472b6"   # the marked pair
 
 
 def place(x, y):
-    """Airfoil-plane coordinates onto the screen. Screen y grows downwards."""
-    return (ORIGIN[0] + x * SCALE, ORIGIN[1] - y * SCALE)
+    """Airfoil-plane coordinates onto the screen, rotated so the air comes in
+    level. Screen y grows downwards."""
+    rx = x * _C - y * _S
+    ry = x * _S + y * _C
+    return (ORIGIN[0] + rx * SCALE, ORIGIN[1] - ry * SCALE)
 
 
 def heat(speed):

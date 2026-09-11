@@ -60,6 +60,23 @@ passes y = −0.95 at the release line and y = −0.61 by x = −3. Releasing th
 marked pair either side of the wrong value puts both of them over the wing and
 the demonstration silently shows nothing.
 
+**The air comes in level, and the wing sits nose-up in it.** The maths puts
+the angle of attack into the free stream and leaves the wing horizontal, which
+draws air arriving uphill. The picture is rotated back by the same angle — the
+view everyone means, and the one an aircraft has. Nothing physical changes;
+only which of the two you are standing still relative to.
+
+What is left is real: the flow still meets the wing tilted *upwards* at the
+nose, because the wing pulls air up to meet it before turning it down. It
+levels off with distance, which is the check that the rotation is right and the
+tilt is not:
+
+| upstream | flow angle on screen |
+|---|---|
+| x = −4 | +8.6° — upwash |
+| x = −20 | +1.3° |
+| x = −300 | +0.1° — level |
+
 **The wing is filled a column at a time.** A circle can be filled and a
 rectangle can be filled, but the Authoring Surface has no polygon, so the wing
 is rasterised into 140 vertical spans — the same trick as `dharma_wheel`
