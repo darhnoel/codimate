@@ -5,9 +5,13 @@ only ever one place to look.
 """
 
 import attention as A
-from layout import (CAPTION_Y, CELL, DIM, EMPTY, FORMULA_Y, GRID, INK, KEY,
-                    MASKED, QUERY, QUIET, SENTENCE_Y, TABLE_LABEL, WARN,
-                    cell, column, heat, line)
+from layout import (CAPTION_Y, CELL, DIM, EMPTY, FORMULA_Y, GRID,
+                    HEADS_IN_LAYER, INK, KEY, MASKED, PAIR_CELL, PAIR_LEFT,
+                    PAIR_RIGHT, QUERY, QUIET, SENTENCE_Y, STRIP_W, STRIP_Y,
+                    TABLE_LABEL, UNLIT, WARN, cell, column, head_marker, heat,
+                    line)
+
+HEAD_INDEX = {"subject": 3, "previous": 11}
 
 WORKING = ("dot", "scale", "softmax", "compare")
 MATRIX = ("matrix", "rows", "whole", "coda")
@@ -73,35 +77,74 @@ def _working(scene, walk):
                        y=line(4), size=30, color=WARN)
 
 
-def _matrix(scene, walk):
+def _heads(scene, walk):
+    """One marker per head in the layer, the one in use lit.
+
+    Drawn from the first moment, so by the time the head changes you already
+    know there are twelve of them and which one you have been watching.
+    """
+    pair = walk.stage == "coda"
+    live = HEAD_INDEX[walk.head]
+    for i in range(HEADS_IN_LAYER):
+        x, y = head_marker(i)
+        if i == live:
+            colour = KEY
+        elif pair and i in HEAD_INDEX.values():
+            colour = QUERY
+        else:
+            colour = UNLIT
+        scene.rect(("head_mark", i), x=x, y=y, w=STRIP_W, h=16, color=colour)
+
+    label = ("GPT-2, layer 4 — two of its twelve heads" if pair
+             else "GPT-2, layer 4 — twelve heads, and this is the one we follow")
+    scene.text("strip_label", label, x=640, top=STRIP_Y + 16, size=17, color=QUIET)
+
+
+def _grid(scene, walk, head, origin, size, tag, rows):
     for j, word in enumerate(A.WORDS):
-        x, _ = cell(0, j)
-        scene.text(("head", j), word, x=x, bottom=GRID[1] - 16, size=20, color=DIM)
+        x, _ = cell(0, j, origin, size)
+        scene.text((tag, "col", j), word, x=x, bottom=origin[1] - 14,
+                   size=18 if size < CELL else 20, color=DIM)
     for i, word in enumerate(A.WORDS):
-        _, y = cell(i, 0)
-        scene.text(("side", i), word, x=GRID[0] - 52, y=y, size=20, color=DIM)
+        _, y = cell(i, 0, origin, size)
+        scene.text((tag, "row", i), word, x=origin[0] - 46, y=y,
+                   size=18 if size < CELL else 20, color=DIM)
 
     for i in range(A.N):
-        done = i in walk.rows
-        weights = A.row(walk.head, i) if done else None
+        done = i in rows
+        weights = A.row(head, i) if done else None
         for j in range(A.N):
-            x, y = cell(i, j)
-            box = scene.group(("cell", i, j), x=x, y=y)
+            x, y = cell(i, j, origin, size)
+            box = scene.group((tag, "cell", i, j), x=x, y=y)
             if j > i:
-                box.rect("fill", w=CELL - 3, h=CELL - 3, color=MASKED)
+                box.rect("fill", w=size - 3, h=size - 3, color=MASKED)
             elif not done:
-                box.rect("fill", w=CELL - 3, h=CELL - 3, color=EMPTY)
+                box.rect("fill", w=size - 3, h=size - 3, color=EMPTY)
             else:
-                box.rect("fill", w=CELL - 3, h=CELL - 3, color=heat(weights[j]))
-                box.text("v", f"{weights[j]:.2f}", size=17,
+                box.rect("fill", w=size - 3, h=size - 3, color=heat(weights[j]))
+                box.text("v", f"{weights[j]:.2f}", size=16 if size < CELL else 17,
                          color=INK if weights[j] > 0.3 else DIM)
+
+
+def _matrix(scene, walk):
+    if walk.stage != "coda":
+        _grid(scene, walk, walk.head, GRID, CELL, "one", walk.rows)
+        return
+
+    every = set(range(A.N))
+    for head, origin, tag, note in (
+            ("subject", PAIR_LEFT, "left", "head 3 — finds the subject"),
+            ("previous", PAIR_RIGHT, "right", "head 11 — looks one word back")):
+        _grid(scene, walk, head, origin, PAIR_CELL, tag, every)
+        scene.text((tag, "note"), note,
+                   x=origin[0] + PAIR_CELL * A.N / 2, y=origin[1] + PAIR_CELL * A.N + 38,
+                   size=21, color=KEY if head == "previous" else DIM)
 
 
 def draw(scene, walk):
     scene.text("title", "Scaled dot-product attention", x=640, y=52,
                size=30, color=INK)
-    scene.text("source", f"GPT-2, {A.HEADS[walk.head][2]}", x=640, y=88,
-               size=18, color=QUIET)
+    _heads(scene, walk)
 
     if walk.stage in MATRIX:
         _matrix(scene, walk)

@@ -52,10 +52,17 @@ throughout. GPT-2 is causal, which is the "masked" attention of the paper's
 decoder, and it is why row *n* has *n+1* numbers rather than six.
 
 **Different heads learn completely different things.** The coda re-runs the
-same code on head 11 of the same layer. It has learned nothing about subjects:
-it attends one token backwards, every time, at 1.00. That is a real component
-of induction heads — and it is the argument for having many heads, made without
-having to explain multi-head attention.
+same code on head 11 of the same layer and puts the two matrices side by side.
+Head 11 has learned nothing about subjects: it attends one token backwards,
+every time, at 1.00. That is a real component of induction heads — and it is
+the argument for having many heads, made without having to explain multi-head
+attention.
+
+The twelve markers under the title are the twelve heads of layer 4, with the
+one being followed lit. They are there from the first frame for one reason: an
+earlier version announced "a different head" in a subtitle and changed nothing
+else on screen, so there was no way to notice that a layer has heads at all,
+let alone that one had been swapped.
 
 ## Two things the animation had to be built around
 

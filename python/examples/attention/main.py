@@ -88,7 +88,7 @@ def explain(walk):
     cm.emit("hold")
 
     act("whole", "every word after the subject looks back at it")
-    act("coda", "a different head in the same layer only looks one word back",
+    act("coda", "same sentence, same arithmetic — two heads, two different habits",
         head="previous")
 
 
