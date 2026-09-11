@@ -198,6 +198,7 @@ One folder each, with a README of its own. See
 ## Next
 
 - [Tutorial](./tutorial.md) — build one from an empty file, copying nothing
+- [What you have to work with](./drawing.md) — the four shapes and what they build
 - [Reference](./reference.md) — every call and parameter, one page
 - [Authoring Model](./authoring-model.md) — why it is shaped this way
 - [Domain Context](../CONTEXT.md) — the vocabulary this project uses

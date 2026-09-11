@@ -280,6 +280,8 @@ python/codimate/           the Python package
   - `bernoulli_lift/` — why wings lift, and why the usual diagram is wrong
   - `explain_codimate/` — Codimate explaining its own maths
 - [Tutorial](docs/tutorial.md) — your first animation from an empty file, nothing copied
+- [What you have to work with](docs/drawing.md) — the four shapes, what they are
+  enough for, and a car built out of them
 - [Reference](docs/reference.md) — every call and parameter, one page
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way

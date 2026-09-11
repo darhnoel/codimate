@@ -1,7 +1,8 @@
 # Reference
 
-Every call, on one page. For the walkthrough see [Tutorial](tutorial.md); for
-why it is shaped this way see [Authoring Model](authoring-model.md).
+Every call, on one page. For the walkthrough see [Tutorial](tutorial.md), for
+what the shapes are enough for see [Drawing](drawing.md), and for why it is
+shaped this way see [Authoring Model](authoring-model.md).
 
 ```python
 import codimate as cm

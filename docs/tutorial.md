@@ -271,6 +271,8 @@ whether it moves.
 
 - [The one thing to understand](../README.md#the-one-thing-to-understand) —
   names decide what moves. Read this before your second animation.
+- [What you have to work with](drawing.md) — the four shapes, and building a
+  car out of them. Read this if you are wondering what else there is.
 - [Reference](reference.md) — every call, every parameter, one page.
 - [Authoring Model](authoring-model.md) — why it is shaped this way.
 - [`python/examples/`](../python/examples/) — six worked ones, with notes.
