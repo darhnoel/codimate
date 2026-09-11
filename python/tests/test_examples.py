@@ -108,11 +108,17 @@ def test_every_example_actually_draws_and_moves():
         brightest = max(max(f) for f in frames)
         assert brightest > 40, f"{name}: every sampled frame is nearly black"
 
-        changes = [
-            sum(abs(a - b) for a, b in zip(x, y)) / len(x)
+        # How many pixels changed, not by how much. A mean is dominated by the
+        # black background, so an animation of small bright text scores almost
+        # nothing however much it is saying — measured across the examples, the
+        # mean ranged 1.2 to 13.7 while this ranges 2.1% to 10.1%.
+        moved = [
+            sum(1 for a, b in zip(x, y) if abs(a - b) > 24) / len(x)
             for x, y in zip(frames, frames[1:])
         ]
-        assert max(changes) > 1.0, f"{name}: nothing moves across the whole video"
+        assert max(moved) > 0.01, (
+            f"{name}: nothing moves — at most {100 * max(moved):.2f}% of pixels "
+            f"changed between any two sampled seconds")
 
 
 if __name__ == "__main__":

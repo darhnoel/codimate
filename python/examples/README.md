@@ -72,6 +72,13 @@ parcels to show it: the upper one arrives 1.35x sooner. The flow is the exact
 Joukowski solution, so the speeds and the times are consequences rather than
 choices.
 
+**[`attention/`](attention/)** — the mechanism behind transformers, on real
+GPT-2 weights.
+
+Q and K extracted from the actual model; the dot products, the scaling, the
+mask and the softmax all computed at render time. "sat" attends 0.96 to "cat"
+because that is what layer 4 head 3 learned, not because it was drawn that way.
+
 ## Under the hood
 
 **[`explain_codimate/`](explain_codimate/)** — Codimate explaining its own
