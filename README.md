@@ -83,6 +83,15 @@ motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
 A shape inside a group is named `group/child`, so `"3/*"` targets one group.
 A rule cannot make something move that did not move.
 
+| path | |
+|---|---|
+| `straight` | a straight line, easing in and out — the default |
+| `linear` | a straight line at constant speed, for things mid-journey at every event |
+| `lift_carry_drop` | arcs up and over, then falls; takes `clearance` |
+
+Use `linear` when something turns or orbits: easing would make it accelerate
+and stop inside every segment.
+
 Every path eases in and out. `cm.ease(t)` calls into the Engine if you need
 the curve itself — to draw it, or to pace something by hand — so you never
 keep a second copy that can drift.

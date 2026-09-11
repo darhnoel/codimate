@@ -208,6 +208,11 @@ fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> PyResult<Animate
     Ok(match kind {
         "straight" => Animated::new(move |t| lerp(a, b, ease_in_out(t))),
 
+        // No easing at all. A shape that is mid-journey at every event — a
+        // turning wheel, an orbit, a conveyor — must not accelerate and stop
+        // inside each segment, or it judders once per event.
+        "linear" => Animated::new(move |t| lerp(a, b, t)),
+
         "lift_carry_drop" => {
             let clearance = opts.get("clearance").copied().unwrap_or(40.0);
             let top = a.y.min(b.y) - clearance;
@@ -226,7 +231,7 @@ fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> PyResult<Animate
 
         other => {
             return Err(PyValueError::new_err(format!(
-                "unknown motion path {other:?} — use \"straight\" or \"lift_carry_drop\""
+                "unknown motion path {other:?} — use \"straight\", \"linear\" or \"lift_carry_drop\""
             )))
         }
     })
@@ -459,6 +464,29 @@ mod tests {
         let still = motion_path(a, a, &rules, "bar_4").unwrap();
         assert_eq!(still.resolve(0.5), a);
         assert_eq!(still.resolve(0.25), a);
+    }
+
+    #[test]
+    fn linear_holds_a_constant_speed() {
+        let (a, b) = (Vec2::new(0.0, 0.0), Vec2::new(100.0, 0.0));
+        let rules = vec![("*".to_string(), "linear".to_string(), HashMap::new())];
+        let path = motion_path(a, b, &rules, "wheel").unwrap();
+
+        // Equal steps in t must give equal steps in distance. Easing would
+        // make the middle step several times the first — which judders once
+        // per event for anything mid-journey, like a turning wheel.
+        let steps: Vec<f32> = (0..10)
+            .map(|i| path.resolve((i + 1) as f32 / 10.0).x - path.resolve(i as f32 / 10.0).x)
+            .collect();
+        let lo = steps.iter().cloned().fold(f32::MAX, f32::min);
+        let hi = steps.iter().cloned().fold(0.0, f32::max);
+        assert!(hi / lo < 1.01, "linear must not accelerate: {steps:?}");
+
+        // The default path does ease, and should keep doing so.
+        let eased = motion_path(a, b, &[], "wheel").unwrap();
+        let mid = eased.resolve(0.55).x - eased.resolve(0.45).x;
+        let edge = eased.resolve(0.1).x - eased.resolve(0.0).x;
+        assert!(mid > edge * 1.5, "straight should still ease in and out");
     }
 
     #[test]

@@ -11,7 +11,7 @@ from .trace import Event, Frame, Trace
 
 View = Callable[[Frame], Scene]
 
-PATHS = ("straight", "lift_carry_drop")
+PATHS = ("straight", "linear", "lift_carry_drop")
 
 
 class Rule:
@@ -22,6 +22,15 @@ class Rule:
     ``pattern`` matches a shape's full name with ``*`` and ``?``. A shape
     inside a group is named ``group/child``, so ``"3/*"`` targets one group and
     ``"*"`` targets everything.
+
+    Paths:
+
+    * ``straight`` — a straight line, easing in and out. The default, and what
+      you want when each event is a distinct step.
+    * ``linear`` — a straight line at constant speed. Use it when a thing is
+      mid-journey at every event, like something turning: easing would make it
+      accelerate and stop inside each segment.
+    * ``lift_carry_drop`` — arcs up and over, then falls. Takes ``clearance``.
     """
 
     def __init__(self, pattern, position: str = "straight", **options: float) -> None:
