@@ -21,10 +21,15 @@ import codimate as cm
 
 import wheel
 
-CENTRE = (640.0, 368.0)
+CENTRE = (640.0, 392.0)
 SPOKES = 8
 STEP = 15                      # degrees per event: 1.5px of chord error, invisible
 PER_SPOKE = 360 // SPOKES // STEP
+
+# Each factor is named while its spoke crosses the top, which takes PER_SPOKE
+# events — so the per-event duration follows from how long you want to read it.
+FACTOR_SECONDS = 1.5
+STEP_SECONDS = FACTOR_SECONDS / PER_SPOKE
 
 # The eight factors, in the Pali terms as they are written in Khmer.
 PATH = (
@@ -78,7 +83,7 @@ def wheel_view(frame):
     scene.text("title", "ធម្មចក្រ", x=CENTRE[0], y=72, size=44, color="#e8eef7")
     scene.text("subtitle", "កង់នៃអដ្ឋង្គិកមគ្គ",
                x=CENTRE[0], y=122, size=24, color="grey")
-    scene.text("factor", PATH[leading], x=CENTRE[0], y=666, size=38, color=wheel.GOLD_LIT)
+    scene.text("factor", PATH[leading], x=CENTRE[0], y=674, size=38, color=wheel.GOLD_LIT)
 
     return scene
 
@@ -89,7 +94,7 @@ cm.explain(
     trace=turn(Wheel()),
     view=wheel_view,
     motion=[cm.Rule("*", position="linear")],
-    timing=cm.Timing(default=0.22, opening=1.0, final_hold=1.6),
+    timing=cm.Timing(default=STEP_SECONDS, opening=1.2, final_hold=2.0),
 ).render("results/dharma_wheel.mp4")
 
 print("wrote results/dharma_wheel.mp4")

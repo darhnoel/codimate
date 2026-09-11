@@ -81,5 +81,13 @@ Authoring Surface does not expose.
 | `STEP = 45` | the wobble in the table above, now visible |
 | `SPOKES = 12` | a twelve-spoke wheel; `PER_SPOKE` adjusts itself |
 | `position="straight"` | the default easing — the judder, plainly visible |
-| `default=0.6` in `Timing` | a slow, contemplative turn |
+| `FACTOR_SECONDS = 3.0` | each factor held twice as long; the wheel slows to match |
 | two turns in `turn()` | the path recited twice |
+
+Note that `FACTOR_SECONDS` is the knob, not the per-event duration. A factor is
+named while its spoke crosses the top, which takes `PER_SPOKE` events, so the
+Timing follows from how long you want to read it:
+
+```python
+STEP_SECONDS = FACTOR_SECONDS / PER_SPOKE
+```
