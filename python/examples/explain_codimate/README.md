@@ -7,6 +7,17 @@
 Three stored pictures of a bubble sort, and the formula that computes every
 frame between them.
 
+## Why this one is split up
+
+It draws three separate panels — a timeline, a curve and a bar chart — so each
+gets a file exporting `draw(scene, ...)`. `story.py` holds what is being
+explained, `theme.py` holds where the panels sit, and `main.py` keeps the four
+pieces together where you can see them connect.
+
+Note what it is **not** split by: `algorithm.py` / `view.py` / `motion.py` /
+`timing.py`. Those are short and already named at the `cm.explain(...)` call.
+See [When to split](../README.md#when-to-split).
+
 ## What it teaches
 
 **The whole model, on one screen:**

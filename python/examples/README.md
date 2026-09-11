@@ -3,10 +3,9 @@
 One folder per example, one `main.py` inside it, and a README saying what that
 example teaches.
 
-**The folder never splits the example up.** A whole explanation is an
-algorithm, a view, some motion rules and some durations, and it stays on one
-screen — that is the point of the Python surface. The folder is there to hold
-the example's notes and anything it needs, not to reintroduce a module split.
+Small examples are a single `main.py`. Bigger ones split — see
+[When to split](#when-to-split) below for the rule, which is not the one you
+might expect.
 
 Run any of them from the repository root:
 
@@ -46,6 +45,47 @@ The playhead sweeping the timeline is moved by exactly the formula it draws,
 and the curve is `cm.ease` — the Engine's own easing, called into rather than
 copied.
 
+## When to split
+
+**Split by what is on screen, not by the four pieces.**
+
+The temptation is `state.py` / `algorithm.py` / `view.py` / `motion.py` /
+`timing.py`, mirroring the Rust examples. Don't. Those four pieces are short —
+in `bubble_sort` they are 8, 20, 1 and 1 lines — and they are already named
+where they are used:
+
+```python
+cm.explain(trace=..., view=..., motion=..., timing=...)
+```
+
+That call shows how the pieces *connect*, which a directory listing cannot.
+Splitting there gives you five files of a dozen lines each and five import
+blocks, which is the ceremony the Python surface exists to remove
+([ADR 0008](../../docs/adr/0008-python-authoring-surface.md)).
+
+**The length is in the drawing.** So that is where the seams are. When a panel
+of the picture stops fitting on a screen, give it a file:
+
+```text
+explain_codimate/
+    main.py        the four pieces, together, plus the view that composes panels
+    story.py       what is being explained: the data and its state
+    theme.py       where the panels sit, and what colour things are
+    timeline.py    one panel, exporting draw(scene, ...)
+    curve.py       one panel
+    bars.py        one panel
+```
+
+Each panel exports a `draw(scene, ...)` and imports only `theme` and `story` —
+never another panel — so there is no import order to remember. Python puts the
+script's own directory on `sys.path`, so plain `import timeline` works when you
+run `main.py` directly.
+
+**Rough threshold:** one `main.py` until it passes ~150 lines or grows a second
+distinct panel. `bubble_sort` (61 lines) and `neural_net` (125) are single
+files and should stay that way; `explain_codimate` draws three panels and is
+split.
+
 ## Adding one
 
 ```text
@@ -53,6 +93,9 @@ python/examples/your_example/
     main.py       the whole explanation
     README.md     what it teaches, and what to try changing
 ```
+
+Start with one file. Split a panel out only when you find yourself scrolling
+to reach it.
 
 See [Daily Workflow](../../docs/daily-workflow.md) for the walkthrough and
 [Authoring Model](../../docs/authoring-model.md) for why it is shaped this way.
