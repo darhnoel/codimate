@@ -2,13 +2,14 @@
 
 import random
 
-from space import (INK, PLANETS, STAR_SEED, STARS, SUN_COLOR, SUN_R, TRAIL,
-                   project)
+from space import (INK, PLANETS, STAR_FAR, STAR_NEAR, STAR_SEED, STARS,
+                   SUN_COLOR, SUN_R, TRAIL, project, travel_on_screen)
 
-# Drawn once here rather than every frame: the sky does not change.
+# Where each star sits and how far away it is. Laid out well beyond the frame
+# so the near ones can stream across it without ever running out.
 _sky = random.Random(STAR_SEED)
-SKY = [(_sky.uniform(20, 1260), _sky.uniform(20, 700),
-        _sky.uniform(0.7, 2.1), _sky.uniform(0.25, 0.85))
+SKY = [(_sky.uniform(-260, 1560), _sky.uniform(-220, 960),
+        _sky.uniform(0.7, 2.2), _sky.uniform(STAR_FAR, STAR_NEAR))
        for _ in range(STARS)]
 
 SUN_TRAIL = "#f0c86a"
@@ -26,25 +27,31 @@ def _helix(scene, key, history, color, width, camera):
         age = (tick - history[0][0]) / TRAIL
         scene.line(("trail", key, tick),
                    start=project(here, camera), end=project(there, camera),
-                   w=width, color=color, opacity=0.10 + 0.90 * age)
+                   w=width * (0.45 + 0.75 * age),
+                   color=color, opacity=0.10 + 0.90 * age)
 
 
 def draw(scene, system):
-    # Stars are named after where they are and never move — the system moves
-    # against them, which is the only reason the travel is visible at all.
-    for i, (x, y, size, glow) in enumerate(SKY):
-        scene.circle(("star", i), x=x, y=y, r=size, color="white", opacity=glow)
+    # The sky streams backwards past a camera that is travelling, and a nearer
+    # star streams faster. Without this the Sun would appear to be standing
+    # still, which is the one thing this animation is arguing against.
+    drift_x, drift_y = travel_on_screen(system.years)
+    for i, (x, y, size, nearness) in enumerate(SKY):
+        scene.circle(("star", i),
+                     x=x - drift_x * nearness, y=y - drift_y * nearness,
+                     r=size, color="white",
+                     opacity=0.25 + 2.4 * nearness)
 
-    scene.text("title", "The helical model", x=640, y=58, size=36, color=INK)
+    scene.text("title", "The helical model", x=640, y=44, size=34, color=INK)
     scene.text("subtitle",
                "the Sun moves, so every orbit is a helix — "
                "and the plane is inclined, not square to the travel",
-               x=640, y=98, size=18, color="grey")
+               x=640, y=80, size=17, color="grey")
 
     camera = system.sun.here
-    _helix(scene, "sun", system.sun.history, SUN_TRAIL, 2.0, camera)
+    _helix(scene, "sun", system.sun.history, SUN_TRAIL, 2.6, camera)
     for body, (_, _, _, _, color) in zip(system.planets, PLANETS):
-        _helix(scene, body.name, body.history, color, 2.0, camera)
+        _helix(scene, body.name, body.history, color, 2.6, camera)
 
     # The Sun last of the trails, so the planets' helices read against it.
     sx, sy = project(system.sun.here, camera)

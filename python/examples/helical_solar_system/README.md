@@ -37,10 +37,23 @@ down-right at 27°, orbital axes projecting to 0.90 and 0.98, so the orbit stays
 nearly circular rather than edge-on.
 
 **The camera travels with the Sun**, which is the frame the helix is most
-legible in: the Sun sits still, planets wind around it, trails stream away
-behind. The stars are what make the travel visible at all — they are named
-after their place and never move, so everything else is seen to move against
-them.
+legible in: the Sun sits still in the middle, planets wind around it, trails
+stream away behind.
+
+**So the sky must stream the other way.** A fixed starfield would be painted
+on, and would quietly say the Sun is standing still — the one thing this is
+arguing against. Each star gives back a share of the camera's travel, and a
+nearer star gives back more, which is parallax:
+
+| star | drift over the 2.8 years shown |
+|---|---|
+| nearest | 238px |
+| middling | 133px |
+| furthest | 27px |
+
+A real star's parallax would be a millionth of that, but the Sun's travel is
+compressed 18× here too, so the sky is compressed with it. What matters is that
+the drift varies with depth rather than sliding as one sheet.
 
 **A trail is a record, not a thing.** Each segment is named after the tick it
 records, so it is fixed the moment it is drawn. New ones fade in at the head,

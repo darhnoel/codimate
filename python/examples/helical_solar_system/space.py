@@ -10,7 +10,7 @@ PLANETS = (
     ("Mars", 1.524, 1.881, 4.2, "#c1573a"),
 )
 
-SUN_R, SUN_COLOR = 13.0, "#ffcc33"
+SUN_R, SUN_COLOR = 21.0, "#ffcc33"
 
 # The Sun really covers about 49 AU per Earth year, which would make one turn
 # of Earth's helix 24 times longer than it is wide — a straight line with a
@@ -39,12 +39,24 @@ PLANE_V = (-math.sin(INCLINATION), 0.0, math.cos(INCLINATION))
 AXIS_X = (0.866, 0.433)         # the direction of travel: right and down
 AXIS_Y = (0.500, -0.750)
 AXIS_Z = (0.000, -0.500)
-SCALE = 150.0                   # pixels per AU
-SUN_AT = (788.0, 480.0)         # the Sun's fixed place on screen
+SCALE = 130.0                   # pixels per AU
+SUN_AT = (640.0, 425.0)         # the Sun's fixed place on screen
 
-# Fixed stars, so there is something for the system to move against.
-STARS = 90
+# The stars are what make the travel visible, so they must not be painted on.
+# The camera moves with the Sun, so the sky streams the other way — and a
+# nearer star streams faster than a far one, which is parallax and is the only
+# honest reason a star would move at all. NEAR and FAR are how much of the
+# Sun's screen travel a star gives back; a real star's would be a millionth of
+# this, but the Sun's travel is compressed 18x here too.
+STARS = 110
 STAR_SEED = 11
+STAR_NEAR, STAR_FAR = 0.26, 0.03
+
+
+def travel_on_screen(years):
+    """How far the Sun has carried the camera, in pixels."""
+    along = TRAVEL * years * SCALE
+    return (along * AXIS_X[0], along * AXIS_X[1])
 
 # The camera travels with the Sun. It keeps the system framed at a scale worth
 # looking at, and it is the frame the helix is most legible in: the Sun sits
