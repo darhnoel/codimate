@@ -58,7 +58,7 @@ against a model that is still moving.
 12. **Facade crate `codimate`** — re-export prelude + `render(&playable | &movie)`.
 13. **Shrink `codimate-effects`**; keep `codimate-arrange` out of the prelude.
 14. **Migrate all ~30 examples** to the new API; the hello-world is the canonical
-    smoke test. Update `docs/authoring-model.md`.
+    smoke test. Update `docs/concepts.md`.
 
 ### Phase 2 — the media channel (new architecture on the Phase-1 foundation)
 1. **`Clip { source, in, out, rate }`** + **`AudioTrack`** (seconds-based) in

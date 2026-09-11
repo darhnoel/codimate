@@ -1,12 +1,19 @@
-# What you have to work with
+# What You Have to Work With
 
-Codimate gives you **four shapes**. Not a shape library — four. This page is
-the whole inventory, what it is enough for, what it is not, and a worked
-example of building something recognisable out of it.
+Sooner or later you'll want to animate something particular. A car, a queue, a
+molecule. And the first question is always the same: what can I actually draw?
 
----
+The answer is shorter than you might expect, and it's better to hear it now
+than to discover it halfway through building something. Codimate gives you four
+shapes. There is no triangle, no polygon, no arbitrary path and no image.
 
-## The four shapes
+That sounds limiting, and for about ten minutes it is. Then you notice that a
+thick line is a rectangle at any angle, that two circles make a ring, and that
+a wing can be filled one column at a time. This chapter is the complete
+inventory, what four shapes turn out to be enough for, and a car built out of
+them.
+
+## The Four Shapes
 
 Every one of these exists on a `Scene` and on any `Group`.
 
@@ -26,9 +33,10 @@ path, no image, no gradient, and no rotation.
 
 ---
 
-## What four shapes turn out to be enough for
+## What Four Shapes Are Enough For
 
-Each of these is used by a real example, and none of them needed a new shape.
+Every technique below comes from a working example in this repository, and none
+of them needed a shape that doesn't exist.
 
 **A ring — from two discs.** A circle can only be filled, so a band is a large
 disc with a smaller one of the background colour on top. Stack four and you get
@@ -64,7 +72,7 @@ turns a wheel this way; the car below turns its wheels.
 
 ---
 
-## What you genuinely cannot do
+## What You Genuinely Cannot Do
 
 | you wanted | do this instead |
 |---|---|
@@ -76,10 +84,10 @@ turns a wheel this way; the car below turns its wheels.
 
 ---
 
-## Worked example: a car driving
+## Building a Car
 
-Everything above, in one file. Paste it into `car.py` at the repository root
-and run it.
+Let's put all of that together. This is a complete program: paste it into
+`car.py` at the repository root and run it.
 
 ```python
 import math
@@ -133,7 +141,7 @@ cm.explain(trace=drive({"x": SPAN[0]}), view=view,
 .venv/bin/python car.py
 ```
 
-### What is doing what
+### Walking Through It
 
 **The car is a group, so it moves as one thing.** `scene.group("car", x=x,
 bottom=ROAD)` is placed once; the body, roof, window and both wheels are drawn
@@ -154,11 +162,12 @@ rest.
 **`linear`, not the default.** The car is mid-journey at every moment, so
 easing would make it accelerate and stop once per tick.
 
-### One thing that will catch you
+### One Thing That Will Catch You
 
-Within the same `layer`, shapes are drawn **in name order**. The first version
-of this car had invisible spokes: `hub` and `spoke` sort before `tyre`, so the
-tyre painted over both. When one thing must cover another, say so:
+Within a single `layer`, shapes are drawn **in name order**. The first version
+of this car had invisible spokes, because `hub` and `spoke` sort alphabetically
+before `tyre`, so the tyre was painted over both of them. When one thing has to
+cover another, say so:
 
 ```python
 wheel.circle("tyre", r=WHEEL_R, y=-WHEEL_R, layer=2)
@@ -168,7 +177,7 @@ wheel.circle("hub", r=9, y=-WHEEL_R, layer=4)
 
 ---
 
-## Where to go next
+## Where to Go Next
 
 - [Tutorial](tutorial.md) — the four pieces, from an empty file
 - [Reference](reference.md) — every call and parameter

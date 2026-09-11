@@ -1,7 +1,8 @@
-# Codimate Authoring Model
+# How Codimate Thinks
 
-Before this deep dive, build one: [Tutorial](./tutorial.md) starts from an
-empty file. [Reference](./reference.md) is the lookup.
+Chapter 3 of [the guide](../README.md#more). By now you have built an animation
+and know what you can draw. This chapter is about why the library is shaped the
+way it is, and it is worth reading before you write anything substantial.
 
 Codimate is fastest when you do not start by drawing frames.
 

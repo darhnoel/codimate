@@ -134,5 +134,5 @@ python/examples/your_example/
 Start with one file. Split a panel out only when you find yourself scrolling
 to reach it.
 
-See [Daily Workflow](../../docs/daily-workflow.md) for the walkthrough and
-[Authoring Model](../../docs/authoring-model.md) for why it is shaped this way.
+See [Writing Your First Animation](../../docs/tutorial.md) for the walkthrough
+and [How Codimate Thinks](../../docs/concepts.md) for why it is shaped this way.

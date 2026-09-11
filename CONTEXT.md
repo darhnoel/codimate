@@ -57,11 +57,11 @@ one Python file containing the four pieces — algorithm, view, motion, timing �
 and repeatedly rendering until the concept reads clearly. There is no module
 split to learn; a whole explanation fits in a single file.
 
-**Canonical Onboarding Workflow**: The single recommended path an Explanation
-Author follows from first run to first custom explanation. This workflow is
-documentation-first, maps to one starter example
-(`python/examples/bubble_sort/main.py`), and must match runnable commands in the
-repository.
+**The Guide**: The four chapters an Explanation Author reads in order —
+`docs/tutorial.md` (build one from an empty file), `docs/drawing.md` (what can
+be drawn), `docs/concepts.md` (why it is shaped this way), `docs/reference.md`
+(every call). Documentation-first: every command and every code block in them
+must run as written, and each is checked by extracting and executing it.
 
 **Onboarding Success Metric**: An Explanation Author can go from clone to first
 custom animation in less than 30 minutes via the Canonical Onboarding Workflow,

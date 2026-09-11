@@ -271,22 +271,18 @@ python/codimate/           the Python package
 
 ## More
 
-- [`python/examples/`](python/examples/) — one folder each, with notes:
-  - `bubble_sort/` — things that move
-  - `neural_net/` — things that stay put while signal travels
-  - `galton_board/` — both at once, with real ballistics
-  - `dharma_wheel/` — rotation, with no rotation in the API
-  - `helical_solar_system/` — the helical model, with the geometry right
-  - `bernoulli_lift/` — why wings lift, and why the usual diagram is wrong
-  - `explain_codimate/` — Codimate explaining its own maths
-- [Tutorial](docs/tutorial.md) — your first animation from an empty file, nothing copied
-- [What you have to work with](docs/drawing.md) — the four shapes, what they are
-  enough for, and a car built out of them
-- [Reference](docs/reference.md) — every call and parameter, one page
-- [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
-- [Authoring Model](docs/authoring-model.md) — why it is shaped this way
-- [Domain Context](CONTEXT.md) — the vocabulary
-- [Decisions](docs/adr/) — architecture decision records
+**The guide, in order.** Four chapters; read them front to back the first time.
+
+1. [Writing Your First Animation](docs/tutorial.md) — build one from an empty
+   file, meeting all four pieces on the way.
+2. [What You Have to Work With](docs/drawing.md) — the four shapes, what they
+   are enough for, and a car built out of them.
+3. [How Codimate Thinks](docs/concepts.md) — why motion is derived rather than
+   authored, and the one decision you have to make.
+4. [Reference](docs/reference.md) — every call and parameter, on one page.
+
+Then [`python/examples/`](python/examples/), six worked examples with notes, and
+[the decisions](docs/adr/) behind the design.
 
 ```bash
 cargo test                                  # the Engine

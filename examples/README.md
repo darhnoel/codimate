@@ -3,7 +3,7 @@
 > **These are not the way to author an explanation.**
 >
 > Codimate is authored in Python — start at
-> [Daily Workflow](../docs/daily-workflow.md) and
+> [the guide](../docs/tutorial.md) and
 > [`python/examples/`](../python/examples/).
 >
 > The Rust examples below exercise the Engine directly: they are how we test
