@@ -35,6 +35,15 @@ moment — the view never mentions movement.
 
 Between them, these two cover the single decision Codimate cannot make for you.
 
+## Motion you might think needs a new feature
+
+**[`dharma_wheel/`](dharma_wheel/)** — a turning wheel, with no rotation in the
+API.
+
+The trace says where the spokes are every 15 degrees and the Engine fills in
+the rest, exactly as it does for a sliding bar. Rotation is just position over
+time. The README works through why 15 degrees and not 45.
+
 ## Under the hood
 
 **[`explain_codimate/`](explain_codimate/)** — Codimate explaining its own
