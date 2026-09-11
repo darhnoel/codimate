@@ -22,8 +22,7 @@ def _wing(scene):
 
 
 def _labels(scene, flow):
-    scene.text("title", "Bernoulli's principle — and the story that goes with it",
-               x=640, y=48, size=30, color=INK)
+    scene.text("title", "Bernoulli's principle", x=640, y=48, size=32, color=INK)
     # Laid out piece by piece. As one centred string the swatches, which are
     # placed at fixed x, landed on top of the word they were labelling.
     # The font runs about 12.1px per character at this size: "colour is speed"
@@ -38,8 +37,7 @@ def _labels(scene, flow):
 
     over, under = flow.arrived.get("over"), flow.arrived.get("under")
     if flow.pair_released:
-        scene.text("claim",
-                   "these two split at the nose — the old story says they meet again",
+        scene.text("claim", "two parcels released together, one over and one under",
                    x=640, y=92, size=19, color=DIM)
     if over:
         scene.text("over_time", f"over:  {over:.2f}", x=1040, y=150,
@@ -50,15 +48,10 @@ def _labels(scene, flow):
     if over and under:
         scene.text("verdict", f"the upper one arrived {under / over:.2f}x sooner",
                    x=1040, y=222, size=20, color=INK)
-        scene.text("verdict2", "so they never met — the story is wrong",
-                   x=1040, y=250, size=18, color=DIM)
-
-        # The half the familiar diagram leaves out.
         scene.text("newton",
-                   f"and the wing turns the air {abs(turned_by()):.0f}\u00b0 downwards",
+                   f"the wing turns the air {abs(turned_by()):.0f}\u00b0 downwards",
                    x=640, y=606, size=20, color=INK)
-        scene.text("newton2",
-                   "it throws air down, the air throws it up — no path lengths needed",
+        scene.text("newton2", "it throws air down, the air throws it up",
                    x=640, y=634, size=17, color=DIM)
 
 

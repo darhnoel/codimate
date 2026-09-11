@@ -98,7 +98,8 @@ class Flow:
     def _release_pair(self):
         """Two parcels side by side, either side of the dividing streamline.
 
-        The old story says they meet again at the trailing edge. Watch.
+        Released together, so when each reaches the trailing edge is a
+        measurement rather than a claim.
         """
         for side, y in (("over", SPLIT_Y + MARK_GAP), ("under", SPLIT_Y - MARK_GAP)):
             parcel = Parcel(self.released, SPAN_X[0], y, marked=True)
