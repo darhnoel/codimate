@@ -253,7 +253,8 @@ python/codimate/           the Python package
 ## More
 
 - [`python/examples/`](python/examples/) — `bubble_sort.py` (things that move),
-  `neural_net.py` (things that stay put while signal travels)
+  `neural_net.py` (things that stay put while signal travels),
+  `explain_codimate.py` (Codimate explaining its own maths)
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way
 - [Domain Context](CONTEXT.md) — the vocabulary

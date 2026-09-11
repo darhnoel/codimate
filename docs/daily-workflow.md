@@ -174,12 +174,14 @@ your data small (4-6 items) while iterating, then grow it once it reads well.
 | `ValueError: two shapes share the name` | One name used twice in one Scene |
 | `RuntimeError: emit() called outside a @trace function` | The function needs the `@cm.trace()` decorator |
 
-## Two examples worth reading
+## Three examples worth reading
 
 - `bubble_sort.py` — things **move**, so names follow the thing (`cm.items()`).
 - `neural_net.py` — neurons **stay put**, so names follow the place
   (`("neuron", layer, index)`). Only the pulses travel, and they travel because
   the trace says where they are at each moment.
+- `explain_codimate.py` — both at once, and a demonstration of what the
+  Engine is doing underneath: a playhead moved by the very formula it draws.
 
 ## Next
 
