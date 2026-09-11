@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 
 # The example checks render real video, so they take about 15 seconds. Skip
 # them with --fast while iterating on the library itself.
-SLOW = {"test_examples"}
+SLOW = {"test_examples", "test_docs"}
 fast = "--fast" in sys.argv
 
 failed = 0

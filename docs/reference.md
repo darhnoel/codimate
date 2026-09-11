@@ -181,8 +181,9 @@ Yields `(slot, item)` pairs — or bare slots if you passed a count.
 
 ```python
 cm.Slot(x, y, w, h, anchor="center")
-slot.left  slot.right  slot.top  slot.bottom       # edges
-slot.point(anchor=None)                            # the single point it anchors at
+
+slot.left, slot.right, slot.top, slot.bottom   # the edges
+slot.point(anchor=None)                        # the single point it anchors at
 ```
 
 A Slot is a *place*, not a shape. Nothing draws it, and it carries no identity:
