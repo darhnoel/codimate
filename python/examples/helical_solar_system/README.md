@@ -22,12 +22,25 @@ does both properly:
 
 Watch Venus fall behind while Earth runs out in front. That is the tell.
 
-**The compression is stated, not hidden.** At true speeds the Sun covers 49 AU
-in the time Earth goes round once — one turn of Earth's helix would be 24 times
-longer than it is wide, which draws as a straight line with a faint ripple.
-`TRAVEL` is set to 2.6 AU/year instead, an 18× compression. The helix you see
-is real in shape and false in pitch, and `space.py` says so where the constant
-is defined.
+**The compression is stated, not hidden — and it decides whether you see
+orbiting at all.** At true speeds the Sun covers 49 AU while Earth goes round
+once, so one turn of Earth's helix would be 24 times longer than it is wide: a
+straight line with a faint ripple.
+
+How far you compress it is not a free choice. A coil only closes into a *loop*
+when its pitch — travel × the planet's period — is shorter than its orbit's
+diameter. Otherwise it stretches into a wave and the planets look like they are
+trailing away rather than going round:
+
+| travel | Earth: pitch / diameter | Mars: pitch / diameter |
+|---|---|---|
+| 2.6 AU/yr | 2.60 / 2.0 — **no** | 4.89 / 3.0 — **no** |
+| 1.8 | 1.80 / 2.0 — yes | 3.39 / 3.0 — no |
+| **1.2** | **1.20 / 2.0 — yes** | **2.26 / 3.0 — yes** |
+
+So `TRAVEL = 1.2`, a 41× compression, and both visibly go round. `TRAIL` is
+1.3 years for the same reason: shorter than an orbit and a planet never
+completes a turn on screen.
 
 **The camera was chosen by searching, not by eye.** Two things fight: a view
 along the Sun's path collapses the orbits to a line, and a view down the

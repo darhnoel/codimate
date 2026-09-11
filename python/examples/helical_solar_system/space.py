@@ -14,17 +14,27 @@ SUN_R, SUN_COLOR = 21.0, "#ffcc33"
 
 # The Sun really covers about 49 AU per Earth year, which would make one turn
 # of Earth's helix 24 times longer than it is wide — a straight line with a
-# ripple. Compressed 18x so the helix is something you can see.
-TRAVEL = 2.6                    # AU per Earth year, drawn
+# ripple, which is why nobody draws it true.
+#
+# How far it is compressed decides whether you see planets ORBITING or a
+# stretched spring. A coil only closes into a loop when its pitch (travel x
+# the planet's period) is shorter than its orbit's diameter:
+#
+#     travel   Earth pitch/diameter   Mars pitch/diameter
+#       2.6      2.60 / 2.0  no         4.89 / 3.0  no
+#       1.2      1.20 / 2.0  yes        2.26 / 3.0  yes
+#
+# So 1.2, a 41x compression, and both planets visibly go round.
+TRAVEL = 1.2                    # AU per Earth year, drawn
 
 # The orbital plane is inclined about 60 degrees to the galactic plane. It is
 # NOT perpendicular to the direction of travel, and the planets do not trail
 # behind the Sun — half of every orbit is ahead of it.
 INCLINATION = math.radians(60.0)
 
-YEARS = 2.8
+YEARS = 3.2
 DT = 0.011                      # Earth years per tick
-TRAIL = 80                      # how many ticks of trail a body keeps
+TRAIL = 120                     # ticks of trail: 1.3 years, so Earth closes a loop
 
 # Travel is +x. The orbital plane's normal leans away from it by INCLINATION.
 NORMAL = (math.cos(INCLINATION), 0.0, math.sin(INCLINATION))
@@ -39,8 +49,8 @@ PLANE_V = (-math.sin(INCLINATION), 0.0, math.cos(INCLINATION))
 AXIS_X = (0.866, 0.433)         # the direction of travel: right and down
 AXIS_Y = (0.500, -0.750)
 AXIS_Z = (0.000, -0.500)
-SCALE = 130.0                   # pixels per AU
-SUN_AT = (640.0, 425.0)         # the Sun's fixed place on screen
+SCALE = 150.0                   # pixels per AU
+SUN_AT = (640.0, 435.0)         # the Sun's fixed place on screen
 
 # The stars are what make the travel visible, so they must not be painted on.
 # The camera moves with the Sun, so the sky streams the other way — and a
