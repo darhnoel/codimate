@@ -4,13 +4,18 @@ Nothing is copied here and no example is opened. Five steps, each one a
 complete file you can paste and run.
 
 We will animate a coin being flipped twenty times, tallying heads against
-tails. Have [the install](../README.md#install) done first.
+tails.
+
+**Before you start:** finish [the install](../README.md#install), then create a
+file called `coins.py` in the repository root — the same folder as
+`README.md`. Run everything below from that folder, so the video lands in
+`results/` with the others.
 
 ---
 
 ## 1. The shape of every explanation
 
-Every Codimate program is four things. Start with the smallest one that runs:
+Every Codimate program is four things. Put this in `coins.py`:
 
 ```python
 import codimate as cm
@@ -23,18 +28,24 @@ def flip(tally):
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("hello", "nothing yet", x=cm.width() / 2, y=360, size=40)
+    scene.text("hello", "nothing yet", x=cm.width() / 2, y=cm.height() / 2, size=40)
     return scene
 
 
 cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
+Run it:
+
 ```bash
 .venv/bin/python coins.py
 ```
 
-Two seconds of "nothing yet". Not much, but every piece is there:
+It prints nothing and writes `results/coins.mp4` — two seconds of the words
+"nothing yet" in the middle of a black frame. Open it. If that plays, your
+install works and the rest of this page will too.
+
+Not much on screen, but every piece is there:
 
 - **the algorithm** — `flip`, ordinary Python, with `@cm.trace()` on it
 - **the view** — one moment in, one picture out
@@ -66,14 +77,19 @@ def flip(tally):
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("count", frame.state, x=cm.width() / 2, y=360, size=40)
+    scene.text("count", frame.state, x=cm.width() / 2, y=cm.height() / 2, size=40)
     return scene
 
 
 cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
-Twenty moments now, and `frame.state` is the tally at each one. The numbers
+Run it again. Twenty moments now, and `frame.state` is the tally at each one,
+counting up on screen.
+
+`random.Random(4)` is a fixed seed, so you get the same twenty flips every
+time you render. Without it the video would differ on every run, which makes
+it impossible to tell whether a change you made did anything. The numbers
 change on screen because the view is asked again for every moment.
 
 Notice you never said "animate". You said what happened.
@@ -114,7 +130,13 @@ def view(frame):
 cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
-Two bars that grow. Three things just happened worth knowing:
+Run it. Two bars that grow, each labelled underneath.
+
+`max(count * 22, 1)` keeps a bar at least one pixel tall, because a zero-height
+rectangle has nothing to draw and would flicker into existence on the first
+flip instead of growing.
+
+Three things just happened worth knowing:
 
 **A group is a thing made of several shapes.** The bar and its label are drawn
 on one `scene.group(side, slot)`, so they can never come apart.
@@ -172,7 +194,8 @@ def view(frame):
 cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
-The bar that just grew turns orange, and fades back as the next flip lands.
+Run it. The bar that just grew turns orange and fades back as the next flip
+lands.
 Codimate does the fading — you only said what colour it is at each moment.
 
 `frame.event` is `None` for the opening moment, before anything has happened,
@@ -225,6 +248,9 @@ cm.explain(
 ).render("results/coins.mp4", fps=60, scale=1.5)
 ```
 
+Run it once more. The flips are slower, both bars turn green at the end, and
+the last picture is held long enough to read.
+
 `fps=60, scale=1.5` renders at 1080p60. **Resolution is a render argument, not
 something the view knows about** — your coordinates still mean what
 `cm.canvas()` says.
@@ -237,7 +263,9 @@ You never wrote a keyframe, a duration on a shape, a tween, or a frame number.
 You described **what happened** and **what a moment looks like**; everything
 between the moments was worked out.
 
-That is the whole idea, and it has one cost — the next page.
+There is one thing it asks of you in return, and it is worth reading before
+you write a second animation: the **name** you give a shape is what decides
+whether it moves.
 
 ## Next
 
