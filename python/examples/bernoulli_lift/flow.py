@@ -13,7 +13,7 @@ from airfoil import velocity
 DT = 0.030
 SPAN_X = (-4.15, 4.45)           # where parcels enter and leave
 LANES = 15
-LANE_Y = (-2.0, 2.2)
+LANE_Y = (-1.615, 0.972)    # solved: clear of the text, top and bottom
 RELEASE_EVERY = 0.34
 SEED = 5
 UNTIL = 13.0
@@ -22,6 +22,12 @@ UNTIL = 13.0
 # by bisection AT THE RELEASE LINE — it is not zero, and it is not the same
 # value further downstream, because circulation pulls it up from well below.
 SPLIT_Y = -0.9526
+
+# The band of air that is shown. The limits are not guessed: each was solved
+# for by tracing its streamline and asking where it reaches on the screen, so
+# the flow stays clear of the title above and the captions below. No air
+# crosses a streamline, so a parcel released inside this band stays inside it —
+# nothing needs to be clamped.
 MARK_AT = 1.2                    # when the marked pair is released
 MARK_GAP = 0.05
 
@@ -51,6 +57,17 @@ def _advance(parcel, dt):
     parcel.y += half[1] * dt
     parcel.speed = math.hypot(*half)
     return True
+
+
+def streamline(y0, dt=0.02):
+    """Follow the flow from the entry line to the exit, and keep the path."""
+    parcel = Parcel(-1, SPAN_X[0], y0)
+    path = [(parcel.x, parcel.y)]
+    while parcel.x < SPAN_X[1]:
+        if not _advance(parcel, dt):
+            break
+        path.append((parcel.x, parcel.y))
+    return path
 
 
 @dataclass

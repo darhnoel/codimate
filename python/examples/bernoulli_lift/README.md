@@ -77,6 +77,13 @@ tilt is not:
 | x = −20 | +1.3° |
 | x = −300 | +0.1° — level |
 
+**The band of air shown was solved for, not guessed.** Each limit comes from
+tracing that streamline and asking where it reaches on the screen, so the flow
+stays clear of the title above and the captions below. Nothing is clamped: no
+air crosses a streamline, so a parcel released inside the band stays inside it.
+Measured over a whole run, every parcel stayed within screen y 125–596, against
+a title at 48 and captions at 606.
+
 **The wing is filled a column at a time.** A circle can be filled and a
 rectangle can be filled, but the Authoring Surface has no polygon, so the wing
 is rasterised into 140 vertical spans — the same trick as `dharma_wheel`
