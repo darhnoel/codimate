@@ -277,6 +277,7 @@ python/codimate/           the Python package
   - `galton_board/` — both at once, with real ballistics
   - `dharma_wheel/` — rotation, with no rotation in the API
   - `helical_solar_system/` — the helical model, with the geometry right
+  - `bernoulli_lift/` — why wings lift, and why the usual diagram is wrong
   - `explain_codimate/` — Codimate explaining its own maths
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way

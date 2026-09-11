@@ -64,6 +64,14 @@ the direction of travel and the planets trailing behind like a comet's tail.
 Neither is true. This one inclines the plane 60° and lets half of each orbit
 run ahead of the Sun, which is what actually happens.
 
+**[`bernoulli_lift/`](bernoulli_lift/)** — and the story that goes with it.
+
+The air over a wing really is faster and really is at lower pressure. The
+"equal transit time" reason for it is not true, and this measures the two
+parcels to show it: the upper one arrives 1.35x sooner. The flow is the exact
+Joukowski solution, so the speeds and the times are consequences rather than
+choices.
+
 ## Under the hood
 
 **[`explain_codimate/`](explain_codimate/)** — Codimate explaining its own
