@@ -41,16 +41,46 @@ NORMAL = (math.cos(INCLINATION), 0.0, math.sin(INCLINATION))
 PLANE_U = (0.0, 1.0, 0.0)
 PLANE_V = (-math.sin(INCLINATION), 0.0, math.cos(INCLINATION))
 
-# Orthographic camera, as three screen vectors — one per world axis. Chosen by
-# searching azimuth and elevation for two things at once: a travel direction
-# long enough to read (azimuth 120, elevation -60 puts it down-right at 27
-# degrees) and an orbit that stays open rather than collapsing edge-on. This
-# pair projects the orbital plane's two axes to 0.90 and 0.98 — near-circular.
-AXIS_X = (0.866, 0.433)         # the direction of travel: right and down
-AXIS_Y = (0.500, -0.750)
-AXIS_Z = (0.000, -0.500)
-SCALE = 150.0                   # pixels per AU
-SUN_AT = (640.0, 435.0)         # the Sun's fixed place on screen
+# Where the camera stands. AZIMUTH is the knob for the angle the Sun travels
+# across the screen; ELEVATION decides how open the orbits look rather than
+# collapsed edge-on. Two things fight: a view along the Sun's path flattens the
+# orbits, and a view down the orbital normal hides the travel. These were found
+# by sweeping both for a pair that keeps each readable.
+#
+#   azimuth   travel runs at   orbit stays open
+#      105       13 deg            0.92
+#      120       27 deg            0.92
+#      135       41 deg            0.94
+#      150       56 deg            0.97
+#
+AZIMUTH = math.radians(135.0)
+ELEVATION = math.radians(-60.0)
+
+
+def _camera_axes(azimuth, elevation):
+    """Three screen vectors, one per world axis, for an orthographic camera."""
+    view = (math.cos(elevation) * math.cos(azimuth),
+            math.cos(elevation) * math.sin(azimuth),
+            math.sin(elevation))
+
+    def cross(a, b):
+        return (a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0])
+
+    right = cross(view, (0.0, 0.0, 1.0))
+    size = math.sqrt(sum(c * c for c in right))
+    right = tuple(c / size for c in right)
+    up = cross(right, view)
+
+    # Screen y grows downwards, so the up vector is negated.
+    return tuple((right[i], -up[i]) for i in range(3))
+
+
+AXIS_X, AXIS_Y, AXIS_Z = _camera_axes(AZIMUTH, ELEVATION)
+
+SCALE = 140.0                   # pixels per AU
+SUN_AT = (640.0, 450.0)         # the Sun's fixed place on screen
 
 # The stars are what make the travel visible, so they must not be painted on.
 # The camera moves with the Sun, so the sky streams the other way — and a

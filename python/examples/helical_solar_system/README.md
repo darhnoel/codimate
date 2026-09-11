@@ -42,12 +42,24 @@ So `TRAVEL = 1.2`, a 41× compression, and both visibly go round. `TRAIL` is
 1.3 years for the same reason: shorter than an orbit and a planet never
 completes a turn on screen.
 
-**The camera was chosen by searching, not by eye.** Two things fight: a view
-along the Sun's path collapses the orbits to a line, and a view down the
-orbital normal hides the travel. Sweeping azimuth and elevation for the pair
-that keeps both readable lands on azimuth 120°, elevation −60° — travel running
-down-right at 27°, orbital axes projecting to 0.90 and 0.98, so the orbit stays
-nearly circular rather than edge-on.
+**The angle the Sun travels is one knob.** `AZIMUTH` in `space.py`; the three
+screen vectors are computed from it rather than written down, so changing the
+angle is changing a number.
+
+It is not a free choice, though. Two things fight: a view along the Sun's path
+collapses the orbits to a line, and a view down the orbital normal hides the
+travel. Sweeping both for a pair that keeps each readable gives:
+
+| azimuth | the Sun travels at | orbit stays open |
+|---|---|---|
+| 105° | 13° | 0.92 |
+| 120° | 27° | 0.92 |
+| **135°** | **41°** | **0.94** |
+| 150° | 56° | 0.97 |
+| 165° | 73° | 0.99 |
+
+`ELEVATION = −60°` is what keeps the orbit near-circular across all of them;
+nearer zero and it flattens to a line whatever the azimuth.
 
 **The camera travels with the Sun**, which is the frame the helix is most
 legible in: the Sun sits still in the middle, planets wind around it, trails
@@ -87,4 +99,5 @@ main.py     the four pieces
 | `INCLINATION = 90°` | the video's geometry: orbits square to the travel |
 | `TRAVEL = 49.0` | the true speed ratio — a straight line with a ripple, which is why nobody draws it |
 | `TRAIL = 200` | long helices that overlap into the vortex look |
-| `AXIS_*` from another azimuth/elevation | the orbits collapse edge-on, or the travel vanishes |
+| `AZIMUTH = 165°` | the Sun travels steeply down the screen |
+| `ELEVATION = -20°` | the orbits flatten to lines — the reason it is −60° |
