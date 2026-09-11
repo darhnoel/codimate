@@ -34,10 +34,10 @@ cm.explain(
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9}),
-).render("results/sort.mp4")
+).render("results/bubble_sort.mp4")
 ```
 
-That is the whole program. Run it, get `results/sort.mp4`.
+That is the whole program. Run it, get `results/bubble_sort.mp4`.
 
 ## Install
 
@@ -48,7 +48,7 @@ yet, so for now build from source — you need a Rust toolchain and `ffmpeg`:
 git clone https://github.com/darhnoel/codimate && cd codimate
 python3 -m venv .venv && .venv/bin/pip install maturin
 .venv/bin/maturin develop --release
-.venv/bin/python python/examples/bubble_sort.py
+.venv/bin/python python/examples/bubble_sort/main.py
 ```
 
 **Use `--release`.** Without it the Rust engine is unoptimized and renders
@@ -252,9 +252,9 @@ python/codimate/           the Python package
 
 ## More
 
-- [`python/examples/`](python/examples/) — `bubble_sort.py` (things that move),
-  `neural_net.py` (things that stay put while signal travels),
-  `explain_codimate.py` (Codimate explaining its own maths)
+- [`python/examples/`](python/examples/) — one folder each, with notes:
+  `bubble_sort/` (things that move), `neural_net/` (things that stay put while
+  signal travels), `explain_codimate/` (Codimate explaining its own maths)
 - [Daily Workflow](docs/daily-workflow.md) — clone to first custom video
 - [Authoring Model](docs/authoring-model.md) — why it is shaped this way
 - [Domain Context](CONTEXT.md) — the vocabulary

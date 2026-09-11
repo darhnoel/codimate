@@ -1,6 +1,6 @@
 """Bubble sort, end to end.
 
-    python python/examples/bubble_sort.py
+    python python/examples/bubble_sort/main.py
 
 Four pieces: the algorithm, the view, the motion, the timing.
 Nothing here knows what a frame is.
@@ -56,6 +56,6 @@ cm.explain(
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9, "done": 0.6}),
-).render("results/sort.mp4")
+).render("results/bubble_sort.mp4")
 
-print("wrote results/sort.mp4")
+print("wrote results/bubble_sort.mp4")

@@ -60,7 +60,7 @@ split to learn; a whole explanation fits in a single file.
 **Canonical Onboarding Workflow**: The single recommended path an Explanation
 Author follows from first run to first custom explanation. This workflow is
 documentation-first, maps to one starter example
-(`python/examples/bubble_sort.py`), and must match runnable commands in the
+(`python/examples/bubble_sort/main.py`), and must match runnable commands in the
 repository.
 
 **Onboarding Success Metric**: An Explanation Author can go from clone to first

@@ -1,6 +1,6 @@
 """A signal moving forward through a neural network.
 
-    python python/examples/neural_net.py
+    python python/examples/neural_net/main.py
 
 Nothing on screen moves house — neurons stay where they are. So the names here
 follow the **place**, not the thing: `("neuron", layer, index)`. The only

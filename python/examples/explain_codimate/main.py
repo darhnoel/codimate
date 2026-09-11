@@ -1,6 +1,6 @@
 """Codimate explaining the maths behind Codimate.
 
-    python python/examples/explain_codimate.py
+    python python/examples/explain_codimate/main.py
 
 The bars on the right are three moments of a bubble sort: compare 3 and 1,
 swap them, compare 3 and 4. Codimate stores only those three pictures. Every

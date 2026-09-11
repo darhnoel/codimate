@@ -11,13 +11,13 @@ Build once and run the example. Nothing to edit yet.
 ```bash
 python3 -m venv .venv && .venv/bin/pip install maturin
 .venv/bin/maturin develop --release
-.venv/bin/python python/examples/bubble_sort.py
+.venv/bin/python python/examples/bubble_sort/main.py
 ```
 
 The `--release` matters: without it the engine runs about 17x slower. You only
 drop it when debugging the engine itself.
 
-Open `results/sort.mp4`. Bars slide when they swap, and the pair being compared turns
+Open `results/bubble_sort.mp4`. Bars slide when they swap, and the pair being compared turns
 orange.
 
 This proves your toolchain, the Rust build, `ffmpeg`, and export all work. If
@@ -31,7 +31,7 @@ no rebuild.
 
 ## Stage 2 — Change things (10 minutes)
 
-Open [`python/examples/bubble_sort.py`](../examples/bubble_sort.py). Make one
+Open [`python/examples/bubble_sort/main.py`](../python/examples/bubble_sort/main.py). Make one
 change at a time and re-run. Each of these teaches one of the four pieces.
 
 **Change the data** — the video regenerates from the algorithm:
@@ -75,7 +75,8 @@ Change it back.
 
 ## Stage 3 — Your own explanation (15 minutes)
 
-Copy `bubble_sort.py` and replace the four pieces. Do them in this order.
+Copy `bubble_sort/` to a folder named after your explanation,
+then replace the four pieces in its `main.py`. Do them in this order.
 
 ### 1. The algorithm
 
@@ -176,11 +177,14 @@ your data small (4-6 items) while iterating, then grow it once it reads well.
 
 ## Three examples worth reading
 
-- `bubble_sort.py` — things **move**, so names follow the thing (`cm.items()`).
-- `neural_net.py` — neurons **stay put**, so names follow the place
+One folder each, with a README of its own. See
+[`python/examples/README.md`](../python/examples/README.md).
+
+- `bubble_sort/` — things **move**, so names follow the thing (`cm.items()`).
+- `neural_net/` — neurons **stay put**, so names follow the place
   (`("neuron", layer, index)`). Only the pulses travel, and they travel because
   the trace says where they are at each moment.
-- `explain_codimate.py` — both at once, and a demonstration of what the
+- `explain_codimate/` — both at once, and a demonstration of what the
   Engine is doing underneath: a playhead moved by the very formula it draws.
 
 ## Next
