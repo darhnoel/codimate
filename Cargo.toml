@@ -13,6 +13,7 @@ members = [
     "crates/codimate-arrange",
     "crates/codimate-fonts",
     "crates/codimate-glyph",
+    "crates/codimate-py",
 
     # --- examples below are temporarily unlisted during the uniform-transform
     # --- refactor (ADR 0006); re-added in migrated batches. See refactor-plan.md.

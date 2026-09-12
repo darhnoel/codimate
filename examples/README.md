@@ -1,6 +1,15 @@
-# Examples
+# Engine Examples (Rust)
 
-Use this with the [Daily Workflow](../docs/daily-workflow.md).
+> **These are not the way to author an explanation.**
+>
+> Codimate is authored in Python — start at
+> [the guide](../docs/tutorial.md) and
+> [`python/examples/`](../python/examples/).
+>
+> The Rust examples below exercise the Engine directly: they are how we test
+> and develop the renderer, the primitive model, and the animation core. They
+> use an API that Explanation Authors never touch. See
+> [ADR 0008](../docs/adr/0008-python-authoring-surface.md).
 
 ## Tier 1 — First win
 

@@ -80,7 +80,11 @@ impl std::fmt::Display for ExportError {
         match self {
             ExportError::Io(e) => write!(f, "I/O error: {}", e),
             ExportError::EncoderNotFound => {
-                write!(f, "video encoder (ffmpeg) not found on PATH")
+                write!(
+                    f,
+                    "video encoder (ffmpeg) not found — install it, or point \
+                     CODIMATE_FFMPEG at a copy"
+                )
             }
             ExportError::EncoderFailed(status) => {
                 write!(f, "video encoder failed with exit status: {}", status)
@@ -212,6 +216,16 @@ pub fn write_raw_frames(
     Ok(())
 }
 
+/// Which `ffmpeg` to run.
+///
+/// `CODIMATE_FFMPEG` wins if set, otherwise whatever is on `PATH`. The
+/// override exists so a caller that has its own copy — a Python wheel with a
+/// bundled static build, say — can point at it without the user having to
+/// install anything system-wide.
+fn encoder_binary() -> std::ffi::OsString {
+    std::env::var_os("CODIMATE_FFMPEG").unwrap_or_else(|| "ffmpeg".into())
+}
+
 /// Encode a playable to mp4 via ffmpeg subprocess.
 ///
 /// Spawns `ffmpeg`, pipes raw RGBA frames to its stdin, and waits for it
@@ -242,7 +256,7 @@ pub fn export_mp4(
     let height = (config.viewport.height * pixel_scale).round().max(1.0) as u32;
     let fps = config.fps.max(1.0);
 
-    let mut command = Command::new("ffmpeg");
+    let mut command = Command::new(encoder_binary());
     command
         .arg("-y")
         .arg("-f")

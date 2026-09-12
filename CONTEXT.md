@@ -10,48 +10,89 @@ concept's state, derive a trace from its logic, project each trace moment into a
 Scene, then let Layer 3 timing compose the result into `f(t) → Scene`.
 
 ## Slot Model
-A Slot is a View-only layout position. It is not concept state, not a Scene
-Node, and not a runtime layout pass.
+A Slot is a View-only layout position: a centre point and a size. It is not
+concept state, not a shape, and not a runtime layout pass. Nothing draws a
+Slot.
 
-- The screen is a Slot: `viewport.slot()`.
-- Groups are invisible Slots: `screen.centered_child(size)`.
-- Rows and columns derive child Slots: `group.row(size, gap, count)` and
-  `group.column(size, gap, count)`.
-- Neighboring labels derive from visual Slots: `slot.below(label_size, gap)`,
-  `slot.above(...)`, `slot.left_of(...)`, and `slot.right_of(...)`.
-- Text belongs in Slots: `centered_text(&slot, ...)`.
-- Items are concept identity; Slots are visual positions.
-- Motion maps item identity from an old Slot to a new Slot.
+- `cm.row(items, gap=)` divides the canvas into one Slot per item, centred,
+  sized from the canvas unless overridden.
+- A Slot exposes the edges a View actually asks for: `.x`, `.y`, `.w`, `.h`,
+  `.left`, `.right`, `.top`, `.bottom`.
+- Shapes are placed by **anchor**, not by centre arithmetic: give one
+  horizontal anchor (`x`/`left`/`right`) and one vertical anchor
+  (`y`/`top`/`bottom`). Two anchors on one axis is an error, never a silent
+  winner.
+- **Items are concept identity; Slots are visual positions.** An Item moving
+  from one Slot to another is still the same Item — that separation is what
+  makes motion derivable.
 
-Use Slots in View code before reaching for raw coordinates. Raw coordinates are
-acceptable for design constants, but repeated alignment math belongs in Slots.
+Use Slots in View code before reaching for raw coordinates. `cm.width()` and
+`cm.height()` cover the occasional hand-placed element; repeated alignment
+math belongs in a Slot.
 
 ## Ubiquitous Language
 
 **Concept**: The idea being explained: a sort, a matrix multiplication, a
 network signal flow, a swap. Avoid treating the video timeline as the concept.
 
-**Explanation Author**: The primary human actor Codimate optimizes for. In the
-current product direction, this means a beginner Rust developer who can read
-Rust and wants a reliable daily workflow from concept to preview/export without
-learning renderer internals first.
+**Explanation Author**: The primary human actor Codimate optimizes for. This is
+a **Python developer** who can express a concept as an algorithm and wants a
+reliable daily workflow from concept to preview/export without learning
+renderer internals — or Rust — first. An Explanation Author never writes Rust
+and never encounters `Animated<T>`, Slots, Effects, or the three-layer model.
 
-**Primary Job (Authoring)**: Build a new explanation from scratch by editing a
-small, predictable authoring split (`state`, `algorithm`, `view`, `motion`,
-`timing`) and repeatedly previewing/exporting until the concept reads clearly.
+**Authoring Surface**: The Python API an Explanation Author writes: `emit`,
+`trace`, `Scene`, `Rule`, `Timing`, `explain`. It is the only supported way to
+author an explanation. The Rust crates are the **Engine** — machinery the
+Authoring Surface drives, not a second front door.
 
-**Canonical Onboarding Workflow**: The single recommended path a beginner
-Explanation Author follows from first run to first custom explanation. This
-workflow is documentation-first, maps to one starter example, and must match
-runnable commands in the repository.
+**Engine**: The Rust crates behind the Authoring Surface. The Engine owns every
+per-frame concern (diffing, interpolation, rasterization, encoding); the
+Authoring Surface owns every per-event concern (state, trace, view, motion
+rules, durations). "Hard things in Rust, easy things in Python" means exactly
+this split — per-frame versus per-event, not fast versus slow.
 
-**Minimal API Stabilization (this pass)**: Stabilize the beginner authoring
-pattern (canonical builder chain + canonical module split) through docs and
-examples. This pass does not introduce a new facade crate.
+**Primary Job (Authoring)**: Build a new explanation from scratch by writing
+one Python file containing the four pieces — algorithm, view, motion, timing —
+and repeatedly rendering until the concept reads clearly. There is no module
+split to learn; a whole explanation fits in a single file.
 
-**Onboarding Success Metric**: A beginner Explanation Author can go from clone
-to first custom animation render/preview in less than 30 minutes via the
-Canonical Onboarding Workflow.
+**The Guide**: The four chapters an Explanation Author reads in order —
+`docs/tutorial.md` (build one from an empty file), `docs/drawing.md` (what can
+be drawn), `docs/concepts.md` (why it is shaped this way), `docs/reference.md`
+(every call). Documentation-first: every command and every code block in them
+must run as written, and each is checked by extracting and executing it.
+
+**Onboarding Success Metric**: An Explanation Author can go from clone to first
+custom animation in less than 30 minutes via the Canonical Onboarding Workflow,
+without writing or reading Rust.
+
+**Item**: Concept identity — the thing an Explanation Author is talking about,
+carried across Scenes by a stable name on every shape and Group. Motion is
+**implied by identity**: the Engine pairs shapes by name between consecutive
+Scenes, and whatever changed becomes a tween. A name keyed to the *thing*
+travels; a name keyed to the *place* never moves and only changes shape. Both
+are legitimate; choosing between them is the Explanation Author's single most
+consequential decision, and it is never an error the Engine can catch.
+
+`cm.items(values)` is how a bare scalar acquires identity: two 3s in a list are
+two different bars, and only a wrapper can say so. An **Item** orders by
+`.value` (so the Algorithm stays ordinary Python) and is equal by `.id` (so it
+survives the deep copy taken at every event — comparing by `is` would not).
+Identity keyed to a place needs no wrapper: `("cell", row, col)` is already
+unique and already stable.
+
+Names are given explicitly, never inferred from an object. Reading an `.id`
+off a passed object can be added later; a convention, once shipped, can never
+be removed.
+
+**Group**: A named place to draw a thing made of several shapes. A Group has
+its own origin and its own name; children are named beneath it (`3/bar`,
+`3/label`), so **everything on a Group moves as one thing** and a motion rule
+cannot pull a thing's parts apart. Groups nest. Inside a Group, `0` is that
+Group's anchor point — nothing is inherited from the parent and nothing is
+decided implicitly, which is what keeps nesting free of rules to learn. A
+Scene is the root Group.
 
 **State**: The concept's data at a meaningful point in the explanation. State is
 domain data, not visual data and not renderer state.
@@ -68,10 +109,18 @@ pivot, compute output cell, or fire signal group. Avoid "keyframe".
 **View**: The projection from State plus Trace Event into a Scene. View code
 decides what the concept looks like; it does not decide the concept's logic.
 
-**Slot**: A View-only visual position with a top-left point and size. Slots are
-build-time helpers for layout authoring; they are not Scene Nodes, not concept
-State, and not renderer objects. Use Slots to derive rows, columns, labels, and
-group positions before constructing Nodes.
+**Slot**: A View-only visual position — a centre point and a size, exposing its
+edges. Slots are authoring-time helpers in the Authoring Surface; they are not
+shapes, not concept State, and not Engine objects, and they carry no identity.
+Use Slots to derive rows, labels, and group positions before placing shapes.
+Contrast with [Item]: a Slot is *where*, an Item is *what*.
+
+**Anchor (Authoring Surface)**: The edge or centre an Explanation Author uses
+to place a shape — one horizontal (`x`, `left`, `right`) and one vertical
+(`y`, `top`, `bottom`). Anchors exist so an author never converts an edge into
+a centre by hand. Ambiguous or missing anchors are rejected. Distinct from the
+Engine's **Anchor** (a point on a shape's boundary that a Connection attaches
+to); the two never meet, because Connections are not in the Authoring Surface.
 
 **Box**: A reusable View authoring component for a styled rectangular visual
 area, usually positioned by a Slot. A Box may have a corner radius, fill, stroke
@@ -123,6 +172,11 @@ and Pulse fade in.
 **Scene Opacity**: A pure Scene-level visual operation that multiplies the alpha
 of every color-bearing Node without changing Scene structure. Effects may use
 Scene Opacity, but it is not Effect-specific.
+
+**Easing (Authoring Surface)**: `cm.ease(t)` returns the Engine's own curve.
+It exists so an Explanation Author drawing or reasoning about pacing calls into
+the Engine instead of keeping a second copy that can silently drift out of
+agreement with what the animation actually does.
 
 **Timing**: The Layer 3 durations assigned to Trace Events and holds. Timing is
 where pacing lives; never hide duration inside Motion or View.
@@ -241,7 +295,9 @@ codimate/
 │   ├── codimate-math/      # Formula: LaTeX -> Typst subprocess -> Paths (see ADR 0005)
 │   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
 │   ├── codimate-previewer/ # interactive preview window, sampled from Playable
-│   └── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)
+│   ├── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)
+│   └── codimate-py/        # PyO3 bindings — the Authoring Surface (see ADR 0008)
+├── python/                 # the `codimate` Python package
 └── examples/
 
 **codimate-core has zero non-pure dependencies.** If a PR adds an I/O import

@@ -1,0 +1,114 @@
+# Build wheels and publish to PyPI.
+#
+# One wheel per platform, not one per Python version: `codimate-py` enables
+# pyo3's `abi3-py39`, so a single wheel works on every Python from 3.9 up.
+# That is five wheels a release instead of twenty-five.
+#
+# The fonts are baked into the binary by `codimate-fonts/build.rs`, so a wheel
+# is self-contained apart from ffmpeg — which pip cannot install, and which the
+# `imageio-ffmpeg` dependency covers as a fallback.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:      # so the wheels can be built and checked without tagging
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu }
+          - { os: macos-latest,   target: aarch64-apple-darwin }
+          - { os: macos-13,       target: x86_64-apple-darwin }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          # Oldest manylinux the toolchain supports, so the wheel installs on
+          # distributions older than the builder.
+          manylinux: auto
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.target }}
+          path: dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
+  smoke:
+    # A wheel that imports but cannot render is worse than no wheel: the
+    # failure lands on someone's first run. Install the built artifact on a
+    # clean machine and render something.
+    needs: [wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"     # the oldest abi3 promises
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-x86_64-unknown-linux-gnu
+          path: dist
+      - name: Hide any system ffmpeg
+        # Otherwise this silently tests the runner's ffmpeg and proves nothing
+        # about the wheel. The whole claim being checked is that a bare
+        # `pip install` renders on a machine with no ffmpeg of its own.
+        run: |
+          if command -v ffmpeg >/dev/null; then
+            sudo mv "$(command -v ffmpeg)" /tmp/ffmpeg-hidden
+          fi
+          ! command -v ffmpeg
+
+      - name: Install and render
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python python/examples/bubble_sort/main.py
+          test -s results/bubble_sort.mp4
+
+  publish:
+    needs: [wheels, sdist, smoke]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write        # trusted publishing — no API token to leak
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
