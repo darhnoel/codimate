@@ -73,5 +73,28 @@ def test_an_ambiguous_anchor_is_rejected():
             raise AssertionError(f"should be rejected: {kwargs}")
 
 
+def test_measure_is_real_and_not_a_guess():
+    """The whole point is that it beats `len(text) * size * k`.
+
+    Two strings of equal length must not measure equal when they are in
+    different scripts — that is exactly the case an estimate gets wrong, and
+    the reason boxes around Khmer used to be sized by rendering and squinting.
+    """
+    w, h = cm.measure("cat", 30)
+    assert w > 0 and h > 0, (w, h)
+
+    # Scales linearly with size.
+    w2, h2 = cm.measure("cat", 60)
+    assert abs(w2 - 2 * w) < 0.01 and abs(h2 - 2 * h) < 0.01, (w, w2, h, h2)
+
+    # Longer text is wider.
+    assert cm.measure("cattle", 30)[0] > w
+
+    # A different script goes through font fallback, so it does not land on
+    # the same width a character count would predict.
+    khmer = cm.measure("អរិយ", 30)[0]
+    assert khmer != cm.measure("abcd", 30)[0], khmer
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))

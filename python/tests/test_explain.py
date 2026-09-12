@@ -86,5 +86,31 @@ def test_the_engines_easing_is_a_usable_motion_curve():
     assert all(b >= a for a, b in zip(seen, seen[1:])), "never travels backwards"
 
 
+def test_the_bundled_ffmpeg_is_only_a_fallback():
+    """A system ffmpeg is usually newer and hardware-accelerated, and it is the
+    one the author expects to be used. The copy that ships with the wheel is
+    there so a bare `pip install` works at all — not to take over."""
+    import importlib
+    import os
+    import shutil
+
+    module = importlib.import_module("codimate.explain")
+    before = os.environ.pop("CODIMATE_FFMPEG", None)
+    try:
+        if shutil.which("ffmpeg"):
+            module._find_encoder()
+            assert "CODIMATE_FFMPEG" not in os.environ, (
+                "a system ffmpeg was on PATH but the bundled one was chosen anyway")
+
+        # An explicit choice is never second-guessed.
+        os.environ["CODIMATE_FFMPEG"] = "/somewhere/of/my/own"
+        module._find_encoder()
+        assert os.environ["CODIMATE_FFMPEG"] == "/somewhere/of/my/own"
+    finally:
+        os.environ.pop("CODIMATE_FFMPEG", None)
+        if before is not None:
+            os.environ["CODIMATE_FFMPEG"] = before
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))

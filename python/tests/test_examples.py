@@ -6,10 +6,11 @@ run the whole pipeline: view, diff, tween, rasterize, ffmpeg, file on disk.
 Examples are discovered, not listed, so a new one is covered the day it is
 added and nobody has to remember this file exists.
 
-Slow by nature (a few seconds each, they render real video). Run them alone
-while iterating on the library:
+An example is only re-rendered when something it depends on has changed —
+its own sources, the `codimate` package, or the compiled engine. So a run
+that changes nothing costs a few ffprobe calls instead of eight renders.
 
-    python python/tests/run.py --fast      # skips this file
+    python python/tests/run.py --fast      # skips this file entirely
 """
 
 import subprocess
@@ -49,6 +50,34 @@ def _frames(video, count=12):
     return [raw[i * size:(i + 1) * size] for i in range(len(raw) // size)]
 
 
+PACKAGE = ROOT / "python" / "codimate"
+
+
+def _sources(main_py):
+    """Everything whose change could change the video.
+
+    The compiled engine lives inside the package as a `.so`, so re-running
+    `maturin develop` invalidates every example — which is what you want,
+    since that is where most rendering behaviour actually lives.
+    """
+    yield from main_py.parent.rglob("*.py")
+    yield from PACKAGE.rglob("*.py")
+    yield from PACKAGE.rglob("*.so")
+
+
+def _fresh(main_py):
+    """The existing video, if nothing it depends on is newer than it.
+
+    Conservative: an unexpected output path, a missing file, or any doubt
+    means we render. A stale pass is far worse than a slow one.
+    """
+    video = ROOT / "results" / f"{main_py.parent.name}.mp4"
+    if not video.exists():
+        return None
+    newest = max(p.stat().st_mtime for p in _sources(main_py))
+    return video if video.stat().st_mtime > newest else None
+
+
 # Rendered once per run, whichever test asks first. Without this the checks
 # below would depend on each other's side effects — and on the order they
 # happen to run in, which is how the first version of this file silently
@@ -58,7 +87,7 @@ _RENDERED = {}
 
 def _video(main_py):
     if main_py not in _RENDERED:
-        _RENDERED[main_py] = _render(main_py)
+        _RENDERED[main_py] = _fresh(main_py) or _render(main_py)
     return _RENDERED[main_py]
 
 

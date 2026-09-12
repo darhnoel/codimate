@@ -107,5 +107,37 @@ def test_a_name_means_exactly_one_thing():
         raise AssertionError("a duplicate name should be rejected")
 
 
+def test_a_formula_carries_its_latex_untouched():
+    """The LaTeX has to survive the payload verbatim.
+
+    It rides in the same `text` field a label uses, so anything that tried to
+    be clever about text — stringifying, escaping, stripping — would quietly
+    corrupt a formula into a typesetting error.
+    """
+    latex = r"\frac{QK^{T}}{\sqrt{d_k}}"
+    shape = cm.Scene().formula("eq", latex, x=10, y=20, size=30)._payload()[0]
+    assert shape["kind"] == "formula", shape["kind"]
+    assert shape["text"] == latex, shape["text"]
+    assert (shape["x"], shape["y"], shape["size"]) == (10, 20, 30), shape
+
+
+def test_a_formula_carries_how_much_of_it_shows():
+    """`reveal` shares the `r` field with radius — the payload is a flat union,
+    so one slot reads three ways depending on the kind. Worth pinning, because
+    nothing else would notice if formula started sending it somewhere else."""
+    shape = cm.Scene().formula("eq", r"\frac{a}{b}", x=0, y=0, reveal=0.25)._payload()[0]
+    assert shape["kind"] == "formula" and shape["r"] == 0.25, shape
+
+
+def test_a_drawn_formula_carries_its_pen():
+    shape = cm.Scene().formula("eq", "x", x=0, y=0, pen=2.0)._payload()[0]
+    assert shape["w"] == 2.0, shape
+
+
+def test_a_rounded_rect_carries_its_radius():
+    shape = cm.Scene().rect("b", x=0, y=0, w=10, h=10, radius=4)._payload()[0]
+    assert shape["kind"] == "rect" and shape["r"] == 4, shape
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))

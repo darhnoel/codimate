@@ -28,6 +28,7 @@ body. The syntax inside them is checked either way.
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import support  # noqa: F401  (puts `codimate` on the import path)
@@ -63,19 +64,25 @@ def test_the_guide_has_code_to_check():
 
 
 def test_every_complete_program_in_the_guide_runs():
-    """Run as written, from the repository root, exactly as a reader would."""
+    """Run as written, in a scratch directory shaped like the repository root.
+
+    Not in the real root. The guide renders to `results/` using the same
+    filenames the examples do — the README's bubble sort is deliberately the
+    same program — so running these here would overwrite an example's video
+    with the doc's lower-resolution one. That went unnoticed for as long as
+    `test_examples` re-rendered unconditionally and repaired it each time.
+    """
     ran = 0
     for page in PAGES:
         for i, code in enumerate(_blocks(page), 1):
             if _kind(code) != "program":
                 continue
-            script = ROOT / f"_doccheck_{page.stem}_{i}.py"
-            script.write_text(code)
-            try:
-                done = subprocess.run([sys.executable, str(script)], cwd=ROOT,
+            with tempfile.TemporaryDirectory() as sandbox:
+                (Path(sandbox) / "results").mkdir()
+                script = Path(sandbox) / f"_doccheck_{page.stem}_{i}.py"
+                script.write_text(code)
+                done = subprocess.run([sys.executable, str(script)], cwd=sandbox,
                                       capture_output=True, text=True)
-            finally:
-                script.unlink()
             assert done.returncode == 0, (
                 f"{page.name} block {i} failed:\n{done.stderr[-1500:]}")
             ran += 1
