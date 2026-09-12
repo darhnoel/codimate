@@ -13,3 +13,16 @@ __pycache__/
 /examples/attention-is-all-you-need-architecture/
 /examples/transformer/
 /examples/logo-animation/
+
+# API keys for authoring-time tools (Kiri TTS). Never committed.
+.env
+
+# Generated narration: 15MB of audio from a paid API, reproducible at any time
+# with python/examples/attention/tools/narrate.py. `spoken.json` is the
+# exception — how to *say* each equation in Khmer is written by hand and could
+# not be recovered.
+python/examples/attention/audio/*
+!python/examples/attention/audio/spoken.json
+
+# Frames pulled out of a render while checking it.
+/scenes/
