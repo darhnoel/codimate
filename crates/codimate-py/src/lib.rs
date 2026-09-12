@@ -9,6 +9,7 @@
 //! keeps Invariant 1 (`f(t) → Scene`) intact.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use codimate_animation::Playable;
 use codimate_core::{
@@ -41,6 +42,9 @@ struct Shape {
     /// For a line, the stroke width.
     w: f32,
     h: f32,
+    /// A circle's radius; on a rect, its corner radius; on a formula, how
+    /// much of it is revealed (0..1). One flat field, three readings — the
+    /// payload is a union, not a class hierarchy.
     r: f32,
     color: String,
     text: String,
@@ -51,7 +55,41 @@ struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-const KINDS: [&str; 4] = ["rect", "circle", "text", "line"];
+const KINDS: [&str; 5] = ["rect", "circle", "text", "line", "formula"];
+
+/// A rectangle with rounded corners, in local space, centred on the anchor.
+///
+/// Built as a `Path` rather than a new `Geometry` arm, which is what the
+/// refactor plan says free shapes should be. A radius of 0 still produces the
+/// same eight segments, so a rect can animate from square to round corners —
+/// two paths only tween if they have matching structure.
+fn round_rect_path(s: &Shape) -> Path {
+    let (hw, hh) = (s.w / 2.0, s.h / 2.0);
+    let r = s.r.max(0.0).min(hw.min(hh));
+    let p = |x: f32, y: f32| Vec2::new(x, y);
+
+    // Each corner is one quad through the true corner — visually
+    // indistinguishable from an arc at these radii, and one segment instead of
+    // the two a cubic approximation would need.
+    let corner = |segments: &mut Vec<Segment>, from: Vec2, ctrl: Vec2, to: Vec2| {
+        segments.push(Segment::Quad(from, ctrl, to));
+    };
+
+    let mut segments = vec![Segment::MoveTo(p(-hw + r, -hh))];
+    segments.push(Segment::Line(p(-hw + r, -hh), p(hw - r, -hh)));
+    corner(&mut segments, p(hw - r, -hh), p(hw, -hh), p(hw, -hh + r));
+    segments.push(Segment::Line(p(hw, -hh + r), p(hw, hh - r)));
+    corner(&mut segments, p(hw, hh - r), p(hw, hh), p(hw - r, hh));
+    segments.push(Segment::Line(p(hw - r, hh), p(-hw + r, hh)));
+    corner(&mut segments, p(-hw + r, hh), p(-hw, hh), p(-hw, hh - r));
+    segments.push(Segment::Line(p(-hw, hh - r), p(-hw, -hh + r)));
+    corner(&mut segments, p(-hw, -hh + r), p(-hw, -hh), p(-hw + r, -hh));
+
+    Path {
+        segments,
+        closed: true,
+    }
+}
 
 /// A line in local space: from the anchor to the far end.
 fn line_path(s: &Shape) -> Path {
@@ -78,6 +116,16 @@ impl Shape {
             },
             "line" => Geometry::path(tween(line_path(self), line_path(other))),
 
+            // A formula is many glyph outlines, so it cannot be one Geometry.
+            // `primitives()` expands it; this arm is never reached.
+            "formula" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
+
+            // Square corners stay a real Rect — the common case keeps the
+            // cheaper primitive and the renderer's own rectangle path.
+            _ if self.r > 0.0 || other.r > 0.0 => {
+                Geometry::path(tween(round_rect_path(self), round_rect_path(other)))
+            }
+
             _ => Geometry::rect(tween(self.w, other.w), tween(self.h, other.h)),
         }
     }
@@ -95,6 +143,8 @@ impl Shape {
     /// Python's `y` is always the **centre** of the shape. Rust text is
     /// baseline-positioned, so convert here — an author never meets a baseline.
     fn anchor(&self) -> Vec2 {
+        // A formula is centred on its own bounding box when the glyphs are
+        // built, so unlike text it needs no baseline correction.
         if self.kind == "text" {
             // ponytail: 0.35 * size approximates cap-height/2; good enough for
             // labels. Swap for a real font metric when text sizing needs it.
@@ -246,10 +296,276 @@ fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> PyResult<Animate
 }
 
 // ============================================================
+// Formulas — LaTeX, via codimate-math
+// ============================================================
+
+/// Typst's default text size in SVG pixels (11pt, at 4/3 px per pt).
+///
+/// `codimate_math::formula` typesets at Typst's default size, so this is what
+/// turns an author's `size=` — which must mean the same thing it means for
+/// `text` — into a scale factor. Measured against it: a cap-height `H` comes
+/// back 10.02px, or 0.68 em, which is the usual cap-height ratio.
+const FORMULA_EM: f32 = 11.0 * 4.0 / 3.0;
+
+/// How many glyphs are fading at once during a `reveal`.
+///
+/// At 1.0 each glyph gets exactly its own slice of the time and none of its
+/// neighbour's, which marches rather than flows — with thirty glyphs over two
+/// seconds that is 66ms each, and it reads as popping. Overlapping them gives
+/// each glyph four times as long and keeps several in flight, which is what
+/// Manim calls a lag ratio.
+const REVEAL_OVERLAP: f32 = 4.0;
+
+/// The last part of a glyph's reveal, during which the drawn outline fades out
+/// and the solid glyph fades in. Manim calls the whole move DrawBorderThenFill;
+/// this is the "then".
+const FILL_TAKEOVER: f32 = 0.35;
+
+/// A glyph outline flattened to a polyline, with the running length at every
+/// point, so it can be cut to a fraction of its total length cheaply.
+///
+/// Curves are sampled rather than measured analytically. At glyph scale the
+/// error is far below a pixel, and the alternative is a closed-form arc length
+/// for cubics, which does not have one.
+struct Traced {
+    /// `(point, starts a new contour, length along the outline so far)`.
+    points: Vec<(Vec2, bool, f32)>,
+    length: f32,
+}
+
+/// How finely a curve is sampled when flattening. Eight is invisible at glyph
+/// size and keeps a whole formula's outline a few thousand points.
+const CURVE_SAMPLES: usize = 8;
+
+fn flatten(path: &Path) -> Traced {
+    let mut points: Vec<(Vec2, bool)> = Vec::new();
+    let mut contour_start: Option<Vec2> = None;
+
+    // A segment carries its own start point, but the previous segment usually
+    // ended there already — only emit it when it would actually break.
+    let mut open_at = |points: &mut Vec<(Vec2, bool)>, a: Vec2| {
+        let joins = points
+            .last()
+            .is_some_and(|(p, _)| (p.x - a.x).abs() < 1e-6 && (p.y - a.y).abs() < 1e-6);
+        if !joins {
+            points.push((a, true));
+        }
+    };
+
+    for seg in &path.segments {
+        match *seg {
+            Segment::MoveTo(p) => {
+                points.push((p, true));
+                contour_start = Some(p);
+            }
+            Segment::Line(a, b) => {
+                open_at(&mut points, a);
+                if contour_start.is_none() {
+                    contour_start = Some(a);
+                }
+                points.push((b, false));
+            }
+            Segment::Quad(a, ..) | Segment::Cubic(a, ..) => {
+                open_at(&mut points, a);
+                if contour_start.is_none() {
+                    contour_start = Some(a);
+                }
+                let (p0, p1, p2, p3) = seg.to_cubic();
+                for step in 1..=CURVE_SAMPLES {
+                    let u = step as f32 / CURVE_SAMPLES as f32;
+                    points.push((cubic_at(p0, p1, p2, p3, u), false));
+                }
+            }
+            Segment::Close => {
+                if let Some(start) = contour_start {
+                    points.push((start, false));
+                }
+            }
+        }
+    }
+
+    let mut length = 0.0;
+    let measured = points
+        .into_iter()
+        .scan(None::<Vec2>, |previous, (point, starts)| {
+            if let (Some(prev), false) = (*previous, starts) {
+                length += ((point.x - prev.x).powi(2) + (point.y - prev.y).powi(2)).sqrt();
+            }
+            *previous = Some(point);
+            Some((point, starts, length))
+        })
+        .collect();
+
+    Traced {
+        points: measured,
+        length,
+    }
+}
+
+fn cubic_at(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, u: f32) -> Vec2 {
+    let v = 1.0 - u;
+    let (a, b, c, d) = (v * v * v, 3.0 * v * v * u, 3.0 * v * u * u, u * u * u);
+    Vec2::new(
+        a * p0.x + b * p1.x + c * p2.x + d * p3.x,
+        a * p0.y + b * p1.y + c * p2.y + d * p3.y,
+    )
+}
+
+/// The first `fraction` of an outline, as a path — what the pen has drawn so
+/// far. The cut lands mid-segment, so the line grows smoothly rather than one
+/// sample at a time.
+fn trim(traced: &Traced, fraction: f32) -> Path {
+    let target = traced.length * fraction.clamp(0.0, 1.0);
+    let mut segments = Vec::new();
+    let mut previous: Option<(Vec2, f32)> = None;
+
+    for &(point, starts, at) in &traced.points {
+        if starts {
+            segments.push(Segment::MoveTo(point));
+            previous = Some((point, at));
+            continue;
+        }
+        let Some((from, from_at)) = previous else {
+            continue;
+        };
+        if at <= target {
+            segments.push(Segment::Line(from, point));
+            previous = Some((point, at));
+        } else {
+            let span = at - from_at;
+            let part = if span > 1e-6 {
+                (target - from_at) / span
+            } else {
+                0.0
+            };
+            if part > 0.0 {
+                segments.push(Segment::Line(
+                    from,
+                    Vec2::new(
+                        from.x + (point.x - from.x) * part,
+                        from.y + (point.y - from.y) * part,
+                    ),
+                ));
+            }
+            break;
+        }
+    }
+
+    Path {
+        segments,
+        closed: false,
+    }
+}
+
+/// Apply `f` to every point of a path.
+fn map_path(path: &Path, f: impl Fn(Vec2) -> Vec2) -> Path {
+    Path {
+        segments: path
+            .segments
+            .iter()
+            .map(|s| match *s {
+                Segment::MoveTo(a) => Segment::MoveTo(f(a)),
+                Segment::Line(a, b) => Segment::Line(f(a), f(b)),
+                Segment::Quad(a, b, c) => Segment::Quad(f(a), f(b), f(c)),
+                Segment::Cubic(a, b, c, d) => Segment::Cubic(f(a), f(b), f(c), f(d)),
+                Segment::Close => Segment::Close,
+            })
+            .collect(),
+        closed: path.closed,
+    }
+}
+
+/// Typeset one LaTeX string into glyph outlines, centred, in em units.
+///
+/// Typeset **once per process**, not once per segment. `codimate-math` already
+/// caches the Typst SVG on disk by content hash, but re-parsing that SVG into
+/// paths for every segment of an explanation is still waste — an explanation
+/// has tens of segments and the answer never changes.
+///
+/// Cached in em units with the fill left off, so one entry serves every size
+/// and colour the same formula is ever drawn at.
+fn formula_glyphs(latex: &str) -> PyResult<Arc<Vec<Path>>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, Arc<Vec<Path>>>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+
+    if let Some(hit) = cache.lock().unwrap().get(latex) {
+        return Ok(hit.clone());
+    }
+
+    let block = codimate_math::formula(latex, Color::WHITE).map_err(|e| {
+        PyValueError::new_err(match e {
+            codimate_math::FormulaError::TypstSpawn(_) => format!(
+                "could not run `typst`, which Codimate uses to typeset {latex:?}. \
+                 Install it (macOS: `brew install typst`) — like ffmpeg it is an \
+                 external tool, not a Python dependency."
+            ),
+            codimate_math::FormulaError::Mitex(m) => {
+                format!("could not read the LaTeX {latex:?}: {m}")
+            }
+            codimate_math::FormulaError::TypstCompile(m) => {
+                format!("could not typeset {latex:?}:\n{m}")
+            }
+            codimate_math::FormulaError::Svg(m) => {
+                format!("could not read the typeset {latex:?}: {m}")
+            }
+        })
+    })?;
+
+    let paths: Vec<Path> = block.glyphs.iter().map(|g| g.resolve(0.0).path).collect();
+
+    // Centre on the block's own bounding box. `GlyphBlock` reports width and
+    // height but keeps the glyphs at their absolute page coordinates, so the
+    // origin has to be recovered here.
+    let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
+    let (mut max_x, mut max_y) = (f32::MIN, f32::MIN);
+    for path in &paths {
+        if let Some((x0, y0, x1, y1)) = path.bounding_box() {
+            min_x = min_x.min(x0);
+            min_y = min_y.min(y0);
+            max_x = max_x.max(x1);
+            max_y = max_y.max(y1);
+        }
+    }
+    if min_x > max_x {
+        return Err(PyValueError::new_err(format!(
+            "{latex:?} typeset to nothing visible"
+        )));
+    }
+    let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+
+    let mut centred: Vec<Path> = paths
+        .iter()
+        .map(|p| {
+            map_path(p, |v| {
+                Vec2::new((v.x - cx) / FORMULA_EM, (v.y - cy) / FORMULA_EM)
+            })
+        })
+        .collect();
+
+    // Left to right, so revealing part of a formula is a wipe in reading
+    // order. Typst emits glyphs in layout order, which is close but not a
+    // promise — and for a fraction it puts the whole numerator before the
+    // denominator, which would reveal the equation in two passes.
+    centred.sort_by(|a, b| {
+        let key = |p: &Path| p.bounding_box().map(|(x0, ..)| x0).unwrap_or(0.0);
+        key(a).partial_cmp(&key(b)).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let shared = Arc::new(centred);
+    cache
+        .lock()
+        .unwrap()
+        .insert(latex.to_string(), shared.clone());
+    Ok(shared)
+}
+
+// ============================================================
 // The diff — motion is implied by identity
 // ============================================================
 
-fn primitive(before: &Shape, after: &Shape, rules: &[Rule]) -> PyResult<Primitive> {
+/// One Item becomes one Primitive — except a formula, which becomes one per
+/// glyph. They share a position, style and opacity, so they move as a unit.
+fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> PyResult<Vec<Primitive>> {
     if before.kind != after.kind {
         return Err(PyValueError::new_err(format!(
             "item {:?} changed kind from {:?} to {:?} — an Item keeps one shape kind",
@@ -258,11 +574,93 @@ fn primitive(before: &Shape, after: &Shape, rules: &[Rule]) -> PyResult<Primitiv
     }
 
     let path = motion_path(before.anchor(), after.anchor(), rules, &after.item)?;
+    let style = tween(before.style()?, after.style()?);
+    let opacity = tween(before.opacity, after.opacity);
 
-    Ok(Primitive::new(before.geometry(after))
+    if before.kind == "formula" {
+        // `before`'s LaTeX, matching how text takes its value from the start of
+        // the segment. An author who wants a formula read before it changes
+        // emits a move and then a hold, exactly as they already do for text.
+        let size = before.size;
+        let glyphs = formula_glyphs(&before.text)?;
+
+        // `r` is the revealed fraction. Scaled to a glyph count, it becomes a
+        // moving edge: glyphs behind it are solid, the one under it is
+        // part-faded, the rest are not there yet. So an equation can assemble
+        // itself term by term instead of appearing all at once.
+        // The edge travels past the last glyph by the overlap, so the tail
+        // finishes fading instead of snapping on at the end.
+        let span = glyphs.len() as f32 + REVEAL_OVERLAP;
+        let (edge_from, edge_to) = (before.r * span, after.r * span);
+        let (fade_from, fade_to) = (before.opacity, after.opacity);
+
+        // How far this glyph has got, 0 to 1. The edge is eased; a linear
+        // sweep starts and stops abruptly, which is most of what makes a
+        // reveal look mechanical. Plain opacity stays linear, matching `tween`.
+        let progress = move |index: f32, t: f32| {
+            let edge = edge_from + (edge_to - edge_from) * ease_in_out(t);
+            ((edge - index) / REVEAL_OVERLAP).clamp(0.0, 1.0)
+        };
+        let fade = move |t: f32| fade_from + (fade_to - fade_from) * t;
+
+        // `w` is the pen. Zero means no pen: glyphs simply fade in, which is
+        // cheaper and right for a formula that is just arriving.
+        let pen = before.w.max(after.w);
+        let ink = parse_color(&before.color)?;
+
+        let mut out = Vec::with_capacity(glyphs.len() * if pen > 0.0 { 2 } else { 1 });
+        for (index, glyph) in glyphs.iter().enumerate() {
+            let scaled = map_path(glyph, |v| Vec2::new(v.x * size, v.y * size));
+            let index = index as f32;
+
+            if pen <= 0.0 {
+                out.push(
+                    Primitive::new(Geometry::path(scaled.into_animated()))
+                        .pos(path.clone())
+                        .style(style.clone())
+                        .opacity(Animated::new(move |t| fade(t) * progress(index, t))),
+                );
+                continue;
+            }
+
+            // The solid glyph, arriving only at the end of its own trace.
+            out.push(
+                Primitive::new(Geometry::path(scaled.clone().into_animated()))
+                    .pos(path.clone())
+                    .style(style.clone())
+                    .opacity(Animated::new(move |t| {
+                        let u = progress(index, t);
+                        fade(t) * ((u - (1.0 - FILL_TAKEOVER)) / FILL_TAKEOVER).clamp(0.0, 1.0)
+                    })),
+            );
+
+            // The pen, drawing that glyph's outline and then lifting.
+            let traced = flatten(&scaled);
+            out.push(
+                Primitive::new(Geometry::path(Animated::new(move |t| {
+                    trim(&traced, progress(index, t))
+                })))
+                .pos(path.clone())
+                .style(
+                    Style::new()
+                        .fill(Color::TRANSPARENT)
+                        .stroke(pen, ink)
+                        .into_animated(),
+                )
+                .opacity(Animated::new(move |t| {
+                    let u = progress(index, t);
+                    let lifting = ((1.0 - u) / FILL_TAKEOVER).clamp(0.0, 1.0);
+                    fade(t) * lifting
+                })),
+            );
+        }
+        return Ok(out);
+    }
+
+    Ok(vec![Primitive::new(before.geometry(after))
         .pos(path)
-        .style(tween(before.style()?, after.style()?))
-        .opacity(tween(before.opacity, after.opacity)))
+        .style(style)
+        .opacity(opacity)])
 }
 
 /// One segment's Scene: every Item that exists in `before` or `after`, tweened.
@@ -280,27 +678,29 @@ fn build_segment(before: &[Shape], after: &[Shape], rules: &[Rule]) -> PyResult<
     let mut scene = Scene::new();
 
     for shape in items {
-        let prim = match (b.get(&shape.item), a.get(&shape.item)) {
+        let prims = match (b.get(&shape.item), a.get(&shape.item)) {
             // Present in both — the ordinary case.
-            (Some(from), Some(to)) => primitive(from, to, rules)?,
+            (Some(from), Some(to)) => primitives(from, to, rules)?,
 
             // Entering — fade in where it lands, no travel.
             (None, Some(to)) => {
                 let mut faded = to.clone();
                 faded.opacity = 0.0;
-                primitive(&faded, to, rules)?
+                primitives(&faded, to, rules)?
             }
 
             // Exiting — fade out where it was.
             (Some(from), None) => {
                 let mut faded = from.clone();
                 faded.opacity = 0.0;
-                primitive(from, &faded, rules)?
+                primitives(from, &faded, rules)?
             }
 
             (None, None) => unreachable!("item came from one of the two lists"),
         };
-        scene = scene.add(prim);
+        for prim in prims {
+            scene = scene.add(prim);
+        }
     }
 
     Ok(scene)
@@ -430,15 +830,129 @@ fn ease(t: f32) -> f32 {
     ease_in_out(t.clamp(0.0, 1.0))
 }
 
+/// How wide and tall a string will be when drawn — see `codimate-render`.
+///
+/// Exposed because an author has no canvas to ask, and the alternative is
+/// rendering a frame and measuring the picture by hand.
+#[pyfunction]
+fn measure(text: &str, size: f32) -> (f32, f32) {
+    codimate_render::measure_text(text, size)
+}
+
+/// How wide and tall a typeset formula will be at `size`.
+///
+/// The text counterpart of `measure`. Without it a formula cannot be laid out
+/// beside words — which is why maths inside a caption had to be spelled in
+/// ASCII, and looked it.
+#[pyfunction]
+fn measure_formula(latex: &str, size: f32) -> PyResult<(f32, f32)> {
+    let glyphs = formula_glyphs(latex)?;
+    let (mut x0, mut y0) = (f32::MAX, f32::MAX);
+    let (mut x1, mut y1) = (f32::MIN, f32::MIN);
+    for path in glyphs.iter() {
+        if let Some((a, b, c, d)) = path.bounding_box() {
+            x0 = x0.min(a);
+            y0 = y0.min(b);
+            x1 = x1.max(c);
+            y1 = y1.max(d);
+        }
+    }
+    if x0 > x1 {
+        return Ok((0.0, 0.0));
+    }
+    // The cache holds glyphs centred and in em units, so scaling by `size` is
+    // the same arithmetic the renderer does.
+    Ok(((x1 - x0) * size, (y1 - y0) * size))
+}
+
 #[pymodule]
 fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
     m.add_function(wrap_pyfunction!(ease, m)?)?;
+    m.add_function(wrap_pyfunction!(measure, m)?)?;
+    m.add_function(wrap_pyfunction!(measure_formula, m)?)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    /// Two paths only tween if they have the same structure, so a rect must
+    /// produce the same segments whether or not its corners are rounded —
+    /// otherwise animating `radius` from 0 would pop instead of ease.
+    #[test]
+    fn rounding_the_corners_keeps_the_path_structure() {
+        let mut square = Shape {
+            item: "b".into(),
+            kind: "rect".into(),
+            x: 0.0, y: 0.0, x2: 0.0, y2: 0.0,
+            w: 100.0, h: 60.0, r: 0.0,
+            color: "white".into(), text: String::new(),
+            size: 0.0, layer: 0, opacity: 1.0,
+        };
+        let flat = round_rect_path(&square).segments.len();
+        square.r = 12.0;
+        let round = round_rect_path(&square).segments.len();
+        assert_eq!(flat, round, "square and rounded rects must tween");
+
+        // A radius past half the short side is a pill, not a broken path.
+        square.r = 9_999.0;
+        let pill = round_rect_path(&square);
+        assert_eq!(pill.segments.len(), flat);
+        for seg in &pill.segments {
+            for v in [seg_start(seg)] {
+                assert!(v.x.abs() <= 50.001 && v.y.abs() <= 30.001, "{v:?} escaped the box");
+            }
+        }
+    }
+
+    /// The pen has to draw a steady fraction of the outline, not a steady
+    /// fraction of the *segments* — a glyph's segments vary wildly in length,
+    /// so counting them would make the pen lurch.
+    #[test]
+    fn the_pen_draws_by_length_not_by_segment() {
+        // A 10x10 square: four sides, perimeter 40.
+        let square = Path {
+            segments: vec![
+                Segment::MoveTo(Vec2::new(0.0, 0.0)),
+                Segment::Line(Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)),
+                Segment::Line(Vec2::new(10.0, 0.0), Vec2::new(10.0, 10.0)),
+                Segment::Line(Vec2::new(10.0, 10.0), Vec2::new(0.0, 10.0)),
+                Segment::Line(Vec2::new(0.0, 10.0), Vec2::new(0.0, 0.0)),
+            ],
+            closed: true,
+        };
+        let traced = flatten(&square);
+        assert!((traced.length - 40.0).abs() < 1e-3, "{}", traced.length);
+
+        let drawn = |f: f32| {
+            trim(&traced, f)
+                .segments
+                .iter()
+                .filter_map(|s| match *s {
+                    Segment::Line(a, b) => {
+                        Some(((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt())
+                    }
+                    _ => None,
+                })
+                .sum::<f32>()
+        };
+
+        assert!(drawn(0.0) < 1e-3, "nothing is drawn at the start");
+        assert!((drawn(0.25) - 10.0).abs() < 1e-3, "{}", drawn(0.25));
+        // Half way is mid-side, not on a corner — the cut lands inside a
+        // segment, which is what stops the line growing a side at a time.
+        assert!((drawn(0.5) - 20.0).abs() < 1e-3, "{}", drawn(0.5));
+        assert!((drawn(1.0) - 40.0).abs() < 1e-3, "{}", drawn(1.0));
+    }
+
+    fn seg_start(s: &Segment) -> Vec2 {
+        match *s {
+            Segment::MoveTo(a) | Segment::Line(a, _) | Segment::Quad(a, _, _) => a,
+            Segment::Cubic(a, _, _, _) => a,
+            Segment::Close => Vec2::new(0.0, 0.0),
+        }
+    }
+
     use super::*;
 
     #[test]

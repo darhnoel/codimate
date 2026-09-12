@@ -434,6 +434,8 @@ dependencies = [
  "codimate-core",
  "codimate-export",
  "codimate-layout",
+ "codimate-math",
+ "codimate-render",
  "pyo3",
 ]
 

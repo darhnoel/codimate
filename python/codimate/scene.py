@@ -114,11 +114,16 @@ class Group:
         right: float = None,
         top: float = None,
         bottom: float = None,
+        radius: float = 0.0,
         color: str = "white",
         layer: int = 0,
         opacity: float = 1.0,
     ) -> "Group":
-        """A rectangle. Place it by its centre or by any edge."""
+        """A rectangle. Place it by its centre or by any edge.
+
+        ``radius`` rounds the corners. It animates like anything else, so a
+        rectangle can square off or soften as the explanation moves.
+        """
         if w is None:
             w = _resolve(None, None, None, 0, ("w",), self._w if self._path else _UNSET)
         return self._place(
@@ -129,6 +134,7 @@ class Group:
             w=w,
             h=h,
             color=color,
+            r=radius,
             layer=layer,
             opacity=opacity,
         )
@@ -182,6 +188,64 @@ class Group:
             y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
             text=str(content),
             size=size,
+            color=color,
+            layer=layer,
+            opacity=opacity,
+        )
+
+    def formula(
+        self,
+        key: Hashable,
+        latex: str,
+        *,
+        x: float = None,
+        y: float = None,
+        top: float = None,
+        bottom: float = None,
+        size: float = 16.0,
+        reveal: float = 1.0,
+        pen: float = 0.0,
+        color: str = "white",
+        layer: int = 10,
+        opacity: float = 1.0,
+    ) -> "Group":
+        r"""Real mathematics, written as LaTeX.
+
+            scene.formula("eq", r"\frac{QK^{T}}{\sqrt{d_k}}", size=34)
+
+        Use a raw string, or every backslash needs doubling. ``size`` means
+        what it means for :meth:`text`, so a formula and a label at the same
+        size look the same weight.
+
+        The result is glyph outlines, not a font — so it moves, fades and
+        recolours like any other shape. It is typeset once when the video is
+        built, never per frame.
+
+        ``reveal`` is how much of it is showing, left to right: ``0.0`` is
+        nothing, ``1.0`` is all of it. Animate it and the equation writes
+        itself on, a term at a time::
+
+            scene.formula("eq", EQUATION, reveal=1.0 if frame.is_("shown") else 0.0)
+
+        ``pen`` draws it instead of fading it. Give it a stroke width and
+        each glyph's outline is traced by a moving pen, then filled in behind
+        it as the pen moves on. ``reveal`` still says how far the pen has got::
+
+            scene.formula("eq", EQUATION, pen=2.0,
+                          reveal=1.0 if frame.is_("shown") else 0.0)
+
+        Needs the ``typst`` binary on PATH, the way video export needs
+        ``ffmpeg``. You get a clear error naming the install if it is missing.
+        """
+        return self._place(
+            key,
+            "formula",
+            x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
+            y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
+            text=latex,
+            size=size,
+            r=reveal,
+            w=pen,
             color=color,
             layer=layer,
             opacity=opacity,

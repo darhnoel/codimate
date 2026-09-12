@@ -19,7 +19,7 @@ Rust. See docs/adr/0008-python-authoring-surface.md.
 from __future__ import annotations
 
 from .explain import Explanation, Rule, Timing, ease, explain
-from .layout import Slot, canvas, column, height, row, width
+from .layout import Slot, canvas, column, height, measure, measure_math, row, width
 from .scene import Group, Scene
 from .trace import Event, Frame, Item, Trace, emit, items, trace
 
@@ -37,6 +37,8 @@ __all__ = [
     "Group",
     # where things sit
     "canvas",
+    "measure",
+    "measure_math",
     "width",
     "height",
     "Slot",

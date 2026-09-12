@@ -89,14 +89,27 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 `Scene` is the root; every method below exists on `Scene` and on any `Group`.
 
 ```python
-scene.rect(name, *, h, w=None, color="white", layer=0, opacity=1.0, <anchors>)
+scene.rect(name, *, h, w=None, radius=0.0, color="white", layer=0, opacity=1.0, <anchors>)
 scene.circle(name, *, r, color="white", layer=0, opacity=1.0, <anchors>)
 scene.text(name, content, *, size=16.0, color="white", layer=10, opacity=1.0, <anchors>)
 scene.line(name, *, start, end, w=2.0, color="white", layer=0, opacity=1.0)
+scene.formula(name, latex, *, size=16.0, reveal=1.0, pen=0.0, color="white", layer=10, opacity=1.0, <anchors>)
 scene.group(name, slot=None, *, anchor=None, w=None, <anchors>) -> Group
 ```
 
 `start` and `end` on a line may each be a `Slot` or a plain `(x, y)`.
+
+`radius` rounds a rectangle's corners, clamped to half its short side — so a
+big radius gives a pill, not a broken shape. It animates like anything else.
+
+`formula` typesets LaTeX maths into glyph outlines, so it moves, fades and
+recolours like any other shape. `reveal` is how much of it shows, left to
+right — animate it from `0.0` to `1.0` and the equation writes itself on, with
+several glyphs fading at once so it flows rather than ticking glyph by glyph.
+Give `pen` a stroke width and it is *drawn* instead of faded: a pen traces each
+glyph's outline and the solid letter fills in behind it as the pen moves on. Pass a raw string — `r"\frac{a}{b}"` — or every
+backslash needs doubling. `size` means what it means for `text`. It needs the
+`typst` binary on PATH, the way rendering needs `ffmpeg`.
 
 ### Anchors
 
@@ -164,6 +177,7 @@ size, colour or position **tween**. You ask for none of it.
 ```python
 cm.canvas(w, h) -> None      # default 1280x720; call before building anything
 cm.width() -> float
+cm.measure(text, size=16.0) -> (w, h)   # how big that string will actually be
 cm.height() -> float
 ```
 
@@ -190,6 +204,21 @@ A Slot is a *place*, not a shape. Nothing draws it, and it carries no identity:
 **Slots are where, names are what.**
 
 ---
+
+### Sizing a box around text
+
+You have no canvas to interrogate, so `cm.measure` asks the engine what a
+string will actually measure — with the real fonts and font fallback, which is
+why a character count is wrong for anything but ASCII:
+
+```python
+w, h = cm.measure(label, size=30)
+scene.rect("box", x=x, y=y, w=w + 24, h=h + 12, radius=6, color="#243046")
+scene.text("label", label, x=x, y=y, size=30)
+```
+
+The height is the line height, so it is the same for `"cat"` and `"Qgy"` and a
+row of boxes lines up instead of jittering with whatever letters it holds.
 
 ## Motion
 

@@ -573,3 +573,51 @@ mod scale_tests {
         assert!((x1 - x2).abs() < 0.01 && (y1 - y2).abs() < 0.01);
     }
 }
+
+/// How wide and tall `text` will be when drawn at `font_size`.
+///
+/// Exists so an author can size a box around text instead of guessing at it.
+/// Codimate is code-authored with no canvas to interrogate, so before this the
+/// only way to learn a string's width was to render a frame and measure the
+/// picture — every "box around this label" in the examples was a hardcoded
+/// number with a comment apologising for it.
+///
+/// Mirrors [`render_text`] exactly, shaped path first and the `ab_glyph`
+/// fallback second, so the answer matches what actually gets drawn — including
+/// font fallback, which is why `len(text) * k` is wrong for anything but
+/// ASCII.
+///
+/// The height is the **line height** (ascent to descent), not the tight ink
+/// box: it is the same for "cat" and "Qgy", so boxes in a row line up.
+pub fn measure_text(text: &str, font_size: f32) -> (f32, f32) {
+    use ab_glyph::{Font, FontRef, PxScale, ScaleFont};
+
+    let registry = FontRegistry::global();
+    let height = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
+        Ok(font) => {
+            let scaled = font.as_scaled(PxScale::from(font_size));
+            scaled.ascent() - scaled.descent()
+        }
+        Err(_) => font_size,
+    };
+
+    if let Some(runs) = shaped_runs(text, font_size, Color::WHITE) {
+        if !runs.is_empty() {
+            return (runs.iter().map(|r| r.block.width).sum(), height);
+        }
+    }
+
+    let primary = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
+        Ok(f) => f,
+        Err(_) => return (0.0, height),
+    };
+    let fallback = registry
+        .ids()
+        .filter(|id| *id != registry.char_font('A'))
+        .find_map(|id| FontRef::try_from_slice(registry.data(id)).ok());
+
+    (
+        text_width(&primary, fallback.as_ref(), PxScale::from(font_size), text),
+        height,
+    )
+}

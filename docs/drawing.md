@@ -10,7 +10,7 @@ shapes. There is no triangle, no polygon, no arbitrary path and no image.
 That sounds limiting, and for about ten minutes it is. Then you notice that a
 thick line is a rectangle at any angle, that two circles make a ring, and that
 a wing can be filled one column at a time. This chapter is the complete
-inventory, what four shapes turn out to be enough for, and a car built out of
+inventory, what a handful of shapes turn out to be enough for, and a car built out of
 them.
 
 ## The Four Shapes
@@ -19,10 +19,11 @@ Every one of these exists on a `Scene` and on any `Group`.
 
 | | you give it | it draws |
 |---|---|---|
-| `scene.rect(name, w=, h=)` | a width and height | a filled rectangle |
+| `scene.rect(name, w=, h=, radius=)` | a width and height | a filled rectangle, corners optionally rounded |
 | `scene.circle(name, r=)` | a radius | a filled circle |
 | `scene.text(name, content, size=)` | some text | centred text, no baselines |
 | `scene.line(name, start=, end=, w=)` | two points and a **thickness** | a stroked line |
+| `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
 | `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
 
 All of them also take `color`, `layer`, `opacity`, and

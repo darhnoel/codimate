@@ -343,7 +343,7 @@ the first link below.
 
 - [The one thing to understand](../README.md#the-one-thing-to-understand):
   how names decide what moves.
-- [What you have to work with](drawing.md): the four shapes Codimate gives you,
+- [What you have to work with](drawing.md): the shapes Codimate gives you,
   what they're enough for, and a car built out of them.
 - [Reference](reference.md): every call and parameter, on one page.
 - [How Codimate Thinks](concepts.md): why the library is shaped this way.

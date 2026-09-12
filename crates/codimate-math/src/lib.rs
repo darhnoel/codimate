@@ -53,6 +53,27 @@ fn latex_to_typst(latex: &str) -> Result<String, FormulaError> {
     }
 }
 
+/// Helpers `mitex` emits but does not define.
+///
+/// `mitex` translates some LaTeX into calls on its own Typst package rather
+/// than into plain Typst — `\sqrt{x}` becomes `mitexsqrt(x)`, for instance.
+/// The package would have to be fetched from Typst's registry at compile time,
+/// so the four helpers it actually reaches for are defined here instead. That
+/// keeps the pipeline offline, which is the same reason `typst` is a binary
+/// rather than a crate (ADR 0005).
+///
+/// Without this, `\sqrt` fails — which is most of the formulas anyone wants.
+const MITEX_PRELUDE: &str = r#"
+#let textmath(body) = text(body)
+#let mitexsqrt(..args) = if args.pos().len() == 1 { math.sqrt(..args) } else { math.root(..args) }
+#let mitexmathbf(x) = math.bold(math.upright(x))
+#let negthinspace = h(-(3/18) * 1em)
+#let bmatrix(..args) = math.mat(delim: "[", ..args)
+#let pmatrix(..args) = math.mat(delim: "(", ..args)
+#let vmatrix(..args) = math.mat(delim: "|", ..args)
+#let Bmatrix(..args) = math.mat(delim: "{", ..args)
+"#;
+
 /// Stage 2 — Typst markup -> SVG via the external `typst` binary.
 ///
 /// Wraps the math in a minimal page, writes to a hash-keyed temp file,
@@ -66,7 +87,7 @@ fn typst_compile(typst_src: &str) -> Result<String, FormulaError> {
 
     let doc = format!(
         "#set page(width: auto, height: auto, margin: 0pt, fill: none)\n\
-         #let textmath(body) = text(body)\n\
+         {MITEX_PRELUDE}\n\
          $ {typst_src} $\n"
     );
 
@@ -150,9 +171,24 @@ fn collect_nodes(group: &usvg::Group, nodes: &mut Vec<PathNode>, fill: Color) {
 }
 
 fn extract_segments(path: &usvg::Path) -> Vec<Segment> {
-    use usvg::tiny_skia_path::PathSegment;
+    use usvg::tiny_skia_path::{PathSegment, Stroke};
 
-    let transformed = match path.data().clone().transform(path.abs_transform()) {
+    // A fraction bar, a radical's overbar and `\overline` come out of Typst as
+    // *stroked* lines with no fill. Filling one directly draws nothing — a line
+    // encloses no area — so outline the stroke and fill the outline instead.
+    // Without this every `\frac` renders as a numerator and a denominator with
+    // no bar between them.
+    let data = match (path.fill(), path.stroke()) {
+        (None, Some(s)) => {
+            let mut stroke = Stroke::default();
+            stroke.width = s.width().get();
+            path.data().stroke(&stroke, 1.0)
+        }
+        _ => None,
+    };
+    let data = data.as_ref().unwrap_or(path.data());
+
+    let transformed = match data.clone().transform(path.abs_transform()) {
         Some(p) => p,
         None => return Vec::new(),
     };
@@ -193,3 +229,55 @@ fn extract_segments(path: &usvg::Path) -> Vec<Segment> {
 
     segments
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `mitex` compiles some LaTeX into calls on its own Typst package, so a
+    /// preamble missing those helpers fails on ordinary formulas — `\sqrt`
+    /// most of all. See `MITEX_PRELUDE`.
+    ///
+    /// Skipped when `typst` is not installed (ADR 0005: it is an external
+    /// binary, not a build dependency).
+    #[test]
+    fn mitex_helpers_are_defined() {
+        if std::process::Command::new("typst").arg("--version").output().is_err() {
+            eprintln!("skipping: typst not installed");
+            return;
+        }
+        for latex in [
+            r"\sqrt{x}",
+            r"\sqrt[3]{x}",
+            r"\frac{QK^{T}}{\sqrt{d_k}}",
+            r"\mathbf{W}",
+            r"a \! b",
+            r"\begin{bmatrix} a & b \\ c & d \end{bmatrix}",
+        ] {
+            let block = formula(latex, Color::WHITE)
+                .unwrap_or_else(|e| panic!("{latex} failed: {e:?}"));
+            assert!(!block.glyphs.is_empty(), "{latex} produced no glyphs");
+        }
+    }
+
+    /// A fraction bar is a *stroked* line in Typst's SVG. Filling it directly
+    /// draws nothing, so `\frac` used to render with no bar at all. The bar
+    /// must enclose area — that is what makes it visible.
+    #[test]
+    fn a_fraction_has_a_visible_bar() {
+        if std::process::Command::new("typst").arg("--version").output().is_err() {
+            eprintln!("skipping: typst not installed");
+            return;
+        }
+        let block = formula(r"\frac{a}{b}", Color::WHITE).unwrap();
+        let bar = block
+            .glyphs
+            .iter()
+            .filter_map(|g| g.resolve(0.0).path.bounding_box())
+            // The bar is the wide, flat one; `a` and `b` are roughly square.
+            .find(|(x0, y0, x1, y1)| (x1 - x0) > 3.0 * (y1 - y0).max(0.001));
+        let (_, y0, _, y1) = bar.expect("no fraction bar in the output at all");
+        assert!(y1 - y0 > 0.0, "the fraction bar is a zero-height line, so it fills to nothing");
+    }
+}
+
