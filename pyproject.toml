@@ -8,6 +8,11 @@ version = "0.1.0"
 description = "Turn a running algorithm into an explainer video"
 readme = "README.md"
 requires-python = ">=3.9"
+# ffmpeg is needed for every render and pip cannot install it. This ships a
+# static build per platform, used only when the system has no ffmpeg of its
+# own — so `pip install codimate` is enough on a bare machine. `typst`, which
+# only `scene.formula` needs, stays a documented prerequisite.
+dependencies = ["imageio-ffmpeg>=0.4.9"]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",

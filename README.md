@@ -42,7 +42,7 @@ That is the whole program. Run it, get `results/bubble_sort.mp4`.
 ## Install
 
 Codimate is a Rust engine with a Python front end. Wheels are not published
-yet, so for now build from source — you need a Rust toolchain and `ffmpeg`:
+yet, so for now build from source — you need a Rust toolchain:
 
 ```bash
 git clone https://github.com/darhnoel/codimate && cd codimate
@@ -55,7 +55,13 @@ python3 -m venv .venv && .venv/bin/pip install maturin
 roughly 17x slower — a scene that draws in 6ms takes 100ms. Only leave it off
 if you are debugging the engine itself.
 
-`ffmpeg` must be on your PATH (`brew install ffmpeg`, `apt install ffmpeg`).
+`ffmpeg` does the video encoding. Codimate uses the one on your PATH if you
+have it (`brew install ffmpeg`, `apt install ffmpeg`) and otherwise falls back
+to the copy that comes with `imageio-ffmpeg`, which pip installs for you. Point
+`CODIMATE_FFMPEG` at a binary to override both.
+
+`typst` is needed **only** if you use `scene.formula` to typeset LaTeX maths
+(`brew install typst`). Everything else renders without it.
 
 ## The four pieces
 
@@ -149,6 +155,8 @@ scene.rect(name,   h=, w=, color=, layer=, opacity=)
 scene.circle(name, r=, color=, layer=, opacity=)
 scene.text(name, content, size=, color=, layer=, opacity=)
 scene.line(name, start=slot_or_point, end=slot_or_point, w=, color=)
+scene.formula(name, r"\frac{a}{b}", size=, color=)      # LaTeX, needs `typst`
+cm.measure(text, size) -> (w, h)                        # to size a box around text
 scene.group(name, slot)      # a place to draw a thing made of several shapes
 ```
 
@@ -275,7 +283,7 @@ python/codimate/           the Python package
 
 1. [Writing Your First Animation](docs/tutorial.md) — build one from an empty
    file, meeting all four pieces on the way.
-2. [What You Have to Work With](docs/drawing.md) — the four shapes, what they
+2. [What You Have to Work With](docs/drawing.md) — the shapes, what they
    are enough for, and a car built out of them.
 3. [How Codimate Thinks](docs/concepts.md) — why motion is derived rather than
    authored, and the one decision you have to make.

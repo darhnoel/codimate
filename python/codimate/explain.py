@@ -132,6 +132,7 @@ class Explanation:
 
         from . import _codimate  # imported here so the pure Python is testable
 
+        _find_encoder()
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
         _codimate.render(
@@ -145,6 +146,38 @@ class Explanation:
             scale=float(scale),
         )
         return output
+
+
+def _find_encoder() -> None:
+    """Make sure the engine can find an ffmpeg to run.
+
+    Rendering needs ffmpeg, which pip cannot install. Rather than let
+    `pip install codimate` succeed and then fail on someone's first render —
+    the worst moment to learn about a prerequisite — fall back to the static
+    build that ships with `imageio-ffmpeg`.
+
+    A system ffmpeg is preferred: it is usually newer, hardware-accelerated,
+    and the one the author already expects to be used. The bundled copy is a
+    safety net, not the default.
+
+    Silent when nothing is found; the engine raises its own error naming both
+    the install and the override.
+    """
+    import os
+    import shutil
+
+    if os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg"):
+        return
+
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        return
+
+    try:
+        os.environ["CODIMATE_FFMPEG"] = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:  # noqa: BLE001 — a broken fallback must not mask the real error
+        pass
 
 
 def explain(
