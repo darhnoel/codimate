@@ -61,8 +61,7 @@ def draw(scene, flow):
     for parcel in flow.parcels:
         if parcel.marked:
             continue
-        scene.circle(("air", parcel.id), x=place(parcel.x, parcel.y)[0],
-                     y=place(parcel.x, parcel.y)[1], r=3.1,
+        scene.circle(("air", parcel.id), at=place(parcel.x, parcel.y), r=3.1,
                      color=heat(parcel.speed), layer=8)
 
     # The marked pair, with the paths they took.

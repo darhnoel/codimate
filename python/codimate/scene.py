@@ -50,10 +50,30 @@ def _key(path) -> str:
 
 
 def _point(place) -> "tuple[float, float]":
-    """Where a line ends: a Slot (its centre) or a plain (x, y)."""
+    """A place: a Slot (its centre) or a plain (x, y)."""
     if isinstance(place, Slot):
         return (place.x, place.y)
     return (float(place[0]), float(place[1]))
+
+
+def _at(at, x, y, edges):
+    """Resolve ``at=`` against the per-axis arguments.
+
+    A position is one thing, so it should arrive as one value. Splitting it
+    into ``x=`` and ``y=`` forces a caller holding a point to take it apart —
+    and in practice that meant calling the function twice and indexing ``[0]``
+    and ``[1]``.
+
+    The per-axis arguments stay, because they are not the same question: they
+    are for when only one axis is known, or when an edge is what you mean
+    (``top=``, ``bottom=``). Mixing the two is always a mistake, so it is an
+    error rather than a precedence rule.
+    """
+    if at is None:
+        return x, y
+    if any(value is not None for value in (x, y, *edges)):
+        raise ValueError("give at=, or x=/y= and edges — not both")
+    return _point(at)
 
 
 class Group:
@@ -106,6 +126,7 @@ class Group:
         self,
         key: Hashable,
         *,
+        at: "Slot | tuple[float, float] | None" = None,
         h: float,
         w: float = None,
         x: float = None,
@@ -126,6 +147,7 @@ class Group:
         """
         if w is None:
             w = _resolve(None, None, None, 0, ("w",), self._w if self._path else _UNSET)
+        x, y = _at(at, x, y, (left, right, top, bottom,))
         return self._place(
             key,
             "rect",
@@ -143,6 +165,7 @@ class Group:
         self,
         key: Hashable,
         *,
+        at: "Slot | tuple[float, float] | None" = None,
         r: float,
         x: float = None,
         y: float = None,
@@ -155,6 +178,7 @@ class Group:
         opacity: float = 1.0,
     ) -> "Group":
         """A circle. Place it by its centre or by any edge, like a rect."""
+        x, y = _at(at, x, y, (left, right, top, bottom,))
         return self._place(
             key,
             "circle",
@@ -171,6 +195,7 @@ class Group:
         key: Hashable,
         content: Any,
         *,
+        at: "Slot | tuple[float, float] | None" = None,
         x: float = None,
         y: float = None,
         top: float = None,
@@ -181,6 +206,7 @@ class Group:
         opacity: float = 1.0,
     ) -> "Group":
         """Text, centred horizontally. You never deal with baselines."""
+        x, y = _at(at, x, y, (top, bottom,))
         return self._place(
             key,
             "text",
@@ -198,6 +224,7 @@ class Group:
         key: Hashable,
         latex: str,
         *,
+        at: "Slot | tuple[float, float] | None" = None,
         x: float = None,
         y: float = None,
         top: float = None,
@@ -237,6 +264,7 @@ class Group:
         Needs the ``typst`` binary on PATH, the way video export needs
         ``ffmpeg``. You get a clear error naming the install if it is missing.
         """
+        x, y = _at(at, x, y, (top, bottom,))
         return self._place(
             key,
             "formula",
@@ -325,6 +353,9 @@ class Group:
 class Scene(Group):
     """The picture at one moment. No animation, no timing, no memory of the
     frame before.
+
+    Draw on it with the shapes it inherits from `Group` — `rect`, `circle`,
+    `text`, `line`, `formula` — and `group` to put several of them together.
 
     Every shape carries a name — the identity of the thing you are talking
     about. **Motion is implied by identity:** the Engine pairs shapes by name

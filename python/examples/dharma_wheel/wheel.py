@@ -43,10 +43,10 @@ def _finials(scene, centre, angle, spokes):
     for index in range(spokes):
         base = angle + index * (360 / spokes)
         for lobe, (offset, reach, size) in enumerate(_LOBES):
-            x, y = polar(centre, base + offset, FINIAL_R + reach)
-            scene.circle(("finial", index, lobe, "edge"), x=x, y=y,
+            spot = polar(centre, base + offset, FINIAL_R + reach)
+            scene.circle(("finial", index, lobe, "edge"), at=spot,
                          r=size + _E, color=EDGE, layer=1)
-            scene.circle(("finial", index, lobe), x=x, y=y,
+            scene.circle(("finial", index, lobe), at=spot,
                          r=size, color=GOLD, layer=2)
 
 
@@ -58,7 +58,7 @@ def _rim(scene, centre):
         ("edge_in", RIM_IN + _E, EDGE, 5),
         ("hollow", RIM_IN, GROUND, 6),
     ):
-        scene.circle(("rim", name), x=centre[0], y=centre[1], r=radius, color=color, layer=layer)
+        scene.circle(("rim", name), at=centre, r=radius, color=color, layer=layer)
 
 
 def _spokes(scene, centre, angle, spokes):
@@ -87,9 +87,9 @@ def _studs(scene, centre, angle, spokes):
     """The ring of dots on the rim — one per spoke, turning with the wheel."""
     band = (RIM_OUT + RIM_IN) / 2
     for index in range(spokes):
-        x, y = polar(centre, angle + index * (360 / spokes), band)
-        scene.circle(("stud", index, "edge"), x=x, y=y, r=DOT_R + 2.5, color=EDGE, layer=11)
-        scene.circle(("stud", index), x=x, y=y, r=DOT_R, color=GOLD_DEEP, layer=12)
+        spot = polar(centre, angle + index * (360 / spokes), band)
+        scene.circle(("stud", index, "edge"), at=spot, r=DOT_R + 2.5, color=EDGE, layer=11)
+        scene.circle(("stud", index), at=spot, r=DOT_R, color=GOLD_DEEP, layer=12)
 
 
 def _hub(scene, centre, angle):
@@ -99,13 +99,13 @@ def _hub(scene, centre, angle):
         ("inner_edge", HUB_IN + _E, EDGE, 15),
         ("inner", HUB_IN, GOLD_DEEP, 16),
     ):
-        scene.circle(("hub", name), x=centre[0], y=centre[1], r=radius, color=color, layer=layer)
+        scene.circle(("hub", name), at=centre, r=radius, color=color, layer=layer)
 
     # Three lobes turning together — a triskelion, as far as circles allow.
     for lobe in range(3):
-        x, y = polar(centre, angle * 1.5 + lobe * 120, 13.0)
-        scene.circle(("swirl", lobe, "edge"), x=x, y=y, r=12.5, color=EDGE, layer=17)
-        scene.circle(("swirl", lobe), x=x, y=y, r=9.5, color=GOLD, layer=18)
+        spot = polar(centre, angle * 1.5 + lobe * 120, 13.0)
+        scene.circle(("swirl", lobe, "edge"), at=spot, r=12.5, color=EDGE, layer=17)
+        scene.circle(("swirl", lobe), at=spot, r=9.5, color=GOLD, layer=18)
 
 
 def draw(scene, centre, angle, spokes):
