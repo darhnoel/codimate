@@ -1,0 +1,10 @@
+[package]
+name = "codimate-reconcile"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codimate-core = { path = "../codimate-core" }
+codimate-animation = { path = "../codimate-animation" }
+codimate-math = { path = "../codimate-math" }
+codimate-render = { path = "../codimate-render" }

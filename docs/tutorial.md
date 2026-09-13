@@ -38,7 +38,8 @@ def flip(tally):
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("hello", "nothing yet", x=cm.width() / 2, y=cm.height() / 2, size=40)
+    scene.text("hello", "nothing yet", size=40,
+               at=(cm.width() / 2, cm.height() / 2))
     return scene
 
 
@@ -90,7 +91,8 @@ def flip(tally):
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("count", frame.state, x=cm.width() / 2, y=cm.height() / 2, size=40)
+    scene.text("count", frame.state, size=40,
+               at=(cm.width() / 2, cm.height() / 2))
     return scene
 
 
@@ -134,11 +136,11 @@ def flip(tally):
 
 def view(frame):
     scene = cm.Scene()
-    for slot, side in cm.row(SIDES, gap=120, w=190):
+    for slot, side in cm.row(SIDES, gap=120, size=190):
         count = frame.state[side]
         bar = scene.group(side, slot)
-        bar.rect("box", h=max(count * 22, 1), bottom=0, color="blue")
-        bar.text("label", side, top=16, size=24)
+        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)).fill("blue")
+        bar.text("label", side, size=24, at=cm.at(top=16))
     return scene
 
 
@@ -147,7 +149,7 @@ cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coin
 
 Run it and you'll see two bars rising, each labelled underneath.
 
-Let's walk through what changed. `cm.row(SIDES, gap=120, w=190)` gives us one
+Let's walk through what changed. `cm.row(SIDES, gap=120, size=190)` gives us one
 slot per side, spaced evenly and centred on the canvas. Sizes come from the
 canvas unless you say otherwise, and here we do say otherwise, because two bars
 filling most of the frame look like slabs rather than bars.
@@ -200,14 +202,15 @@ def view(frame):
     scene = cm.Scene()
     landed = frame.event.data.get("side") if frame.event else None
 
-    scene.text("title", "20 coin flips", x=cm.width() / 2, y=90, size=38, color="grey")
+    scene.text("title", "20 coin flips", size=38,
+               at=(cm.width() / 2, 90)).fill("grey")
 
-    for slot, side in cm.row(SIDES, gap=120, w=190):
+    for slot, side in cm.row(SIDES, gap=120, size=190):
         count = frame.state[side]
         bar = scene.group(side, slot)
-        bar.rect("box", h=max(count * 22, 1), bottom=0,
-                 color="orange" if side == landed else "blue")
-        bar.text("label", f"{side}  {count}", top=16, size=24)
+        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)) \
+           .fill("orange" if side == landed else "blue")
+        bar.text("label", f"{side}  {count}", size=24, at=cm.at(top=16))
     return scene
 
 
@@ -256,14 +259,16 @@ def view(frame):
     landed = frame.event.data.get("side") if frame.event else None
     finished = frame.is_("done")
 
-    scene.text("title", "20 coin flips", x=cm.width() / 2, y=90, size=38, color="grey")
+    scene.text("title", "20 coin flips", size=38,
+               at=(cm.width() / 2, 90)).fill("grey")
 
-    for slot, side in cm.row(SIDES, gap=120, w=190):
+    for slot, side in cm.row(SIDES, gap=120, size=190):
         count = frame.state[side]
         bar = scene.group(side, slot)
-        bar.rect("box", h=max(count * 22, 1), bottom=0,
-                 color="green" if finished else "orange" if side == landed else "blue")
-        bar.text("label", f"{side}  {count}", top=16, size=24)
+        colour = "orange" if side == landed else "blue"
+        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)) \
+           .fill("green" if finished else colour)
+        bar.text("label", f"{side}  {count}", size=24, at=cm.at(top=16))
     return scene
 
 
@@ -311,7 +316,7 @@ color="green" if count == max(frame.state.values()) else "blue"
 instead of after the side it counts:
 
 ```python
-for i, (slot, side) in enumerate(cm.row(SIDES, gap=120, w=190)):
+for i, (slot, side) in enumerate(cm.row(SIDES, gap=120, size=190)):
     bar = scene.group(i, slot)              # was scene.group(side, slot)
 ```
 

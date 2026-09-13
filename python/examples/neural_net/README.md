@@ -20,7 +20,7 @@ pulses, and the view never mentions movement:
 
 ```python
 here = at[src] if net.signal_at == "source" else at[dst]
-scene.circle(("pulse", src, dst), x=here.x, y=here.y, r=9)
+scene.circle(("pulse", src, dst), r=9, at=(here.x, here.y))
 ```
 
 The algorithm emits `send` and then `arrive`. The pulse exists in both moments

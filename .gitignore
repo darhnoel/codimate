@@ -26,3 +26,8 @@ python/examples/attention/audio/*
 
 # Frames pulled out of a render while checking it.
 /scenes/
+
+# The built documentation site, API reference included. Rebuild with:
+#   python docs/build_site.py
+/site/
+/docs/api/

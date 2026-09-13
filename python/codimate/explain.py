@@ -38,7 +38,8 @@ class Rule:
 
     def __init__(self, pattern, position: str = "straight", **options: float) -> None:
         if position not in PATHS:
-            raise ValueError(f"unknown path {position!r} — use one of {', '.join(PATHS)}")
+            raise ValueError(
+                f"unknown path {position!r} — use one of {', '.join(PATHS)}")
         self.pattern = _key(pattern) if isinstance(pattern, tuple) else str(pattern)
         self.position = position
         self.options = {k: float(v) for k, v in options.items()}
@@ -67,6 +68,12 @@ class Timing:
         self.final_hold = final_hold
 
     def for_event(self, event: Event) -> float:
+        """How long ``event`` lasts: its own entry, or ``default``.
+
+        A name with no entry takes ``default`` silently — which is what a
+        default is for, but it means a misspelled event name costs you the
+        default duration rather than an error.
+        """
         return self.events.get(event.name, self.default)
 
 
@@ -84,6 +91,12 @@ def ease(t: float) -> float:
 
 
 class Explanation:
+    """A trace, a view and a timing, ready to render.
+
+    Built by :func:`explain` rather than directly. Holds one Scene per Trace
+    Event and the gap between each pair; :meth:`render` hands all of it to the
+    Engine once, and everything per-frame happens in there.
+    """
     def __init__(
         self,
         *,
@@ -94,6 +107,7 @@ class Explanation:
     ) -> None:
         self.timing = timing or Timing()
         self.motion = motion or []
+        self.trace = trace
 
         # The view runs once per event, not per frame — this is the whole
         # reason Python is fast enough to be the authoring language.
@@ -137,6 +151,7 @@ class Explanation:
 
         _codimate.render(
             scenes=[s._payload() for s in self.scenes],
+            cameras=[s._camera() for s in self.scenes],
             rules=[r._payload() for r in self.motion],
             durations=self.durations,
             output=output,
@@ -146,6 +161,58 @@ class Explanation:
             scale=float(scale),
         )
         return output
+
+    def frame_at(self, seconds: float, output: str = "frame.png",
+                 scale: float = 1.0) -> str:
+        """Save a single moment as a PNG, without rendering the video.
+
+            cm.explain(...).frame_at(12.5, "check.png")
+
+        The same scenes, timing and arithmetic as :meth:`render`, resolved at
+        one instant. Checking a frame by rendering the whole video and seeking
+        into it costs a minute to look at one second.
+
+        ``scale`` matches ``render``'s, so the debug frame is rasterized the
+        way the video is — worth passing when you are checking text, which is
+        the thing that has historically differed between the two.
+        """
+        from pathlib import Path
+
+        from . import _codimate
+
+        Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+        _codimate.render_frame_png(
+            scenes=[s._payload() for s in self.scenes],
+            cameras=[s._camera() for s in self.scenes],
+            rules=[r._payload() for r in self.motion],
+            durations=self.durations,
+            seconds=float(seconds),
+            output=output,
+            width=width(),
+            height=height(),
+            scale=float(scale),
+        )
+        return output
+
+    def timeline(self) -> "list[tuple[float, float, str]]":
+        """Every beat as ``(start, duration, event name)``, in seconds.
+
+            for start, length, name in cm.explain(...).timeline():
+                print(f"{start:6.2f}  {length:4.2f}  {name}")
+
+        What is on screen at 0:42, and how long each beat actually lasts —
+        the two questions you have when a video feels wrong. Pair it with
+        :meth:`frame_at` to look at the moment you find.
+        """
+        # Read from `durations`, which already carries the held opening and
+        # ending, rather than recomputing them — a second copy of that
+        # arithmetic is how a timeline starts disagreeing with the video.
+        names = ["(opening)"] + [e.name for e in self.trace.events] + ["(final hold)"]
+        out, at = [], 0.0
+        for name, length in zip(names, self.durations):
+            out.append((round(at, 3), length, name))
+            at += length
+        return out
 
 
 def _find_encoder() -> None:
@@ -187,4 +254,16 @@ def explain(
     motion: "list[Rule] | None" = None,
     timing: "Timing | None" = None,
 ) -> Explanation:
+    """Gather an algorithm, a view and a timing into something renderable.
+
+    ``trace`` is what a ``@cm.trace()``-marked function returns: the moments
+    your algorithm passed through. ``view`` is called once per moment and
+    returns the picture of it. ``motion`` and ``timing`` are optional —
+    without them every shape travels in a straight line and every event lasts
+    the same.
+
+        cm.explain(trace=flip(tally), view=view).render("results/coins.mp4")
+
+    Nothing is computed here; the work happens in :meth:`Explanation.render`.
+    """
     return Explanation(trace=trace, view=view, motion=motion, timing=timing)

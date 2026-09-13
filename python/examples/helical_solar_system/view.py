@@ -14,8 +14,11 @@ SKY = [(_sky.uniform(-260, 1560), _sky.uniform(-220, 960),
 
 SUN_TRAIL = "#f0c86a"
 
+# Every trail is drawn at the same weight; it was never worth an argument.
+TRAIL_W = 2.6
 
-def _helix(scene, key, history, color, width, camera):
+
+def _helix(scene, key, history, color, camera):
     """A body's recent path, one line per tick, fading out behind it.
 
     Each segment is named after the tick it records, so it is fixed the moment
@@ -25,10 +28,10 @@ def _helix(scene, key, history, color, width, camera):
     """
     for (tick, here), (_, there) in zip(history, history[1:]):
         age = (tick - history[0][0]) / TRAIL
-        scene.line(("trail", key, tick),
-                   start=project(here, camera), end=project(there, camera),
-                   w=width * (0.45 + 0.75 * age),
-                   color=color, opacity=0.10 + 0.90 * age)
+        scene.line(("trail", key, tick), start=project(here, camera),
+                   end=project(there, camera),
+                   w=TRAIL_W * (0.45 + 0.75 * age)).fill(color) \
+            .on(opacity=0.10 + 0.90 * age)
 
 
 def draw(scene, system):
@@ -37,29 +40,28 @@ def draw(scene, system):
     # still, which is the one thing this animation is arguing against.
     drift_x, drift_y = travel_on_screen(system.years)
     for i, (x, y, size, nearness) in enumerate(SKY):
-        scene.circle(("star", i),
-                     x=x - drift_x * nearness, y=y - drift_y * nearness,
-                     r=size, color="white",
-                     opacity=0.25 + 2.4 * nearness)
+        scene.circle(("star", i), r=size,
+                     at=(x - drift_x * nearness,
+                         y - drift_y * nearness)).fill("white") \
+             .on(opacity=0.25 + 2.4 * nearness)
 
-    scene.text("title", "The helical model", x=640, y=44, size=34, color=INK)
-    scene.text("subtitle",
-               "the Sun moves, so every orbit is a helix — "
+    scene.text("title", "The helical model", size=34, at=(640, 44)).fill(INK)
+    scene.text("subtitle", "the Sun moves, so every orbit is a helix — "
                "and the plane is inclined, not square to the travel",
-               x=640, y=80, size=17, color="grey")
+               size=17, at=(640, 80)).fill("grey")
 
     camera = system.sun.here
-    _helix(scene, "sun", system.sun.history, SUN_TRAIL, 2.6, camera)
+    _helix(scene, "sun", system.sun.history, SUN_TRAIL, camera)
     for body, (_, _, _, _, color) in zip(system.planets, PLANETS):
-        _helix(scene, body.name, body.history, color, 2.6, camera)
+        _helix(scene, body.name, body.history, color, camera)
 
     # The Sun last of the trails, so the planets' helices read against it.
     sx, sy = project(system.sun.here, camera)
-    scene.circle("sun_glow", x=sx, y=sy, r=SUN_R * 1.9, color=SUN_COLOR,
-                 opacity=0.18, layer=8)
-    scene.circle("sun", x=sx, y=sy, r=SUN_R, color=SUN_COLOR, layer=9)
+    scene.circle("sun_glow", r=SUN_R * 1.9,
+                 at=(sx, sy)).fill(SUN_COLOR).on(opacity=0.18, layer=8)
+    scene.circle("sun", r=SUN_R, at=(sx, sy)).fill(SUN_COLOR).on(layer=9)
 
     for body, (_, _, _, size, color) in zip(system.planets, PLANETS):
         px, py = project(body.here, camera)
-        scene.circle(("planet", body.name), x=px, y=py, r=size,
-                     color=color, layer=10)
+        scene.circle(("planet", body.name), r=size,
+                     at=(px, py)).fill(color).on(layer=10)

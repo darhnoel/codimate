@@ -93,8 +93,9 @@ def main():
         f = 0.5 * f * (1 + np.tanh(math.sqrt(2 / math.pi) * (f + 0.044715 * f ** 3)))
         x = x + f @ tensor(p + "mlp.c_proj.weight") + tensor(p + "mlp.c_proj.bias")
 
-    rows = lambda m: "\n".join(
-        "    (" + ", ".join(f"{v:.4f}" for v in r) + ")," for r in m)
+    def rows(m):
+        return "\n".join(
+            "    (" + ", ".join(f"{v:.4f}" for v in r) + ")," for r in m)
 
     print('"""Q and K from a real GPT-2, layer 4. Produced by extract.py."""')
     print(f"\nWORDS = {tuple(w.strip() for w in SENTENCE)!r}")

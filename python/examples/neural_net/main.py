@@ -76,7 +76,8 @@ def places(net):
     return {
         (layer, i): slot
         for layer, count in enumerate(net.layers)
-        for i, slot in enumerate(cm.column(count, gap=44, w=64, x=COLUMN_X[layer]))
+        for i, slot in enumerate(
+            cm.column(count, gap=44, size=64, at=cm.at(x=COLUMN_X[layer])))
     }
 
 
@@ -85,24 +86,25 @@ def network(frame):
     net = frame.state
     at = places(net)
 
-    scene.text("title", "Forward Pass", x=cm.width() / 2, y=80, size=40, color="grey")
+    scene.text("title", "Forward Pass", size=40, at=(cm.width() / 2, 80)).fill("grey")
 
     for src, dst in net.every_edge():
         live = (src, dst) in net.carrying
         scene.line(("edge", src, dst), start=at[src], end=at[dst],
-                   w=3.0 if live else 1.0, color=LIVE if live else DIM)
+                   w=3.0 if live else 1.0).fill(LIVE if live else DIM)
 
     for node, slot in at.items():
         charged = node in net.fired
-        scene.group(("neuron", node), slot).circle(
-            "body", r=30, color=CHARGED if charged else RESTING, layer=5)
+        scene.group(("neuron", node), slot).circle("body",
+                    r=30).fill(CHARGED if charged else RESTING).on(layer=5)
 
     # A pulse sits at the source end of its edge, then at the target end. It
     # exists in both moments, so the Engine makes it travel. Nothing here
     # mentions movement.
     for src, dst in net.carrying:
         here = at[src] if net.signal_at == "source" else at[dst]
-        scene.circle(("pulse", src, dst), x=here.x, y=here.y, r=9, color=LIVE, layer=9)
+        scene.circle(("pulse", src, dst), r=9,
+                     at=(here.x, here.y)).fill(LIVE).on(layer=9)
 
     return scene
 

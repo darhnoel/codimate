@@ -83,7 +83,8 @@ says nothing about falling:
 
 ```python
 for ball_id, level, rights in board.flying:
-    scene.circle(("ball", ball_id), x=slot_x(level, rights), y=level_y(level), r=9.0)
+    scene.circle(("ball", ball_id), r=9.0,
+                 at=(slot_x(level, rights), level_y(level)))
 ```
 
 The trace records where every ball *is* at each tick. Everything between ticks

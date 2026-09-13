@@ -418,6 +418,7 @@ dependencies = [
  "codimate-example-neural-net",
  "codimate-example-newton-laws",
  "codimate-example-swap-a-b",
+ "codimate-example-system-diagram",
  "codimate-example-word-appear",
  "codimate-export",
  "codimate-layout",
@@ -434,9 +435,19 @@ dependencies = [
  "codimate-core",
  "codimate-export",
  "codimate-layout",
- "codimate-math",
+ "codimate-reconcile",
  "codimate-render",
  "pyo3",
+]
+
+[[package]]
+name = "codimate-reconcile"
+version = "0.1.0"
+dependencies = [
+ "codimate-animation",
+ "codimate-core",
+ "codimate-math",
+ "codimate-render",
 ]
 
 [[package]]

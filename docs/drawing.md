@@ -5,7 +5,7 @@ molecule. And the first question is always the same: what can I actually draw?
 
 The answer is shorter than you might expect, and it's better to hear it now
 than to discover it halfway through building something. Codimate gives you four
-shapes. There is no triangle, no polygon, no arbitrary path and no image.
+shapes. There is no arbitrary Bezier path and no image.
 
 That sounds limiting, and for about ten minutes it is. Then you notice that a
 thick line is a rectangle at any angle, that two circles make a ring, and that
@@ -19,17 +19,23 @@ Every one of these exists on a `Scene` and on any `Group`.
 
 | | you give it | it draws |
 |---|---|---|
-| `scene.rect(name, w=, h=, radius=)` | a width and height | a filled rectangle, corners optionally rounded |
-| `scene.circle(name, r=)` | a radius | a filled circle |
+| `scene.rect(name, h=, w=)` | a width and height | a rectangle — `.round(r)` for the corners |
+| `scene.circle(name, r=)` | a radius | a circle |
 | `scene.text(name, content, size=)` | some text | centred text, no baselines |
 | `scene.line(name, start=, end=, w=)` | two points and a **thickness** | a stroked line |
 | `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
+| `scene.polygon(name, points)` | corners | a filled shape with straight edges |
+| `scene.arrow(name, start=, end=)` | two points | a shaft and a head, as one shape |
 | `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
+
+Each one hands back a **handle**, and the rest of what a shape looks like is
+said on that: `.fill(color, edge=, edge_w=)`, `.round(r)`, `.turn(deg)`,
+`.grow(scale)`, `.on(layer=, opacity=)`, `.write(reveal=, pen=)`.
 
 All of them also take `color`, `layer`, `opacity`, and
 [anchors](reference.md#anchors).
 
-**That is the complete list.** There is no triangle, no polygon, no arbitrary
+**That is the complete list.** There is no arbitrary
 path, no image, no gradient, and no rotation.
 
 ---
@@ -39,28 +45,31 @@ path, no image, no gradient, and no rotation.
 Every technique below comes from a working example in this repository, and none
 of them needed a shape that doesn't exist.
 
-**A ring — from two discs.** A circle can only be filled, so a band is a large
-disc with a smaller one of the background colour on top. Stack four and you get
-a ring with a dark edge on both sides.
+**A ring — from one stroked circle.** `.fill("none", edge=…)` outlines a shape
+without filling it, so a band is one circle at the mean radius, stroked at the
+band's width:
 
 ```python
-scene.circle("rim_edge", x=cx, y=cy, r=210, color="#8a5a12", layer=1)
-scene.circle("rim",      x=cx, y=cy, r=204, color="gold",    layer=2)
-scene.circle("hollow",   x=cx, y=cy, r=172, color="black",   layer=3)
+scene.circle("rim", r=188, at=(cx, cy)).fill("none", edge="gold", edge_w=32)
 ```
+
+`dharma_wheel` predates that and still stacks four discs — a big one with a
+smaller background-coloured one on top. It works, and it is four shapes and
+three layers where one will do.
 
 **An angled bar — from a thick line.** `line` strokes a path, so a short span
 at a large width draws a **rectangle at any angle**. This is how you get
 anything that is not axis-aligned:
 
 ```python
-scene.line("spoke", start=(x1, y1), end=(x2, y2), w=24.0, color="gold")
+scene.line("spoke", start=(x1, y1), end=(x2, y2), w=24.0).fill("gold")
 ```
 
-**A filled outline — one column at a time.** No polygon, so fill it the way a
-rasteriser would: a vertical line per column, from the top edge to the bottom.
-[`bernoulli_lift`](../python/examples/bernoulli_lift/) fills a whole aerofoil in
-140 of them.
+**A filled outline — one polygon.** `scene.polygon(name, points)` fills any
+closed run of corners, and `cm.ngon`/`cm.star` produce the regular ones.
+[`bernoulli_lift`](../python/examples/bernoulli_lift/) predates it and still
+fills its aerofoil with 140 vertical lines, one per column, the way a
+rasteriser would — correct, and no longer necessary.
 
 **A curve — from short straight pieces.** Twenty-four lines draw a smooth
 easing curve; the streamlines in `bernoulli_lift` are hundreds. At screen
@@ -77,7 +86,7 @@ turns a wheel this way; the car below turns its wheels.
 
 | you wanted | do this instead |
 |---|---|
-| a triangle or polygon | thick lines for the edges, or columns for a fill |
+| a triangle or polygon | `scene.polygon(name, points)`, or `cm.ngon` for a regular one |
 | a smooth curve | a run of short lines |
 | an image or sprite | not supported — build it from shapes |
 | `rotate=` on a group | emit the rotated positions; the Engine tweens them |
@@ -107,26 +116,28 @@ def drive(car):
 
 def view(frame):
     scene = cm.Scene()
-    scene.line("road", start=(0, ROAD), end=(1280, ROAD), w=3.0, color="#3a465e")
+    scene.line("road", start=(0, ROAD), end=(1280, ROAD), w=3.0).fill("#3a465e")
 
     x = frame.state["x"]
-    car = scene.group("car", x=x, bottom=ROAD)
+    car = scene.group("car", at=cm.at(x=x, bottom=ROAD))
 
-    car.rect("body", w=230, h=62, bottom=-16, color="#e05a4a")
-    car.rect("roof", w=126, h=50, bottom=-78, x=-14, color="#c94b3c")
-    car.rect("window", w=104, h=34, bottom=-86, x=-14, color="#2b3648")
+    car.rect("body", w=230, h=62, at=cm.at(bottom=-16)).fill("#e05a4a")
+    car.rect("roof", w=126, h=50, at=cm.at(x=-14, bottom=-78)).fill("#c94b3c")
+    car.rect("window", w=104, h=34, at=cm.at(x=-14, bottom=-86)).fill("#2b3648")
 
     turn = x / WHEEL_R                       # rolling without slipping
     for side, wx in (("rear", -70), ("front", 70)):
-        wheel = car.group(side, x=wx, bottom=0)
-        wheel.circle("tyre", r=WHEEL_R, y=-WHEEL_R, color="#222832", layer=2)
-        wheel.circle("hub", r=9, y=-WHEEL_R, color="#8b93a3", layer=4)
+        wheel = car.group(side, at=cm.at(x=wx, bottom=0))
+        wheel.circle("tyre", r=WHEEL_R, at=cm.at(y=-WHEEL_R)) \
+             .fill("#222832").on(layer=2)
+        wheel.circle("hub", r=9, at=cm.at(y=-WHEEL_R)) \
+             .fill("#8b93a3").on(layer=4)
         for spoke in range(3):
             a = turn + spoke * math.pi / 3
             dx, dy = WHEEL_R * 0.82 * math.cos(a), WHEEL_R * 0.82 * math.sin(a)
             wheel.line(("spoke", spoke),
                        start=(-dx, -WHEEL_R - dy), end=(dx, -WHEEL_R + dy),
-                       w=4.0, color="#8b93a3", layer=3)
+                       w=4.0).fill("#8b93a3").on(layer=3)
 
     return scene
 
@@ -144,13 +155,13 @@ cm.explain(trace=drive({"x": SPAN[0]}), view=view,
 
 ### Walking Through It
 
-**The car is a group, so it moves as one thing.** `scene.group("car", x=x,
-bottom=ROAD)` is placed once; the body, roof, window and both wheels are drawn
-on it and can never come apart.
+**The car is a group, so it moves as one thing.** `scene.group("car",
+at=cm.at(x=x, bottom=ROAD))` is placed once; the body, roof, window and both
+wheels are drawn on it and can never come apart.
 
 **Inside a group, `0` is the group's own point.** The group sits on the road,
-so `bottom=0` puts the wheels on the road and `bottom=-16` lifts the body clear
-of it. Negative is upwards.
+so `cm.at(bottom=0)` puts the wheels on the road and `cm.at(bottom=-16)` lifts
+the body clear of it. Negative is upwards.
 
 **Groups nest.** Each wheel is a group inside the car, so a spoke is placed
 relative to its own wheel rather than to the road.
@@ -171,9 +182,9 @@ before `tyre`, so the tyre was painted over both of them. When one thing has to
 cover another, say so:
 
 ```python
-wheel.circle("tyre", r=WHEEL_R, y=-WHEEL_R, layer=2)
-wheel.line(("spoke", i), ..., layer=3)
-wheel.circle("hub", r=9, y=-WHEEL_R, layer=4)
+wheel.circle("tyre", r=WHEEL_R, at=cm.at(y=-WHEEL_R)).on(layer=2)
+wheel.line(("spoke", i), ...).on(layer=3)
+wheel.circle("hub", r=9, at=cm.at(y=-WHEEL_R)).on(layer=4)
 ```
 
 ---

@@ -87,13 +87,13 @@ def wheel_view(frame):
 
     wheel.draw(scene, CENTRE, state.angle, SPOKES)
 
-    scene.text("title", "ធម្មចក្រ", x=CENTRE[0], y=62, size=44, color="#e8eef7")
-    scene.text("subtitle", "អរិយអដ្ឋង្គិកមគ្គ",
-               x=CENTRE[0], y=110, size=24, color="grey")
+    scene.text("title", "ធម្មចក្រ", size=44, at=(CENTRE[0], 62)).fill("#e8eef7")
+    scene.text("subtitle", "អរិយអដ្ឋង្គិកមគ្គ", size=24,
+               at=(CENTRE[0], 110)).fill("grey")
 
     factor, meaning, _training = PATH[leading]
-    scene.text("factor", factor, x=CENTRE[0], y=628, size=36, color=wheel.GOLD_LIT)
-    scene.text("meaning", meaning, x=CENTRE[0], y=672, size=24, color="grey")
+    scene.text("factor", factor, size=36, at=(CENTRE[0], 628)).fill(wheel.GOLD_LIT)
+    scene.text("meaning", meaning, size=24, at=(CENTRE[0], 672)).fill("grey")
 
     return scene
 

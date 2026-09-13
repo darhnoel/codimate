@@ -1,0 +1,59 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One deployment at a time, and a push that lands mid-deploy waits rather than
+# cancelling it — a half-published site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # No Rust and no maturin: every `_codimate` import in the package is
+      # inside the function that uses it, so pdoc can read the docstrings from
+      # a bare checkout. If that ever stops being true this step fails loudly
+      # rather than publishing a half-empty reference.
+      - name: Install the doc toolchain
+        run: pip install pdoc markdown pygments
+
+      - name: Build the site
+        run: python docs/build_site.py
+
+      - name: Check nothing links into a void
+        run: python docs/check_links.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  # Only what is on main gets published; a pull request builds and is checked,
+  # which is the point of running this on pull requests at all.
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

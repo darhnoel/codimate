@@ -25,3 +25,23 @@ manifest-path = "crates/codimate-py/Cargo.toml"
 python-source = "python"
 module-name = "codimate._codimate"
 features = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 88
+# `weights.py` is a table of numbers taken from a real model, one row per line.
+# Wrapping it would make it unreadable, and it is not hand-maintained.
+extend-exclude = ["docs/api"]
+
+[tool.ruff.lint]
+# PEP 8 and pyflakes, plus the two rules this project learned the hard way:
+#   PLR0913 — more than five arguments. A shape used to take eighteen.
+# No "I": the tests import `support` first, on purpose, to put the package
+# on the path — sorting that import away breaks them.
+select = ["E", "W", "F", "PLR0913"]
+ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"python/examples/attention/weights.py" = ["E501"]
+
+[tool.ruff.lint.pylint]
+max-args = 5

@@ -146,7 +146,8 @@ def explain(walk):
         # A caption may be a tuple of lines. Each is narrated in turn over the
         # same picture, the way a subtitle continues — rather than crammed onto
         # one line, which would run past the frame on the longer ones.
-        lines = (walk.caption,) if isinstance(walk.caption, str) else tuple(walk.caption)
+        one_line = isinstance(walk.caption, str)
+        lines = (walk.caption,) if one_line else tuple(walk.caption)
 
         # Shapes cross-fade over whatever segment they enter or leave in, so a
         # caption that changes during a 0.8s move fades for 0.8s. The way to
@@ -296,8 +297,13 @@ def cue_sheet():
 cm.explain(trace=story, view=attention_view, timing=TIMING).render(
     "results/attention.mp4", fps=60, scale=1.5)
 
+# `wrote <path>` on its own line: that is the contract `test_examples` reads
+# to find what was produced, so anything else goes on a line of its own.
+print("wrote results/attention.mp4")
+
 if CLIP:
-    (AUDIO / "cues.json").write_text(json.dumps(cue_sheet(), indent=2))
-    print(f"wrote results/attention.mp4 and {len(cue_sheet())} audio cues")
+    cues = cue_sheet()
+    (AUDIO / "cues.json").write_text(json.dumps(cues, indent=2))
+    print(f"  {len(cues)} audio cues -> run tools/mix.py to lay the voice on")
 else:
-    print("wrote results/attention.mp4 (no narration — see tools/narrate.py)")
+    print("  no narration yet — see tools/narrate.py")
