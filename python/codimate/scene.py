@@ -23,6 +23,7 @@ class _Shape:
     h: float = 0.0
     r: float = 0.0
     color: str = "white"
+    points: tuple = ()
     edge: str = "white"
     edge_w: float = 0.0
     text: str = ""
@@ -292,6 +293,103 @@ class Group:
             size=size,
             r=reveal,
             w=pen,
+            color=color,
+            layer=layer,
+            opacity=opacity,
+        )
+
+    def polygon(
+        self,
+        key: Hashable,
+        points,
+        *,
+        closed: bool = True,
+        color: str = "white",
+        edge: str = "white",
+        edge_w: float = 0.0,
+        layer: int = 0,
+        opacity: float = 1.0,
+    ) -> "Group":
+        """A shape with corners: a triangle, a wedge, an arrow head, a wing.
+
+            scene.polygon("roof", [(0, 0), (60, -40), (120, 0)], color="brown")
+            scene.polygon("tri", cm.ngon(3, r=50, at=(640, 360)))
+
+        ``points`` is a sequence of ``(x, y)`` in canvas coordinates. Closed by
+        default, so it is filled; ``closed=False`` leaves an open outline, which
+        only shows if you give it an ``edge``.
+
+        Two polygons only tween if they have the same number of corners —
+        interpolating a triangle into a pentagon has no answer worth inventing,
+        so the later shape stands for the whole beat instead. To make one morph,
+        keep the corner count fixed and move the corners.
+        """
+        flat, xs, ys = [], [], []
+        for x, y in points:
+            flat += [float(x), float(y)]
+            xs.append(float(x))
+            ys.append(float(y))
+        if not flat:
+            raise ValueError(f"polygon {key!r} has no points")
+
+        return self._place(
+            key,
+            "polygon",
+            # The anchor is the middle of the corners, so the whole shape
+            # travels as one thing when it moves.
+            x=(min(xs) + max(xs)) / 2,
+            y=(min(ys) + max(ys)) / 2,
+            points=tuple(flat),
+            w=1.0 if closed else 0.0,
+            color=color,
+            edge=edge,
+            edge_w=edge_w,
+            layer=layer,
+            opacity=opacity,
+        )
+
+    def arrow(
+        self,
+        key: Hashable,
+        *,
+        start,
+        end,
+        w: float = 4.0,
+        head: float = 16.0,
+        color: str = "white",
+        layer: int = 0,
+        opacity: float = 1.0,
+    ) -> "Group":
+        """An arrow from one place to another, as a single filled shape.
+
+            scene.arrow("flow", start=at["a"], end=at["b"])
+
+        One shape rather than a line plus a separate head, so it carries one
+        name and travels as one thing. ``w`` is the shaft thickness, ``head``
+        the length of the point.
+        """
+        import math
+
+        (x0, y0), (x1, y1) = _point(start), _point(end)
+        dx, dy = x1 - x0, y1 - y0
+        span = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / span, dy / span
+        px, py = -uy, ux                       # unit normal, for the thickness
+        head = min(head, span)
+        bx, by = x1 - ux * head, y1 - uy * head   # where the head meets the shaft
+        half, wing = w / 2, max(head * 0.55, w)
+
+        return self.polygon(
+            key,
+            [
+                (x0 + px * half, y0 + py * half),
+                (bx + px * half, by + py * half),
+                (bx + px * wing, by + py * wing),
+                (x1, y1),
+                (bx - px * wing, by - py * wing),
+                (bx - px * half, by - py * half),
+                (x0 - px * half, y0 - py * half),
+            ],
             color=color,
             layer=layer,
             opacity=opacity,

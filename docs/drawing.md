@@ -5,7 +5,7 @@ molecule. And the first question is always the same: what can I actually draw?
 
 The answer is shorter than you might expect, and it's better to hear it now
 than to discover it halfway through building something. Codimate gives you four
-shapes. There is no triangle, no polygon, no arbitrary path and no image.
+shapes. There is no arbitrary Bezier path and no image.
 
 That sounds limiting, and for about ten minutes it is. Then you notice that a
 thick line is a rectangle at any angle, that two circles make a ring, and that
@@ -24,12 +24,14 @@ Every one of these exists on a `Scene` and on any `Group`.
 | `scene.text(name, content, size=)` | some text | centred text, no baselines |
 | `scene.line(name, start=, end=, w=)` | two points and a **thickness** | a stroked line |
 | `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
+| `scene.polygon(name, points)` | corners | a filled shape with straight edges |
+| `scene.arrow(name, start=, end=)` | two points | a shaft and a head, as one shape |
 | `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
 
 All of them also take `color`, `layer`, `opacity`, and
 [anchors](reference.md#anchors).
 
-**That is the complete list.** There is no triangle, no polygon, no arbitrary
+**That is the complete list.** There is no arbitrary
 path, no image, no gradient, and no rotation.
 
 ---
@@ -77,7 +79,7 @@ turns a wheel this way; the car below turns its wheels.
 
 | you wanted | do this instead |
 |---|---|
-| a triangle or polygon | thick lines for the edges, or columns for a fill |
+| a triangle or polygon | `scene.polygon(name, points)`, or `cm.ngon` for a regular one |
 | a smooth curve | a run of short lines |
 | an image or sprite | not supported — build it from shapes |
 | `rotate=` on a group | emit the rotated positions; the Engine tweens them |

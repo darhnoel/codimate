@@ -92,6 +92,8 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 scene.rect(name, *, h, w=None, radius=0.0, color="white", edge="white", edge_w=0.0, layer=0, opacity=1.0, <anchors>)
 scene.circle(name, *, r, color="white", layer=0, opacity=1.0, <anchors>)
 scene.text(name, content, *, size=16.0, color="white", layer=10, opacity=1.0, <anchors>)
+scene.polygon(name, points, *, closed=True, color="white", edge=, edge_w=, layer=0, opacity=1.0)
+scene.arrow(name, *, start, end, w=4.0, head=16.0, color="white", layer=0, opacity=1.0)
 scene.line(name, *, start, end, w=2.0, color="white", layer=0, opacity=1.0)
 scene.formula(name, latex, *, size=16.0, reveal=1.0, pen=0.0, color="white", layer=10, opacity=1.0, <anchors>)
 scene.group(name, slot=None, *, anchor=None, w=None, <anchors>) -> Group
@@ -99,7 +101,16 @@ scene.focus(*names, pad=40.0, least=240.0)      # what the camera looks at
 scene.overlay() -> Group                        # what the camera does not move
 ```
 
-`start` and `end` on a line may each be a `Slot` or a plain `(x, y)`.
+`start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
+
+`polygon` takes a sequence of `(x, y)` — a triangle, a wedge, a wing. `cm.ngon`
+and `cm.star` produce the corners of the regular ones, so you rarely compute
+them. An `arrow` is a single polygon rather than a line with a head stuck on,
+so it carries one name and travels as one thing.
+
+Two polygons only tween if they have the same number of corners; otherwise the
+later shape stands for the whole beat. To morph one, keep the count fixed and
+move the corners.
 
 `focus` aims the camera by name, so you never write a camera coordinate: the
 Engine knows where everything is, works out the framing, and the usual tween

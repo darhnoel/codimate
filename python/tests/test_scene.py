@@ -94,7 +94,7 @@ def test_every_shape_carries_every_field():
     shape = cm.Scene().rect("bar", x=0, y=0, w=1, h=1)._payload()[0]
     assert set(shape) == {
         "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
-        "color", "edge", "edge_w", "text", "size", "layer", "opacity",
+        "color", "points", "edge", "edge_w", "text", "size", "layer", "opacity",
     }, sorted(shape)
 
 
@@ -132,6 +132,40 @@ def test_a_formula_carries_how_much_of_it_shows():
 def test_a_drawn_formula_carries_its_pen():
     shape = cm.Scene().formula("eq", "x", x=0, y=0, pen=2.0)._payload()[0]
     assert shape["w"] == 2.0, shape
+
+
+def test_a_polygon_carries_its_corners_flat():
+    """`points` is the one payload field that is not a single number (ADR 0010),
+    so it is worth pinning that it stays flat and in order."""
+    scene = cm.Scene()
+    scene.polygon("tri", [(0, 0), (10, 0), (5, 8)])
+    shape = scene._payload()[0]
+    assert shape["kind"] == "polygon"
+    assert shape["points"] == (0.0, 0.0, 10.0, 0.0, 5.0, 8.0), shape["points"]
+    # anchored at the middle of its corners, so the whole shape travels as one
+    assert (shape["x"], shape["y"]) == (5.0, 4.0), shape
+
+
+def test_an_arrow_is_one_shape_not_two():
+    """A line plus a separate head would be two names, and they could drift
+    apart. One polygon travels as one thing."""
+    scene = cm.Scene()
+    scene.arrow("a", start=(0, 0), end=(100, 0))
+    payload = scene._payload()
+    assert len(payload) == 1 and payload[0]["kind"] == "polygon", payload
+
+
+def test_ngon_and_star_return_points_rather_than_drawing():
+    """They compose: the corners can be shifted, measured, or handed on."""
+    assert len(cm.ngon(3, r=10)) == 3
+    assert len(cm.ngon(6, r=10)) == 6
+    assert len(cm.star(5, r=10)) == 10          # a point and a valley each
+    try:
+        cm.ngon(2, r=10)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("two sides is not a polygon")
 
 
 def test_a_shape_can_be_filled_and_outlined_at_once():

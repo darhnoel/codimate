@@ -68,6 +68,9 @@ pub struct Shape {
     /// be two stacked rectangles.
     pub edge: String,
     pub edge_w: f32,
+    /// A polygon's corners, flat: `[x0, y0, x1, y1, ...]`. The one payload
+    /// field that is not a single number — see ADR 0010.
+    pub points: Vec<f32>,
     pub text: String,
     pub size: f32,
     pub layer: i32,
@@ -76,7 +79,7 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 5] = ["rect", "circle", "text", "line", "formula"];
+pub const KINDS: [&str; 6] = ["rect", "circle", "text", "line", "formula", "polygon"];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
 ///
@@ -112,6 +115,36 @@ fn round_rect_path(s: &Shape) -> Path {
     }
 }
 
+/// A polygon in local space, relative to its anchor.
+///
+/// `w` carries whether it is closed — one more reading of a float rather than a
+/// boolean in the payload, consistent with `r` and `size`.
+fn polygon_path(s: &Shape) -> Path {
+    let corners: Vec<Vec2> = s
+        .points
+        .chunks_exact(2)
+        .map(|p| Vec2::new(p[0] - s.x, p[1] - s.y))
+        .collect();
+
+    let mut segments = Vec::new();
+    if let Some(&first) = corners.first() {
+        segments.push(Segment::MoveTo(first));
+        for pair in corners.windows(2) {
+            segments.push(Segment::Line(pair[0], pair[1]));
+        }
+        if s.w > 0.0 {
+            if let Some(&last) = corners.last() {
+                segments.push(Segment::Line(last, first));
+            }
+        }
+    }
+
+    Path {
+        segments,
+        closed: s.w > 0.0,
+    }
+}
+
 /// A line in local space: from the anchor to the far end.
 fn line_path(s: &Shape) -> Path {
     Path {
@@ -136,6 +169,18 @@ impl Shape {
                 align: TextAlign::Center,
             },
             "line" => Geometry::path(tween(line_path(self), line_path(other))),
+
+            // Two polygons only tween if they have the same number of corners;
+            // interpolating a triangle into a pentagon has no answer worth
+            // inventing. Otherwise the later shape stands for the whole
+            // segment, exactly as text does when its content changes.
+            "polygon" => {
+                if self.points.len() == other.points.len() {
+                    Geometry::path(tween(polygon_path(self), polygon_path(other)))
+                } else {
+                    Geometry::path(polygon_path(other).into_animated())
+                }
+            }
 
             // A formula is many glyph outlines, so it cannot be one Geometry.
             // `primitives()` expands it; this arm is never reached.
@@ -796,6 +841,19 @@ fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
         "circle" => (shape.r * 2.0, shape.r * 2.0),
         "text" => codimate_render::measure_text(&shape.text, shape.size),
         "formula" => formula_size(&shape.text, shape.size).unwrap_or((0.0, 0.0)),
+        "polygon" => {
+            let xs: Vec<f32> = shape.points.iter().step_by(2).copied().collect();
+            let ys: Vec<f32> = shape.points.iter().skip(1).step_by(2).copied().collect();
+            if xs.is_empty() {
+                return (shape.x, shape.y, shape.x, shape.y);
+            }
+            return (
+                xs.iter().cloned().fold(f32::MAX, f32::min),
+                ys.iter().cloned().fold(f32::MAX, f32::min),
+                xs.iter().cloned().fold(f32::MIN, f32::max),
+                ys.iter().cloned().fold(f32::MIN, f32::max),
+            );
+        }
         "line" => {
             let (x0, x1) = (shape.x.min(shape.x2), shape.x.max(shape.x2));
             let (y0, y1) = (shape.y.min(shape.y2), shape.y.max(shape.y2));
@@ -877,6 +935,13 @@ fn framed(shapes: Vec<Shape>, focus: Option<&Focus>, viewport: (f32, f32)) -> Re
             s.y = (s.y - cy) * zoom + sy;
             s.x2 = (s.x2 - cx) * zoom + sx;
             s.y2 = (s.y2 - cy) * zoom + sy;
+            for (i, value) in s.points.iter_mut().enumerate() {
+                *value = if i % 2 == 0 {
+                    (*value - cx) * zoom + sx
+                } else {
+                    (*value - cy) * zoom + sy
+                };
+            }
             s.w *= zoom;
             s.h *= zoom;
             s.r *= zoom;

@@ -20,7 +20,8 @@ encoding — happens in Rust (ADR 0008).
 
 ## What a moment looks like
 
-- `Scene` — one picture: `rect`, `circle`, `text`, `line`, `formula`, `group`
+- `Scene` — one picture: `rect`, `circle`, `polygon`, `arrow`, `text`, `line`, `formula`
+- `ngon`, `star` — corners for a polygon, so you do not compute them
 - `Group` — several shapes that move together
 
 ## Where things sit
@@ -44,7 +45,8 @@ encoding — happens in Rust (ADR 0008).
 from __future__ import annotations
 
 from .explain import Explanation, Rule, Timing, ease, explain
-from .layout import Slot, canvas, column, height, measure, measure_math, row, width
+from .layout import (Slot, canvas, column, height, measure, measure_math, ngon, row,
+                     star, width)
 from .scene import Group, Scene
 from .trace import Event, Frame, Item, Trace, emit, items, trace
 
@@ -69,6 +71,8 @@ __all__ = [
     "Slot",
     "row",
     "column",
+    "ngon",
+    "star",
     # putting it together
     "Rule",
     "Timing",
