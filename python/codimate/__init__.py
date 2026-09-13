@@ -23,6 +23,7 @@ encoding — happens in Rust (ADR 0008).
 - `Scene` — one picture: `rect`, `circle`, `polygon`, `arrow`, `text`, `line`, `formula`
 - `ngon`, `star` — corners for a polygon, so you do not compute them
 - `Group` — several shapes that move together
+- every shape takes `color`/`edge`, `scale`, `rotate`, `pivot`, `layer`, `opacity`
 
 ## Where things sit
 

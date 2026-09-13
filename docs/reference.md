@@ -118,6 +118,20 @@ animates the move. `least` is the smallest thing it will fill the frame with.
 Anything drawn on an `overlay` stays where it is put — titles and captions
 belong there, since a caption that zooms with the diagram ends up off the edge.
 
+Every drawable shape also takes `scale`, `rotate` and `pivot`:
+
+```python
+scene.rect("card", w=200, h=120, rotate=12)          # degrees
+scene.polygon("tri", cm.ngon(3, r=60), scale=1.8)    # a number, or (sx, sy)
+scene.rect("bar", w=200, h=20, rotate=30, pivot="left")   # turns about its left edge
+```
+
+They tween like everything else, so a shape grows or turns between two moments
+without you saying how. `pivot` is `center`, `top`, `bottom`, `left` or `right`.
+
+**`rotate` does not turn text.** Its position moves, but the glyphs stay
+upright — rotating them is renderer work that has not been done.
+
 `color` fills a shape and `edge`/`edge_w` outline it — both at once, so a
 bordered box is one rectangle rather than two stacked ones. `color="none"`
 leaves it unfilled, which is how you draw a ring. Lines are drawn rather than

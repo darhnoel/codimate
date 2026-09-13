@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use codimate_animation::Playable;
 use codimate_core::{
-    scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry, IntoAnimated, Path,
+    scene::AnchorKind, scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry, IntoAnimated, Path,
     Primitive, Scene, Segment, Style, TextAlign, Vec2,
 };
 
@@ -75,6 +75,12 @@ pub struct Shape {
     pub size: f32,
     pub layer: i32,
     pub opacity: f32,
+    /// The rest of `Transform`, which the surface used to leave unreachable.
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub rotate: f32,
+    /// What the shape turns and grows around: center, top, bottom, left, right.
+    pub pivot: String,
 }
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
@@ -113,6 +119,22 @@ fn round_rect_path(s: &Shape) -> Path {
         segments,
         closed: true,
     }
+}
+
+/// What a shape turns and grows around.
+fn pivot_of(name: &str) -> Result<AnchorKind> {
+    Ok(match name {
+        "center" | "" => AnchorKind::Center,
+        "top" => AnchorKind::Top,
+        "bottom" => AnchorKind::Bottom,
+        "left" => AnchorKind::Left,
+        "right" => AnchorKind::Right,
+        other => {
+            return Err(Error(format!(
+                "unknown pivot {other:?} — use center, top, bottom, left or right"
+            )))
+        }
+    })
 }
 
 /// A polygon in local space, relative to its anchor.
@@ -652,6 +674,15 @@ fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primi
     let style = tween(before.style()?, after.style()?);
     let opacity = tween(before.opacity, after.opacity);
 
+    // The rest of the Transform. Tweened like everything else, so a shape can
+    // grow or turn between two moments without the author saying how.
+    let scale = tween(
+        Vec2::new(before.scale_x, before.scale_y),
+        Vec2::new(after.scale_x, after.scale_y),
+    );
+    let spin = tween(before.rotate, after.rotate);
+    let pivot = pivot_of(&after.pivot)?;
+
     if before.kind == "formula" {
         // `before`'s LaTeX, matching how text takes its value from the start of
         // the segment. An author who wants a formula read before it changes
@@ -734,6 +765,9 @@ fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primi
 
     Ok(vec![Primitive::new(before.geometry(after))
         .pos(path)
+        .scale_xy(scale)
+        .rotate(spin)
+        .pivot(pivot)
         .style(style)
         .opacity(opacity)])
 }

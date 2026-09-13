@@ -30,6 +30,39 @@ class _Shape:
     size: float = 16.0
     layer: int = 0
     opacity: float = 1.0
+    scale_x: float = 1.0
+    scale_y: float = 1.0
+    rotate: float = 0.0
+    pivot: str = "center"
+
+
+PIVOTS = ("center", "top", "bottom", "left", "right")
+
+
+def _look(color, edge, edge_w, layer, opacity, scale, rotate, pivot) -> dict:
+    """The fields every drawable shape carries, resolved in one place.
+
+    Five shape methods used to repeat this pass-through, so adding one property
+    meant five near-identical edits and a chance to miss one. The signatures
+    stay explicit — they are what the generated reference and editor completion
+    read — but the body lives here.
+
+    ``scale`` takes a number for both axes, or ``(sx, sy)`` to stretch.
+    """
+    if pivot not in PIVOTS:
+        raise ValueError(f"unknown pivot {pivot!r} — use one of {', '.join(PIVOTS)}")
+    sx, sy = (scale, scale) if isinstance(scale, (int, float)) else scale
+    return {
+        "color": color,
+        "edge": edge,
+        "edge_w": float(edge_w),
+        "layer": int(layer),
+        "opacity": float(opacity),
+        "scale_x": float(sx),
+        "scale_y": float(sy),
+        "rotate": float(rotate),
+        "pivot": pivot,
+    }
 
 
 def _key(path) -> str:
@@ -141,6 +174,9 @@ class Group:
         radius: float = 0.0,
         edge: str = "white",
         edge_w: float = 0.0,
+        scale=1.0,
+        rotate: float = 0.0,
+        pivot: str = "center",
         color: str = "white",
         layer: int = 0,
         opacity: float = 1.0,
@@ -156,16 +192,13 @@ class Group:
         return self._place(
             key,
             "rect",
-            edge=edge,
-            edge_w=edge_w,
             x=_resolve(x, left, right, w / 2, ("x", "left", "right"), self._child_default),
             y=_resolve(y, top, bottom, h / 2, ("y", "top", "bottom"), self._child_default),
             w=w,
             h=h,
-            color=color,
             r=radius,
-            layer=layer,
-            opacity=opacity,
+            **_look(color, edge, edge_w, layer, opacity,
+                    scale, rotate, pivot),
         )
 
     def circle(
@@ -182,6 +215,9 @@ class Group:
         bottom: float = None,
         edge: str = "white",
         edge_w: float = 0.0,
+        scale=1.0,
+        rotate: float = 0.0,
+        pivot: str = "center",
         color: str = "white",
         layer: int = 0,
         opacity: float = 1.0,
@@ -191,14 +227,11 @@ class Group:
         return self._place(
             key,
             "circle",
-            edge=edge,
-            edge_w=edge_w,
             x=_resolve(x, left, right, r, ("x", "left", "right"), self._child_default),
             y=_resolve(y, top, bottom, r, ("y", "top", "bottom"), self._child_default),
             r=r,
-            color=color,
-            layer=layer,
-            opacity=opacity,
+            **_look(color, edge, edge_w, layer, opacity,
+                    scale, rotate, pivot),
         )
 
     def text(
@@ -214,6 +247,9 @@ class Group:
         size: float = 16.0,
         edge: str = "white",
         edge_w: float = 0.0,
+        scale=1.0,
+        rotate: float = 0.0,
+        pivot: str = "center",
         color: str = "white",
         layer: int = 10,
         opacity: float = 1.0,
@@ -223,15 +259,12 @@ class Group:
         return self._place(
             key,
             "text",
-            edge=edge,
-            edge_w=edge_w,
             x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
             y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
             text=str(content),
             size=size,
-            color=color,
-            layer=layer,
-            opacity=opacity,
+            **_look(color, edge, edge_w, layer, opacity,
+                    scale, rotate, pivot),
         )
 
     def formula(
@@ -249,6 +282,9 @@ class Group:
         pen: float = 0.0,
         edge: str = "white",
         edge_w: float = 0.0,
+        scale=1.0,
+        rotate: float = 0.0,
+        pivot: str = "center",
         color: str = "white",
         layer: int = 10,
         opacity: float = 1.0,
@@ -285,17 +321,14 @@ class Group:
         return self._place(
             key,
             "formula",
-            edge=edge,
-            edge_w=edge_w,
             x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
             y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
             text=latex,
             size=size,
             r=reveal,
             w=pen,
-            color=color,
-            layer=layer,
-            opacity=opacity,
+            **_look(color, edge, edge_w, layer, opacity,
+                    scale, rotate, pivot),
         )
 
     def polygon(
@@ -304,6 +337,9 @@ class Group:
         points,
         *,
         closed: bool = True,
+        scale=1.0,
+        rotate: float = 0.0,
+        pivot: str = "center",
         color: str = "white",
         edge: str = "white",
         edge_w: float = 0.0,
@@ -341,11 +377,8 @@ class Group:
             y=(min(ys) + max(ys)) / 2,
             points=tuple(flat),
             w=1.0 if closed else 0.0,
-            color=color,
-            edge=edge,
-            edge_w=edge_w,
-            layer=layer,
-            opacity=opacity,
+            **_look(color, edge, edge_w, layer, opacity,
+                    scale, rotate, pivot),
         )
 
     def arrow(

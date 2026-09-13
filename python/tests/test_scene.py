@@ -95,6 +95,7 @@ def test_every_shape_carries_every_field():
     assert set(shape) == {
         "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
         "color", "points", "edge", "edge_w", "text", "size", "layer", "opacity",
+        "scale_x", "scale_y", "rotate", "pivot",
     }, sorted(shape)
 
 
@@ -132,6 +133,34 @@ def test_a_formula_carries_how_much_of_it_shows():
 def test_a_drawn_formula_carries_its_pen():
     shape = cm.Scene().formula("eq", "x", x=0, y=0, pen=2.0)._payload()[0]
     assert shape["w"] == 2.0, shape
+
+
+def test_every_drawable_shape_shares_the_same_look():
+    """`scale`, `rotate` and `pivot` are the rest of the engine's Transform,
+    which the surface used to leave unreachable. They go through one helper, so
+    a new property is one edit rather than five."""
+    for draw in (lambda s: s.rect("k", x=0, y=0, w=4, h=4, scale=2.0, rotate=30, pivot="top"),
+                 lambda s: s.circle("k", x=0, y=0, r=4, scale=2.0, rotate=30, pivot="top"),
+                 lambda s: s.text("k", "hi", x=0, y=0, scale=2.0, rotate=30, pivot="top"),
+                 lambda s: s.polygon("k", [(0, 0), (4, 0), (2, 3)],
+                                     scale=2.0, rotate=30, pivot="top")):
+        scene = cm.Scene()
+        draw(scene)
+        shape = scene._payload()[0]
+        assert (shape["scale_x"], shape["rotate"], shape["pivot"]) == (2.0, 30.0, "top"), shape
+
+    # a number scales both axes; a pair stretches
+    stretched = cm.Scene()
+    stretched.rect("k", x=0, y=0, w=4, h=4, scale=(3.0, 0.5))
+    got = stretched._payload()[0]
+    assert (got["scale_x"], got["scale_y"]) == (3.0, 0.5), got
+
+    try:
+        cm.Scene().rect("k", x=0, y=0, w=4, h=4, pivot="middle")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("an unknown pivot should not reach the Engine")
 
 
 def test_a_polygon_carries_its_corners_flat():

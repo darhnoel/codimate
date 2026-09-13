@@ -44,6 +44,10 @@ struct PyShape {
     size: f32,
     layer: i32,
     opacity: f32,
+    scale_x: f32,
+    scale_y: f32,
+    rotate: f32,
+    pivot: String,
 }
 
 impl From<PyShape> for Shape {
@@ -66,6 +70,10 @@ impl From<PyShape> for Shape {
             size: s.size,
             layer: s.layer,
             opacity: s.opacity,
+            scale_x: s.scale_x,
+            scale_y: s.scale_y,
+            rotate: s.rotate,
+            pivot: s.pivot,
         }
     }
 }
