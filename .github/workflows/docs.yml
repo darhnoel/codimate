@@ -25,6 +25,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
       # No Rust and no maturin: every `_codimate` import in the package is
       # inside the function that uses it, so pdoc can read the docstrings from
       # a bare checkout. If that ever stops being true this step fails loudly
