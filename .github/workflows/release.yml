@@ -120,7 +120,10 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
           path: dist
-      - uses: PyO3/maturin-action@v1
+      # Not `maturin upload`: it authenticates with a username/password or
+      # MATURIN_PYPI_TOKEN and has no OIDC support, so it would ignore the
+      # id-token permission above and fail for want of credentials. This is
+      # the action that actually exchanges the OIDC token with PyPI.
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
+          skip-existing: true
