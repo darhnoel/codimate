@@ -18,6 +18,17 @@ Resolution is a render argument (`scale=1.5`), not something the views know abou
 
 ## Start here
 
+**[`moving_ball/`](moving_ball/)** — one name, two positions.
+
+Python changes one number and emits one moment. The same circle name appears
+before and after, so Codimate derives the movement. This is the smallest
+example of the idea every other example builds on.
+
+**[`bouncing_ball/`](bouncing_ball/)** — gravity decides the motion.
+
+Python updates velocity and height at a fixed time step, then reverses velocity
+at the floor. Codimate connects the sampled positions.
+
 **[`bubble_sort/`](bubble_sort/)** — things that **move**.
 
 Bars slide when they swap. Names follow the *thing*, so `cm.items()` gives each
