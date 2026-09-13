@@ -445,6 +445,7 @@ dependencies = [
  "codimate-animation",
  "codimate-core",
  "codimate-math",
+ "codimate-render",
 ]
 
 [[package]]

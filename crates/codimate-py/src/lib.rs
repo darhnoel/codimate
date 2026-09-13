@@ -14,7 +14,7 @@
 
 use codimate_export::{export_mp4, ExportConfig};
 use codimate_layout::Viewport;
-use codimate_reconcile::{self as reconcile, Shape};
+use codimate_reconcile::{self as reconcile, Focus, Shape};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -64,6 +64,27 @@ impl From<PyShape> for Shape {
     }
 }
 
+/// What one Scene's camera is aimed at, as Python sends it.
+#[derive(FromPyObject)]
+#[pyo3(from_item_all)]
+struct PyFocus {
+    names: Vec<String>,
+    pad: f32,
+    min_size: f32,
+    fixed: Vec<String>,
+}
+
+impl From<PyFocus> for Focus {
+    fn from(f: PyFocus) -> Self {
+        Focus {
+            names: f.names,
+            pad: f.pad,
+            min_size: f.min_size,
+            fixed: f.fixed,
+        }
+    }
+}
+
 /// Authoring mistakes reach Python as `ValueError`, which is what they are.
 fn py(error: reconcile::Error) -> PyErr {
     PyValueError::new_err(error.0)
@@ -74,10 +95,11 @@ fn py(error: reconcile::Error) -> PyErr {
 /// `scenes` has one entry per Trace Event plus the opening Scene, so it is
 /// always `durations.len() + 1` long.
 #[pyfunction]
-#[pyo3(signature = (scenes, rules, durations, output, width=1280.0, height=720.0, fps=30.0, scale=1.0))]
+#[pyo3(signature = (scenes, cameras, rules, durations, output, width=1280.0, height=720.0, fps=30.0, scale=1.0))]
 #[allow(clippy::too_many_arguments)]
 fn render(
     scenes: Vec<Vec<PyShape>>,
+    cameras: Vec<Option<PyFocus>>,
     rules: Vec<reconcile::Rule>,
     durations: Vec<f32>,
     output: String,
@@ -95,7 +117,10 @@ fn render(
         .map(|scene| scene.into_iter().map(Shape::from).collect())
         .collect();
 
-    let explanation = reconcile::explanation(&scenes, &rules, &durations).map_err(py)?;
+    let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
+    let explanation =
+        reconcile::explanation(&scenes, &cameras, &rules, &durations, (width, height))
+            .map_err(py)?;
 
     // `pixel_scale` rasterizes at the larger size rather than upscaling
     // afterwards, so 1080p is genuinely drawn at 1080p.

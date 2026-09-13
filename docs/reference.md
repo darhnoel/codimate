@@ -95,9 +95,17 @@ scene.text(name, content, *, size=16.0, color="white", layer=10, opacity=1.0, <a
 scene.line(name, *, start, end, w=2.0, color="white", layer=0, opacity=1.0)
 scene.formula(name, latex, *, size=16.0, reveal=1.0, pen=0.0, color="white", layer=10, opacity=1.0, <anchors>)
 scene.group(name, slot=None, *, anchor=None, w=None, <anchors>) -> Group
+scene.focus(*names, pad=40.0, least=240.0)      # what the camera looks at
+scene.overlay() -> Group                        # what the camera does not move
 ```
 
 `start` and `end` on a line may each be a `Slot` or a plain `(x, y)`.
+
+`focus` aims the camera by name, so you never write a camera coordinate: the
+Engine knows where everything is, works out the framing, and the usual tween
+animates the move. `least` is the smallest thing it will fill the frame with.
+Anything drawn on an `overlay` stays where it is put — titles and captions
+belong there, since a caption that zooms with the diagram ends up off the edge.
 
 `radius` rounds a rectangle's corners, clamped to half its short side — so a
 big radius gives a pill, not a broken shape. It animates like anything else.

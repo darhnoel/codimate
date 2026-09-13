@@ -149,6 +149,7 @@ class Explanation:
 
         _codimate.render(
             scenes=[s._payload() for s in self.scenes],
+            cameras=[s._camera() for s in self.scenes],
             rules=[r._payload() for r in self.motion],
             durations=self.durations,
             output=output,

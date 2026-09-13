@@ -139,5 +139,28 @@ def test_a_rounded_rect_carries_its_radius():
     assert shape["kind"] == "rect" and shape["r"] == 4, shape
 
 
+def test_focus_names_things_rather_than_coordinates():
+    """The camera is aimed by name, so a layout change cannot leave it pointing
+    at whitespace — the name is the part that stays stable."""
+    scene = cm.Scene()
+    scene.rect("box", x=100, y=100, w=10, h=10)
+    assert scene._camera() is None, "no camera unless one is asked for"
+
+    scene.focus("box", pad=12, least=200)
+    camera = scene._camera()
+    assert camera["names"] == ["box"], camera
+    assert (camera["pad"], camera["min_size"]) == (12.0, 200.0), camera
+
+
+def test_an_overlay_is_listed_as_fixed():
+    """Whatever is on the overlay must reach the Engine as camera-exempt, or the
+    first zoom pushes the narration off the frame."""
+    scene = cm.Scene()
+    scene.rect("box", x=100, y=100, w=10, h=10)
+    scene.overlay().text("title", "hello", x=640, y=52)
+    scene.focus("box")
+    assert scene._camera()["fixed"] == ["_overlay"], scene._camera()
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
