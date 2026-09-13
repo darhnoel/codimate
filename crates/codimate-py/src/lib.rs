@@ -12,7 +12,7 @@
 //! `codimate-reconcile`; the only thing that belongs here is turning Python
 //! values into Rust ones.
 
-use codimate_export::{export_mp4, ExportConfig};
+use codimate_export::{export_mp4, write_png, ExportConfig};
 use codimate_layout::Viewport;
 use codimate_reconcile::{self as reconcile, Focus, Shape};
 use pyo3::exceptions::PyValueError;
@@ -130,6 +130,48 @@ fn render(
         .map_err(|e| PyValueError::new_err(format!("export failed: {e:?}")))
 }
 
+/// Rasterize a single moment to a PNG.
+///
+/// Same scenes, same timing, same arithmetic as `render` — only one frame of
+/// it. Debugging a frame by rendering the whole video and seeking into it
+/// costs a minute for a look at one second.
+#[pyfunction]
+#[pyo3(signature = (scenes, cameras, rules, durations, seconds, output, width=1280.0, height=720.0, scale=1.0))]
+#[allow(clippy::too_many_arguments)]
+fn render_frame_png(
+    scenes: Vec<Vec<PyShape>>,
+    cameras: Vec<Option<PyFocus>>,
+    rules: Vec<reconcile::Rule>,
+    durations: Vec<f32>,
+    seconds: f32,
+    output: String,
+    width: f32,
+    height: f32,
+    scale: f32,
+) -> PyResult<()> {
+    use codimate_animation::Playable;
+
+    let scenes: Vec<Vec<Shape>> = scenes
+        .into_iter()
+        .map(|scene| scene.into_iter().map(Shape::from).collect())
+        .collect();
+    let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
+    let explanation =
+        reconcile::explanation(&scenes, &cameras, &rules, &durations, (width, height))
+            .map_err(py)?;
+
+    let viewport = Viewport::new(width, height);
+    let scene = explanation.resolve_at(seconds);
+    let layout = codimate_layout::layout_scene(scene, viewport);
+    let frame = codimate_render::render_frame(explanation.name(), seconds, &layout);
+    // Scaled the same way the video is, so a debug frame is not a different
+    // picture from the one that ships — text placement in particular used to
+    // differ, which is exactly the kind of bug this is for finding.
+    let bitmap = codimate_render::rasterize_scaled(&frame, scale.max(1.0));
+
+    write_png(&output, &bitmap).map_err(|e| PyValueError::new_err(format!("{e}")))
+}
+
 /// The easing the Engine applies between two moments.
 ///
 /// Exposed so an author can draw or reason about pacing without writing a
@@ -162,6 +204,7 @@ fn measure_formula(latex: &str, size: f32) -> PyResult<(f32, f32)> {
 #[pymodule]
 fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
+    m.add_function(wrap_pyfunction!(render_frame_png, m)?)?;
     m.add_function(wrap_pyfunction!(ease, m)?)?;
     m.add_function(wrap_pyfunction!(measure, m)?)?;
     m.add_function(wrap_pyfunction!(measure_formula, m)?)?;

@@ -10,6 +10,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 codimate-core = { path = "../codimate-core" }
 codimate-layout = { path = "../codimate-layout" }
+# Only for the `Playable` trait, to resolve one moment for a debug frame.
+codimate-animation = { path = "../codimate-animation" }
 codimate-export = { path = "../codimate-export" }
 codimate-render = { path = "../codimate-render" }
 codimate-reconcile = { path = "../codimate-reconcile" }

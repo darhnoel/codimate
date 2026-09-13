@@ -112,5 +112,29 @@ def test_the_bundled_ffmpeg_is_only_a_fallback():
             os.environ["CODIMATE_FFMPEG"] = before
 
 
+def test_the_timeline_accounts_for_the_whole_video():
+    """Every second of the render belongs to some beat.
+
+    The timeline is what you read when a video feels wrong, so it has to agree
+    with the video exactly — a second copy of the duration arithmetic would
+    drift and send you looking at the wrong moment.
+    """
+    @cm.trace()
+    def run(state):
+        cm.emit("one")
+        cm.emit("two")
+
+    exp = cm.explain(trace=run({}), view=lambda f: cm.Scene(),
+                     timing=cm.Timing(default=1.5, opening=1.0, final_hold=2.0))
+    beats = exp.timeline()
+
+    assert [n for _, _, n in beats] == ["(opening)", "one", "two", "(final hold)"]
+    assert abs(sum(d for _, d, _ in beats) - sum(exp.durations)) < 1e-6
+
+    # each beat starts where the previous one ended
+    for (start, length, _), (next_start, _, _) in zip(beats, beats[1:]):
+        assert abs(start + length - next_start) < 1e-6, beats
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))

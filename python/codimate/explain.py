@@ -106,6 +106,7 @@ class Explanation:
     ) -> None:
         self.timing = timing or Timing()
         self.motion = motion or []
+        self.trace = trace
 
         # The view runs once per event, not per frame — this is the whole
         # reason Python is fast enough to be the authoring language.
@@ -159,6 +160,58 @@ class Explanation:
             scale=float(scale),
         )
         return output
+
+    def frame_at(self, seconds: float, output: str = "frame.png",
+                 scale: float = 1.0) -> str:
+        """Save a single moment as a PNG, without rendering the video.
+
+            cm.explain(...).frame_at(12.5, "check.png")
+
+        The same scenes, timing and arithmetic as :meth:`render`, resolved at
+        one instant. Checking a frame by rendering the whole video and seeking
+        into it costs a minute to look at one second.
+
+        ``scale`` matches ``render``'s, so the debug frame is rasterized the
+        way the video is — worth passing when you are checking text, which is
+        the thing that has historically differed between the two.
+        """
+        from pathlib import Path
+
+        from . import _codimate
+
+        Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+        _codimate.render_frame_png(
+            scenes=[s._payload() for s in self.scenes],
+            cameras=[s._camera() for s in self.scenes],
+            rules=[r._payload() for r in self.motion],
+            durations=self.durations,
+            seconds=float(seconds),
+            output=output,
+            width=width(),
+            height=height(),
+            scale=float(scale),
+        )
+        return output
+
+    def timeline(self) -> "list[tuple[float, float, str]]":
+        """Every beat as ``(start, duration, event name)``, in seconds.
+
+            for start, length, name in cm.explain(...).timeline():
+                print(f"{start:6.2f}  {length:4.2f}  {name}")
+
+        What is on screen at 0:42, and how long each beat actually lasts —
+        the two questions you have when a video feels wrong. Pair it with
+        :meth:`frame_at` to look at the moment you find.
+        """
+        # Read from `durations`, which already carries the held opening and
+        # ending, rather than recomputing them — a second copy of that
+        # arithmetic is how a timeline starts disagreeing with the video.
+        names = ["(opening)"] + [e.name for e in self.trace.events] + ["(final hold)"]
+        out, at = [], 0.0
+        for name, length in zip(names, self.durations):
+            out.append((round(at, 3), length, name))
+            at += length
+        return out
 
 
 def _find_encoder() -> None:

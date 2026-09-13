@@ -261,6 +261,23 @@ It calls into the Engine, so it cannot drift from what your animation does.
 
 ---
 
+## Looking at what you made
+
+```python
+exp = cm.explain(trace=..., view=..., timing=...)
+
+exp.timeline()                       # [(start, length, event), ...] in seconds
+exp.frame_at(12.5, "check.png")      # one moment, without rendering the video
+```
+
+`frame_at` uses the same scenes, timing and arithmetic as `render`, resolved at
+one instant — checking a frame by rendering the whole video and seeking into it
+costs a minute to look at one second. Pass the same `scale` you render with
+when you are checking text.
+
+`timeline` answers the two questions you have when a video feels wrong: what is
+on screen at 0:42, and how long each beat actually lasts.
+
 ## Timing
 
 ```python
