@@ -291,6 +291,10 @@ python/codimate/           the Python package
 
 ## More
 
+All of this is also a site — **<https://darhnoel.github.io/codimate/>** — with
+the API reference generated from the docstrings alongside it. Build it locally
+with `python docs/build_site.py`.
+
 **The guide, in order.** Four chapters; read them front to back the first time.
 
 1. [Writing Your First Animation](docs/tutorial.md) — build one from an empty

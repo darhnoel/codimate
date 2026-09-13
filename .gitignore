@@ -27,6 +27,7 @@ python/examples/attention/audio/*
 # Frames pulled out of a render while checking it.
 /scenes/
 
-# Generated API reference. Regenerate with:
-#   pdoc -o docs/api -d google --no-include-undocumented codimate
+# The built documentation site, API reference included. Rebuild with:
+#   python docs/build_site.py
+/site/
 /docs/api/
