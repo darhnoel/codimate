@@ -7,6 +7,13 @@
 # The fonts are baked into the binary by `codimate-fonts/build.rs`, so a wheel
 # is self-contained apart from ffmpeg — which pip cannot install, and which the
 # `imageio-ffmpeg` dependency covers as a fallback.
+#
+# HARFBUZZ_SYS_NO_PKG_CONFIG is what keeps that true. harfbuzz-sys asks
+# pkg-config for a system harfbuzz before falling back to the copy it vendors,
+# so on any builder that happens to have one — a macOS runner with Homebrew,
+# say — the wheel links against a path that does not exist on the machine it
+# is installed on, and importing it fails. Setting this makes it always build
+# and link harfbuzz statically.
 name: release
 
 on:
@@ -38,6 +45,8 @@ jobs:
 
       - name: Build wheel
         uses: PyO3/maturin-action@v1
+        env:
+          HARFBUZZ_SYS_NO_PKG_CONFIG: "1"
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
