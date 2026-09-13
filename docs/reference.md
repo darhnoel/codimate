@@ -89,7 +89,7 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 `Scene` is the root; every method below exists on `Scene` and on any `Group`.
 
 ```python
-scene.rect(name, *, h, w=None, radius=0.0, color="white", layer=0, opacity=1.0, <anchors>)
+scene.rect(name, *, h, w=None, radius=0.0, color="white", edge="white", edge_w=0.0, layer=0, opacity=1.0, <anchors>)
 scene.circle(name, *, r, color="white", layer=0, opacity=1.0, <anchors>)
 scene.text(name, content, *, size=16.0, color="white", layer=10, opacity=1.0, <anchors>)
 scene.line(name, *, start, end, w=2.0, color="white", layer=0, opacity=1.0)
@@ -106,6 +106,11 @@ Engine knows where everything is, works out the framing, and the usual tween
 animates the move. `least` is the smallest thing it will fill the frame with.
 Anything drawn on an `overlay` stays where it is put — titles and captions
 belong there, since a caption that zooms with the diagram ends up off the edge.
+
+`color` fills a shape and `edge`/`edge_w` outline it — both at once, so a
+bordered box is one rectangle rather than two stacked ones. `color="none"`
+leaves it unfilled, which is how you draw a ring. Lines are drawn rather than
+filled, so their `w=` is the stroke and they take no edge.
 
 `radius` rounds a rectangle's corners, clamped to half its short side — so a
 big radius gives a pill, not a broken shape. It animates like anything else.

@@ -94,7 +94,7 @@ def test_every_shape_carries_every_field():
     shape = cm.Scene().rect("bar", x=0, y=0, w=1, h=1)._payload()[0]
     assert set(shape) == {
         "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
-        "color", "text", "size", "layer", "opacity",
+        "color", "edge", "edge_w", "text", "size", "layer", "opacity",
     }, sorted(shape)
 
 
@@ -132,6 +132,19 @@ def test_a_formula_carries_how_much_of_it_shows():
 def test_a_drawn_formula_carries_its_pen():
     shape = cm.Scene().formula("eq", "x", x=0, y=0, pen=2.0)._payload()[0]
     assert shape["w"] == 2.0, shape
+
+
+def test_a_shape_can_be_filled_and_outlined_at_once():
+    """Two separate colours, which the engine always supported and the surface
+    used to collapse into one. Without it a bordered box is two stacked
+    rectangles, and a banded ring is four concentric discs."""
+    shape = cm.Scene().rect("b", x=0, y=0, w=10, h=10,
+                            color="#1b2332", edge="#4ade80", edge_w=3)._payload()[0]
+    assert (shape["color"], shape["edge"], shape["edge_w"]) == ("#1b2332", "#4ade80", 3.0)
+
+    # and a shape that asks for no edge keeps exactly the old behaviour
+    plain = cm.Scene().rect("b", x=0, y=0, w=10, h=10, color="blue")._payload()[0]
+    assert plain["edge_w"] == 0.0
 
 
 def test_a_rounded_rect_carries_its_radius():

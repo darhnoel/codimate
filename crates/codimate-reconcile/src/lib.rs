@@ -63,6 +63,11 @@ pub struct Shape {
     /// payload is a union, not a class hierarchy.
     pub r: f32,
     pub color: String,
+    /// The outline, when `edge_w` is positive. Fill and outline are separate,
+    /// so a shape can have both — which is why a bordered box no longer has to
+    /// be two stacked rectangles.
+    pub edge: String,
+    pub edge_w: f32,
     pub text: String,
     pub size: f32,
     pub layer: i32,
@@ -147,13 +152,19 @@ impl Shape {
     }
 
     fn style(&self) -> Result<Style> {
-        let color = parse_color(&self.color)?;
-        Ok(if self.kind == "line" {
-            // A line is drawn, not filled — `w` is its stroke width.
-            Style::new().fill(Color::TRANSPARENT).stroke(self.w, color)
-        } else {
-            Style::new().fill(color)
-        })
+        let fill = parse_color(&self.color)?;
+
+        // A line is drawn, not filled — `w` is its stroke width, and it has no
+        // separate edge.
+        if self.kind == "line" {
+            return Ok(Style::new().fill(Color::TRANSPARENT).stroke(self.w, fill));
+        }
+
+        let style = Style::new().fill(fill);
+        if self.edge_w <= 0.0 {
+            return Ok(style);
+        }
+        Ok(style.stroke(self.edge_w, parse_color(&self.edge)?))
     }
 
     /// Python's `y` is always the **centre** of the shape. Rust text is
@@ -178,6 +189,9 @@ impl Shape {
 fn parse_color(name: &str) -> Result<Color> {
     let c = |r: f32, g: f32, b: f32| Color { r, g, b, a: 1.0 };
     Ok(match name {
+        // No fill at all, for a shape that is only an outline. Meaningless
+        // before `edge_w` existed; now it is how you draw a ring.
+        "none" | "transparent" => Color::TRANSPARENT,
         "white" => Color::WHITE,
         "black" => Color::BLACK,
         "red" => Color::RED,

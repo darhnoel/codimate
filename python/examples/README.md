@@ -45,6 +45,15 @@ The trace says where the spokes are every 15 degrees and the Engine fills in
 the rest, exactly as it does for a sliding bar. Rotation is just position over
 time. The README works through why 15 degrees and not 45.
 
+## Continuous motion from sampled physics
+
+**[`pendulum/`](pendulum/)** — gravity supplies the acceleration; Codimate
+connects the moments.
+
+The simulation advances angle and angular velocity at a fixed time step. The
+view turns each sampled angle into a string and bob, and `linear` interpolation
+keeps that already-continuous motion from stopping at every event.
+
 ## Both at once
 
 **[`galton_board/`](galton_board/)** — where the bell curve comes from.

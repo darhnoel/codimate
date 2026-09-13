@@ -23,6 +23,8 @@ class _Shape:
     h: float = 0.0
     r: float = 0.0
     color: str = "white"
+    edge: str = "white"
+    edge_w: float = 0.0
     text: str = ""
     size: float = 16.0
     layer: int = 0
@@ -136,6 +138,8 @@ class Group:
         top: float = None,
         bottom: float = None,
         radius: float = 0.0,
+        edge: str = "white",
+        edge_w: float = 0.0,
         color: str = "white",
         layer: int = 0,
         opacity: float = 1.0,
@@ -151,6 +155,8 @@ class Group:
         return self._place(
             key,
             "rect",
+            edge=edge,
+            edge_w=edge_w,
             x=_resolve(x, left, right, w / 2, ("x", "left", "right"), self._child_default),
             y=_resolve(y, top, bottom, h / 2, ("y", "top", "bottom"), self._child_default),
             w=w,
@@ -173,6 +179,8 @@ class Group:
         right: float = None,
         top: float = None,
         bottom: float = None,
+        edge: str = "white",
+        edge_w: float = 0.0,
         color: str = "white",
         layer: int = 0,
         opacity: float = 1.0,
@@ -182,6 +190,8 @@ class Group:
         return self._place(
             key,
             "circle",
+            edge=edge,
+            edge_w=edge_w,
             x=_resolve(x, left, right, r, ("x", "left", "right"), self._child_default),
             y=_resolve(y, top, bottom, r, ("y", "top", "bottom"), self._child_default),
             r=r,
@@ -201,6 +211,8 @@ class Group:
         top: float = None,
         bottom: float = None,
         size: float = 16.0,
+        edge: str = "white",
+        edge_w: float = 0.0,
         color: str = "white",
         layer: int = 10,
         opacity: float = 1.0,
@@ -210,6 +222,8 @@ class Group:
         return self._place(
             key,
             "text",
+            edge=edge,
+            edge_w=edge_w,
             x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
             y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
             text=str(content),
@@ -232,6 +246,8 @@ class Group:
         size: float = 16.0,
         reveal: float = 1.0,
         pen: float = 0.0,
+        edge: str = "white",
+        edge_w: float = 0.0,
         color: str = "white",
         layer: int = 10,
         opacity: float = 1.0,
@@ -268,6 +284,8 @@ class Group:
         return self._place(
             key,
             "formula",
+            edge=edge,
+            edge_w=edge_w,
             x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
             y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
             text=latex,
