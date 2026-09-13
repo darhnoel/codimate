@@ -155,8 +155,15 @@ tests the day it is added.
 
 ```bash
 .venv/bin/python python/examples/<name>/main.py
-cd python && ../.venv/bin/python tests/run.py --fast
+cd python && ../.venv/bin/python tests/run.py
 ```
 
-The full suite also renders every example; `--fast` skips that while iterating.
+That skips the two files that render video. Run `--all` before committing — it
+renders every example and takes about two minutes.
+
+Also: the skill's shape list is out of date the moment a primitive is added.
+`scene.polygon`, `scene.arrow`, `cm.ngon`, `cm.star`, and `scale`/`rotate`/
+`pivot` on every shape all exist; check `docs/reference.md` rather than this
+list.
+
 Then report the runnable command.

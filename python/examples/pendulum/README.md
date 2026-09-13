@@ -47,6 +47,14 @@ motion=[cm.Rule("*", position="linear")]
 same objects in every moment. Their endpoints are interpolated together, so
 the string remains attached to the bob between samples.
 
+**One mark can carry two measurements.** The filled sector follows the rod, so
+its size and side show the instantaneous angle. Its colour comes from the
+pendulum's remaining mechanical energy: green at the initial amplitude,
+shifting toward red as damping reduces the equivalent turning angle. The colour
+scale spans the amplitude loss visible during this ten-second lesson, while the
+number beside the sector reports its current angle directly. The sector
+collapses at each centre crossing, but its colour continues its gradual change.
+
 ## Try changing
 
 | Change | What happens |

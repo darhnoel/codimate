@@ -15,7 +15,7 @@ Run the lot:
 
 ```bash
 python python/tests/run.py           # ~25s: the example and doc checks render real video
-python python/tests/run.py --fast    # skip those while working on the library
+python python/tests/run.py    # skip those while working on the library
 ```
 
 or one file on its own while you work on it:

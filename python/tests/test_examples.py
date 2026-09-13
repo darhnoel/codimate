@@ -10,7 +10,8 @@ An example is only re-rendered when something it depends on has changed —
 its own sources, the `codimate` package, or the compiled engine. So a run
 that changes nothing costs a few ffprobe calls instead of eight renders.
 
-    python python/tests/run.py --fast      # skips this file entirely
+    python python/tests/run.py             # skips this file
+python python/tests/run.py --all       # includes it entirely
 """
 
 import subprocess
