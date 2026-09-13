@@ -9,11 +9,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 codimate-core = { path = "../codimate-core" }
-codimate-animation = { path = "../codimate-animation" }
 codimate-layout = { path = "../codimate-layout" }
 codimate-export = { path = "../codimate-export" }
 codimate-render = { path = "../codimate-render" }
-codimate-math = { path = "../codimate-math" }
+codimate-reconcile = { path = "../codimate-reconcile" }
 # `abi3-py39` builds one wheel per platform that works on every Python from
 # 3.9 up, instead of one wheel per Python version per platform — 5 wheels to
 # release rather than 25. Matches `requires-python` in pyproject.toml.
