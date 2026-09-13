@@ -59,10 +59,14 @@ def height() -> float:
 
 @dataclass(frozen=True)
 class Slot:
-    """A place to put something: a centre point, a size, and the edge it is
-    naturally anchored by.
+    """A place to put something. Not a shape — nothing draws a Slot.
 
-    A Slot is not a shape and nothing draws it.
+    `row` and `column` hand you these; you rarely build one.
+
+    - `x`, `y` — its centre
+    - `w`, `h` — its size
+    - `left`, `right`, `top`, `bottom` — its edges
+    - `anchor` — which edge things placed here line up on
     """
 
     x: float

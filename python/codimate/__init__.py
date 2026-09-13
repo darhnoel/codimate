@@ -1,19 +1,44 @@
 """Codimate — turn a running algorithm into an explainer video.
 
-You write four things:
+You write four things, and never a keyframe:
 
     algorithm   your normal code, with emit() where something happens
     view        what one moment looks like
     motion      how things travel between moments
     timing      how long each moment lasts
 
-Everything per-frame — diffing, interpolation, drawing, encoding — happens in
-Rust. See docs/adr/0008-python-authoring-surface.md.
+Codimate pairs shapes between moments **by name** and turns the differences
+into movement. Everything per-frame — diffing, interpolation, drawing,
+encoding — happens in Rust (ADR 0008).
 
-    codimate.layout    the canvas, Slots, row, column
-    codimate.scene     Groups, Scenes, the shapes you can draw
-    codimate.trace     Items, emit, trace, Frame
-    codimate.explain   Rule, Timing, render
+## What your algorithm did
+
+- `trace` — mark a function so Codimate can watch it run
+- `emit` — say that something worth showing just happened
+- `items` — a list whose entries keep their identity when they move
+- `Item`, `Event`, `Trace`, `Frame` — what your view is handed
+
+## What a moment looks like
+
+- `Scene` — one picture: `rect`, `circle`, `text`, `line`, `formula`, `group`
+- `Group` — several shapes that move together
+
+## Where things sit
+
+- `canvas`, `width`, `height` — the frame
+- `row`, `column`, `Slot` — divide it up, without coordinates
+- `measure`, `measure_math` — how big text or a formula will actually be
+
+## How it moves, and for how long
+
+- `Rule` — the path a shape travels
+- `Timing` — how long each event lasts
+- `ease` — the curve the Engine uses, if you need to draw it
+
+## Running it
+
+- `explain` — gather algorithm, view, motion and timing
+- `Explanation.render` — write the video
 """
 
 from __future__ import annotations

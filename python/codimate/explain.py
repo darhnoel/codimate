@@ -67,6 +67,12 @@ class Timing:
         self.final_hold = final_hold
 
     def for_event(self, event: Event) -> float:
+        """How long ``event`` lasts: its own entry, or ``default``.
+
+        A name with no entry takes ``default`` silently — which is what a
+        default is for, but it means a misspelled event name costs you the
+        default duration rather than an error.
+        """
         return self.events.get(event.name, self.default)
 
 
@@ -84,6 +90,12 @@ def ease(t: float) -> float:
 
 
 class Explanation:
+    """A trace, a view and a timing, ready to render.
+
+    Built by :func:`explain` rather than directly. Holds one Scene per Trace
+    Event and the gap between each pair; :meth:`render` hands all of it to the
+    Engine once, and everything per-frame happens in there.
+    """
     def __init__(
         self,
         *,
@@ -187,4 +199,16 @@ def explain(
     motion: "list[Rule] | None" = None,
     timing: "Timing | None" = None,
 ) -> Explanation:
+    """Gather an algorithm, a view and a timing into something renderable.
+
+    ``trace`` is what a ``@cm.trace()``-marked function returns: the moments
+    your algorithm passed through. ``view`` is called once per moment and
+    returns the picture of it. ``motion`` and ``timing`` are optional —
+    without them every shape travels in a straight line and every event lasts
+    the same.
+
+        cm.explain(trace=flip(tally), view=view).render("results/coins.mp4")
+
+    Nothing is computed here; the work happens in :meth:`Explanation.render`.
+    """
     return Explanation(trace=trace, view=view, motion=motion, timing=timing)
