@@ -296,8 +296,13 @@ def cue_sheet():
 cm.explain(trace=story, view=attention_view, timing=TIMING).render(
     "results/attention.mp4", fps=60, scale=1.5)
 
+# `wrote <path>` on its own line: that is the contract `test_examples` reads
+# to find what was produced, so anything else goes on a line of its own.
+print("wrote results/attention.mp4")
+
 if CLIP:
-    (AUDIO / "cues.json").write_text(json.dumps(cue_sheet(), indent=2))
-    print(f"wrote results/attention.mp4 and {len(cue_sheet())} audio cues")
+    cues = cue_sheet()
+    (AUDIO / "cues.json").write_text(json.dumps(cues, indent=2))
+    print(f"  {len(cues)} audio cues -> run tools/mix.py to lay the voice on")
 else:
-    print("wrote results/attention.mp4 (no narration — see tools/narrate.py)")
+    print("  no narration yet — see tools/narrate.py")
