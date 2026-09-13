@@ -242,7 +242,11 @@ mod tests {
     /// binary, not a build dependency).
     #[test]
     fn mitex_helpers_are_defined() {
-        if std::process::Command::new("typst").arg("--version").output().is_err() {
+        if std::process::Command::new("typst")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
             eprintln!("skipping: typst not installed");
             return;
         }
@@ -254,8 +258,8 @@ mod tests {
             r"a \! b",
             r"\begin{bmatrix} a & b \\ c & d \end{bmatrix}",
         ] {
-            let block = formula(latex, Color::WHITE)
-                .unwrap_or_else(|e| panic!("{latex} failed: {e:?}"));
+            let block =
+                formula(latex, Color::WHITE).unwrap_or_else(|e| panic!("{latex} failed: {e:?}"));
             assert!(!block.glyphs.is_empty(), "{latex} produced no glyphs");
         }
     }
@@ -265,7 +269,11 @@ mod tests {
     /// must enclose area — that is what makes it visible.
     #[test]
     fn a_fraction_has_a_visible_bar() {
-        if std::process::Command::new("typst").arg("--version").output().is_err() {
+        if std::process::Command::new("typst")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
             eprintln!("skipping: typst not installed");
             return;
         }
@@ -277,7 +285,9 @@ mod tests {
             // The bar is the wide, flat one; `a` and `b` are roughly square.
             .find(|(x0, y0, x1, y1)| (x1 - x0) > 3.0 * (y1 - y0).max(0.001));
         let (_, y0, _, y1) = bar.expect("no fraction bar in the output at all");
-        assert!(y1 - y0 > 0.0, "the fraction bar is a zero-height line, so it fills to nothing");
+        assert!(
+            y1 - y0 > 0.0,
+            "the fraction bar is a zero-height line, so it fills to nothing"
+        );
     }
 }
-

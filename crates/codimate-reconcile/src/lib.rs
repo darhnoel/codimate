@@ -16,8 +16,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use codimate_animation::Playable;
 use codimate_core::{
-    scene::AnchorKind, scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry, IntoAnimated, Path,
-    Primitive, Scene, Segment, Style, TextAlign, Vec2,
+    scene::AnchorKind, scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry,
+    IntoAnimated, Path, Primitive, Scene, Segment, Style, TextAlign, Vec2,
 };
 
 /// Why a Scene could not be built.
@@ -624,9 +624,7 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
         }
     }
     if min_x > max_x {
-        return Err(Error(format!(
-            "{latex:?} typeset to nothing visible"
-        )));
+        return Err(Error(format!("{latex:?} typeset to nothing visible")));
     }
     let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
 
@@ -645,7 +643,9 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
     // denominator, which would reveal the equation in two passes.
     centred.sort_by(|a, b| {
         let key = |p: &Path| p.bounding_box().map(|(x0, ..)| x0).unwrap_or(0.0);
-        key(a).partial_cmp(&key(b)).unwrap_or(std::cmp::Ordering::Equal)
+        key(a)
+            .partial_cmp(&key(b))
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let shared = Arc::new(centred);
@@ -1029,7 +1029,13 @@ pub fn explanation(
     let framed: Vec<Vec<Shape>> = scenes
         .iter()
         .enumerate()
-        .map(|(i, scene)| framed(scene.clone(), cameras.get(i).and_then(|c| c.as_ref()), viewport))
+        .map(|(i, scene)| {
+            framed(
+                scene.clone(),
+                cameras.get(i).and_then(|c| c.as_ref()),
+                viewport,
+            )
+        })
         .collect::<Result<_>>()?;
 
     let mut segments = Vec::new();
@@ -1039,7 +1045,11 @@ pub fn explanation(
         if *duration <= 0.0 {
             continue;
         }
-        segments.push((cursor, *duration, build_segment(&framed[i], &framed[i + 1], rules)?));
+        segments.push((
+            cursor,
+            *duration,
+            build_segment(&framed[i], &framed[i + 1], rules)?,
+        ));
         cursor += duration;
     }
 
@@ -1095,10 +1105,18 @@ mod tests {
         let mut square = Shape {
             item: "b".into(),
             kind: "rect".into(),
-            x: 0.0, y: 0.0, x2: 0.0, y2: 0.0,
-            w: 100.0, h: 60.0, r: 0.0,
-            color: "white".into(), text: String::new(),
-            size: 0.0, layer: 0, opacity: 1.0,
+            x: 0.0,
+            y: 0.0,
+            x2: 0.0,
+            y2: 0.0,
+            w: 100.0,
+            h: 60.0,
+            r: 0.0,
+            color: "white".into(),
+            text: String::new(),
+            size: 0.0,
+            layer: 0,
+            opacity: 1.0,
         };
         let flat = round_rect_path(&square).segments.len();
         square.r = 12.0;
@@ -1111,7 +1129,10 @@ mod tests {
         assert_eq!(pill.segments.len(), flat);
         for seg in &pill.segments {
             for v in [seg_start(seg)] {
-                assert!(v.x.abs() <= 50.001 && v.y.abs() <= 30.001, "{v:?} escaped the box");
+                assert!(
+                    v.x.abs() <= 50.001 && v.y.abs() <= 30.001,
+                    "{v:?} escaped the box"
+                );
             }
         }
     }
@@ -1140,9 +1161,7 @@ mod tests {
                 .segments
                 .iter()
                 .filter_map(|s| match *s {
-                    Segment::Line(a, b) => {
-                        Some(((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt())
-                    }
+                    Segment::Line(a, b) => Some(((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt()),
                     _ => None,
                 })
                 .sum::<f32>()
@@ -1241,9 +1260,18 @@ mod tests {
         let (first_x, first_y) = step(0.0, 0.1);
         let (last_x, last_y) = step(0.9, 1.0);
 
-        assert!((first_x - last_x).abs() < 0.01, "sideways drift must not change");
-        assert!(last_y > first_y * 8.0, "downward speed must build: {first_y} -> {last_y}");
-        assert!((path.resolve(1.0).y - 400.0).abs() < 0.01, "and still arrive");
+        assert!(
+            (first_x - last_x).abs() < 0.01,
+            "sideways drift must not change"
+        );
+        assert!(
+            last_y > first_y * 8.0,
+            "downward speed must build: {first_y} -> {last_y}"
+        );
+        assert!(
+            (path.resolve(1.0).y - 400.0).abs() < 0.01,
+            "and still arrive"
+        );
     }
 
     #[test]
@@ -1302,7 +1330,10 @@ mod tests {
         Shape {
             item: item.into(),
             kind: "rect".into(),
-            x, y, w, h,
+            x,
+            y,
+            w,
+            h,
             color: "white".into(),
             opacity: 1.0,
             ..Default::default()
@@ -1313,18 +1344,32 @@ mod tests {
     /// centre on it, and zoom until it fills the frame.
     #[test]
     fn focus_frames_the_shape_it_names() {
-        let shapes = vec![box_at("a", 100.0, 100.0, 40.0, 40.0),
-                          box_at("b", 900.0, 600.0, 40.0, 40.0)];
-        let focus = Focus { names: vec!["b".into()], pad: 0.0, min_size: 0.0, fixed: vec![] };
+        let shapes = vec![
+            box_at("a", 100.0, 100.0, 40.0, 40.0),
+            box_at("b", 900.0, 600.0, 40.0, 40.0),
+        ];
+        let focus = Focus {
+            names: vec!["b".into()],
+            pad: 0.0,
+            min_size: 0.0,
+            fixed: vec![],
+        };
 
         let (cx, cy, zoom) = aim(&shapes, &focus, (1280.0, 720.0)).unwrap();
-        assert_eq!((cx, cy), (900.0, 600.0), "centred on what it was told to look at");
+        assert_eq!(
+            (cx, cy),
+            (900.0, 600.0),
+            "centred on what it was told to look at"
+        );
         assert!(zoom > 1.0, "zoomed in, not out: {zoom}");
 
         // and the framed scene puts that shape in the middle of the screen
         let framed = framed(shapes, Some(&focus), (1280.0, 720.0)).unwrap();
         let b = framed.iter().find(|s| s.item == "b").unwrap();
-        assert!((b.x - 640.0).abs() < 0.01 && (b.y - 360.0).abs() < 0.01, "{b:?}");
+        assert!(
+            (b.x - 640.0).abs() < 0.01 && (b.y - 360.0).abs() < 0.01,
+            "{b:?}"
+        );
     }
 
     /// A camera pointing at whitespace is the failure aiming-by-name exists to
@@ -1332,7 +1377,12 @@ mod tests {
     #[test]
     fn focus_on_a_name_that_is_not_there_is_an_error() {
         let shapes = vec![box_at("a", 100.0, 100.0, 40.0, 40.0)];
-        let focus = Focus { names: vec!["typo".into()], pad: 0.0, min_size: 0.0, fixed: vec![] };
+        let focus = Focus {
+            names: vec!["typo".into()],
+            pad: 0.0,
+            min_size: 0.0,
+            fixed: vec![],
+        };
         assert!(aim(&shapes, &focus, (1280.0, 720.0)).is_err());
     }
 
@@ -1340,17 +1390,27 @@ mod tests {
     #[test]
     fn a_tiny_shape_does_not_fill_the_screen() {
         let shapes = vec![box_at("dot", 640.0, 360.0, 3.0, 3.0)];
-        let loose = Focus { names: vec!["dot".into()], pad: 0.0, min_size: 240.0, fixed: vec![] };
+        let loose = Focus {
+            names: vec!["dot".into()],
+            pad: 0.0,
+            min_size: 240.0,
+            fixed: vec![],
+        };
         let (_, _, zoom) = aim(&shapes, &loose, (1280.0, 720.0)).unwrap();
-        assert!(zoom <= 720.0 / 240.0 + 0.01, "clamped by min_size, got {zoom}");
+        assert!(
+            zoom <= 720.0 / 240.0 + 0.01,
+            "clamped by min_size, got {zoom}"
+        );
     }
 
     /// The overlay is the reason `focus` is usable at all: without it a caption
     /// is pushed off the frame the first time the camera moves.
     #[test]
     fn the_overlay_stays_where_it_was_put() {
-        let shapes = vec![box_at("thing", 200.0, 200.0, 40.0, 40.0),
-                          box_at("_overlay/title", 640.0, 52.0, 300.0, 30.0)];
+        let shapes = vec![
+            box_at("thing", 200.0, 200.0, 40.0, 40.0),
+            box_at("_overlay/title", 640.0, 52.0, 300.0, 30.0),
+        ];
         let focus = Focus {
             names: vec!["thing".into()],
             pad: 0.0,
@@ -1359,8 +1419,19 @@ mod tests {
         };
 
         let framed = framed(shapes, Some(&focus), (1280.0, 720.0)).unwrap();
-        let title = framed.iter().find(|s| s.item.starts_with("_overlay")).unwrap();
-        assert_eq!((title.x, title.y), (640.0, 52.0), "the camera moved the title");
-        assert_eq!((title.w, title.h), (300.0, 30.0), "the camera resized the title");
+        let title = framed
+            .iter()
+            .find(|s| s.item.starts_with("_overlay"))
+            .unwrap();
+        assert_eq!(
+            (title.x, title.y),
+            (640.0, 52.0),
+            "the camera moved the title"
+        );
+        assert_eq!(
+            (title.w, title.h),
+            (300.0, 30.0),
+            "the camera resized the title"
+        );
     }
 }

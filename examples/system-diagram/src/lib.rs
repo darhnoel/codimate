@@ -57,7 +57,9 @@ fn hop(a: &Slot, b: &Slot, t1: f32, t2: f32) -> (Connection, Pulse) {
         c.a *= alpha.resolve(t);
         c
     });
-    let dot = pulse_on(edge.clone(), travel(t1, t2)).radius(7.0).fill(fill);
+    let dot = pulse_on(edge.clone(), travel(t1, t2))
+        .radius(7.0)
+        .fill(fill);
     (edge, dot)
 }
 
@@ -106,7 +108,12 @@ fn system_diagram_scene() -> Scene {
     ];
     for (slot, label, color) in boxes {
         s = s
-            .add(box_in(slot).radius(12.0).fill(color).stroke(2.0, manim::WHITE))
+            .add(
+                box_in(slot)
+                    .radius(12.0)
+                    .fill(color)
+                    .stroke(2.0, manim::WHITE),
+            )
             .add(centered_text(slot, label, 22.0, manim::WHITE));
     }
 

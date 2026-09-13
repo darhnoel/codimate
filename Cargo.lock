@@ -418,6 +418,7 @@ dependencies = [
  "codimate-example-neural-net",
  "codimate-example-newton-laws",
  "codimate-example-swap-a-b",
+ "codimate-example-system-diagram",
  "codimate-example-word-appear",
  "codimate-export",
  "codimate-layout",

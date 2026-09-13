@@ -23,6 +23,7 @@ codimate-example-faster-dijkstra = { path = "../../examples/faster-dijkstra" }
 codimate-example-newton-laws = { path = "../../examples/newton-laws" }
 codimate-example-insertion-sort = { path = "../../examples/insertion-sort" }
 codimate-example-word-appear = { path = "../../examples/word-appear" }
+codimate-example-system-diagram = { path = "../../examples/system-diagram" }
 minifb = { version = "0.25", default-features = false, features = ["x11"] }
 
 [build-dependencies]
