@@ -89,17 +89,21 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 `Scene` is the root; every method below exists on `Scene` and on any `Group`.
 
 ```python
-scene.rect(name, *, h, w=None, radius=0.0, color="white", edge="white", edge_w=0.0, layer=0, opacity=1.0, <anchors>)
-scene.circle(name, *, r, color="white", layer=0, opacity=1.0, <anchors>)
-scene.text(name, content, *, size=16.0, color="white", layer=10, opacity=1.0, <anchors>)
-scene.polygon(name, points, *, closed=True, color="white", edge=, edge_w=, layer=0, opacity=1.0)
-scene.arrow(name, *, start, end, w=4.0, head=16.0, color="white", layer=0, opacity=1.0)
-scene.line(name, *, start, end, w=2.0, color="white", layer=0, opacity=1.0)
-scene.formula(name, latex, *, size=16.0, reveal=1.0, pen=0.0, color="white", layer=10, opacity=1.0, <anchors>)
-scene.group(name, slot=None, *, anchor=None, w=None, <anchors>) -> Group
+scene.rect(name, *, h, w=None, at=None)          -> Handle
+scene.circle(name, *, r, at=None)                -> Handle
+scene.text(name, content, *, size=16.0, at=None) -> Handle
+scene.formula(name, latex, *, size=16.0, at=None) -> Handle
+scene.polygon(name, points, *, closed=True)      -> Handle
+scene.line(name, *, start, end, w=2.0)           -> Handle
+scene.arrow(name, *, start, end, w=4.0, head=16.0) -> Handle
+scene.group(name, slot=None, *, at=None, anchor=None, w=None) -> Group
 scene.focus(*names, pad=40.0, least=240.0)      # what the camera looks at
 scene.overlay() -> Group                        # what the camera does not move
 ```
+
+Each shape takes the few things that decide **what it is** — a radius, a
+height, some words. Everything else is said afterwards, on the Handle it hands
+back. No call takes more than five arguments; a shape used to take eighteen.
 
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
 
@@ -118,18 +122,31 @@ animates the move. `least` is the smallest thing it will fill the frame with.
 Anything drawn on an `overlay` stays where it is put — titles and captions
 belong there, since a caption that zooms with the diagram ends up off the edge.
 
-Every drawable shape also takes `scale`, `rotate` and `pivot`:
+## The Handle
+
+A shape call returns a `Handle`. Saying more about the shape is a chained call,
+and each one returns the handle again:
 
 ```python
-scene.rect("card", w=200, h=120, rotate=12)          # degrees
-scene.polygon("tri", cm.ngon(3, r=60), scale=1.8)    # a number, or (sx, sy)
-scene.rect("bar", w=200, h=20, rotate=30, pivot="left")   # turns about its left edge
+scene.rect("card", h=120, w=200).fill("#243046", edge="grey", edge_w=2).round(8)
+scene.circle("bob", r=28, at=(x, y)).fill("orange").on(layer=4)
+scene.polygon("tri", cm.ngon(3, r=60)).grow(1.8).turn(12)
 ```
 
-They tween like everything else, so a shape grows or turns between two moments
-without you saying how. `pivot` is `center`, `top`, `bottom`, `left` or `right`.
+- `.fill(color, edge=, edge_w=)` — the fill, and an outline. `color="none"`
+  leaves it unfilled, so a shape can be an outline alone.
+- `.turn(degrees, pivot="center")` — rotate. `pivot` is `center`, `top`,
+  `bottom`, `left` or `right`.
+- `.grow(scale)` — a number for both axes, or `(sx, sy)` to stretch.
+- `.on(layer=, opacity=)` — draw order, and how solid it is.
+- `.round(radius)` — a rectangle's corners, clamped to half its short side.
+- `.write(reveal=, pen=)` — how much of a formula shows, and whether a pen
+  traces it on.
 
-**`rotate` does not turn text.** Its position moves, but the glyphs stay
+All of it tweens like everything else, so a shape grows or turns between two
+moments without you saying how.
+
+**`.turn()` does not turn text.** Its position moves, but the glyphs stay
 upright — rotating them is renderer work that has not been done.
 
 `color` fills a shape and `edge`/`edge_w` outline it — both at once, so a
@@ -145,27 +162,27 @@ recolours like any other shape. `reveal` is how much of it shows, left to
 right — animate it from `0.0` to `1.0` and the equation writes itself on, with
 several glyphs fading at once so it flows rather than ticking glyph by glyph.
 Give `pen` a stroke width and it is *drawn* instead of faded: a pen traces each
-glyph's outline and the solid letter fills in behind it as the pen moves on. Pass a raw string — `r"\frac{a}{b}"` — or every
-backslash needs doubling. `size` means what it means for `text`. It needs the
+glyph's outline and the solid letter fills in behind it as the pen moves on.
+Both live on the handle: `.write(reveal=1.0, pen=2.2)`. Pass a raw string —
+`r"\frac{a}{b}"` — or every backslash needs doubling. `size` means what it means for `text`. It needs the
 `typst` binary on PATH, the way rendering needs `ffmpeg`.
 
-### Anchors
+## Placement
 
-Give **one horizontal** and **one vertical**, and never convert an edge to a
-centre yourself:
-
-| horizontal | vertical |
-|---|---|
-| `x` centre · `left` · `right` | `y` centre · `top` · `bottom` |
+Where a shape goes is **one argument**, `at`. It takes a plain point, a `Slot`
+from `cm.row`/`cm.column`, or `cm.at(...)` when you want an edge:
 
 ```python
-scene.rect("bar", x=640, bottom=560, w=90, h=200)   # stands on a line
-scene.rect("box", left=100, top=100, w=200, h=80)   # from a corner
-scene.text("label", 3, x=640, top=580)              # under something
+scene.rect("bar", h=200, w=90, at=(640, 460))            # a point
+scene.rect("bar", h=200, w=90, at=cm.at(x=640, bottom=560))  # stands on a line
+scene.text("label", 3, at=cm.at(x=640, top=580))         # under something
+bar = scene.group(item.id, slot)                         # a Slot
 ```
 
-Two anchors on one axis raises `ValueError` rather than picking a winner.
-Text is placed by its centre — there are no baselines.
+`cm.at(x=, y=, top=, bottom=)` — give at most one vertical of the three;
+two on one axis raises `ValueError` rather than picking a winner. Anything you
+leave out falls back to the group's own centre. Text is placed by its centre —
+there are no baselines.
 
 ### Names
 
@@ -185,8 +202,8 @@ from other names rather than formatting strings.
 
 ```python
 bar = scene.group(item.id, slot)
-bar.rect("box", h=value * 70, bottom=0)
-bar.text("label", value, top=20)
+bar.rect("box", h=value * 70, at=cm.at(bottom=0))
+bar.text("label", value, at=cm.at(top=20))
 ```
 
 **Everything on a group moves as one thing** — the Engine sees `3/box` and
@@ -220,8 +237,8 @@ cm.height() -> float
 ```
 
 ```python
-cm.row(items, *, gap=40.0, w=None, h=None, bottom=None, y=None, within=None)
-cm.column(items, *, gap=40.0, w=None, h=None, x=None, y=None, within=None)
+cm.row(items, gap=40.0, size=None, at=cm.at(y=None, bottom=None), within=None)
+cm.column(items, gap=40.0, size=None, at=cm.at(x=None, y=None), within=None)
 ```
 
 One `Slot` per item, centred. A **row** spreads and its slots anchor at
@@ -251,8 +268,8 @@ why a character count is wrong for anything but ASCII:
 
 ```python
 w, h = cm.measure(label, size=30)
-scene.rect("box", x=x, y=y, w=w + 24, h=h + 12, radius=6, color="#243046")
-scene.text("label", label, x=x, y=y, size=30)
+scene.rect("box", w=w + 24, h=h + 12, at=(x, y)).fill("#243046").round(6)
+scene.text("label", label, size=30, at=(x, y))
 ```
 
 The height is the line height, so it is the same for `"cat"` and `"Qgy"` and a

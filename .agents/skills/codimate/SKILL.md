@@ -43,8 +43,9 @@ def view(frame):
     scene = cm.Scene()
     for slot, side in cm.row(SIDES, gap=120, w=190):
         bar = scene.group(side, slot)
-        bar.rect("box", h=max(frame.state[side] * 22, 1), bottom=0, color="blue")
-        bar.text("label", side, top=16, size=24)
+        bar.rect("box", h=max(frame.state[side] * 22, 1),
+                 at=cm.at(bottom=0)).fill("blue")
+        bar.text("label", side, size=24, at=cm.at(top=16))
     return scene
 
 
@@ -73,21 +74,27 @@ Do not read `crates/` unless fixing the engine.
 ## The API you actually need
 
 ```python
-# shapes — all take color=, layer=, opacity=, and anchors
-scene.rect(name, w=, h=, radius=)        # radius rounds the corners
-scene.circle(name, r=)
-scene.text(name, content, size=)
+# shapes — each takes only what decides WHAT IT IS, and returns a Handle
+scene.rect(name, h=, w=, at=)
+scene.circle(name, r=, at=)
+scene.text(name, content, size=, at=)
+scene.formula(name, latex, size=, at=)   # real LaTeX; needs `typst`
+scene.polygon(name, points)              # cm.ngon / cm.star make the corners
 scene.line(name, start=, end=, w=)       # start/end take a Slot or (x, y)
-scene.formula(name, latex, size=, reveal=, pen=)   # real LaTeX; needs `typst`
+scene.arrow(name, start=, end=, head=)
 scene.group(name, slot)                  # several shapes that move together
 
-# placement — pick ONE per axis
-at=(x, y)          # a point, or a Slot
-x=, y=             # one axis by its centre
-left= right= top= bottom=                # one axis by an edge
+# everything else is said on the handle, chained — no call takes >5 arguments
+.fill(color, edge=, edge_w=)   .round(radius)   .turn(degrees, pivot)
+.grow(scale)                   .on(layer=, opacity=)   .write(reveal=, pen=)
+
+# placement — ONE argument, `at`
+at=(x, y)                      # a point, or a Slot from cm.row/cm.column
+at=cm.at(x=, y=)               # one axis by its centre
+at=cm.at(x=, top=/bottom=)     # the vertical by an edge
 
 # where things sit
-cm.row(items, gap=, w=), cm.column(...)  # slots, so you write no coordinates
+cm.row(items, gap=, size=), cm.column(...)   # slots, so you write no coordinates
 cm.canvas(w, h), cm.width(), cm.height()
 cm.measure(text, size)                   # how big text will really be
 cm.measure_math(latex, size)             # same, for a formula
@@ -156,14 +163,19 @@ tests the day it is added.
 ```bash
 .venv/bin/python python/examples/<name>/main.py
 cd python && ../.venv/bin/python tests/run.py
+.venv/bin/ruff check
 ```
 
 That skips the two files that render video. Run `--all` before committing — it
 renders every example and takes about two minutes.
 
-Also: the skill's shape list is out of date the moment a primitive is added.
-`scene.polygon`, `scene.arrow`, `cm.ngon`, `cm.star`, and `scale`/`rotate`/
-`pivot` on every shape all exist; check `docs/reference.md` rather than this
-list.
+`ruff check` must pass before you are done. It enforces PEP 8 and, in
+particular, **PLR0913: no function takes more than five arguments** — which is
+why shapes hand back a handle instead of growing another keyword. If a helper
+of yours trips it, the fix is to group the arguments that always travel
+together, not to raise the limit.
+
+The list above goes out of date the moment a primitive is added; check
+`docs/reference.md` rather than this file.
 
 Then report the runnable command.

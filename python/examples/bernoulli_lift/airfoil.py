@@ -37,7 +37,8 @@ def to_circle(z):
     """The inverse, on the branch outside the circle."""
     root = cmath.sqrt(z * z - 4.0 * B * B)
     outer = 0.5 * (z + root)
-    return outer if abs(outer - CENTRE) >= abs(0.5 * (z - root) - CENTRE) else 0.5 * (z - root)
+    inner = 0.5 * (z - root)
+    return outer if abs(outer - CENTRE) >= abs(inner - CENTRE) else inner
 
 
 def surface(count=240):
@@ -87,7 +88,8 @@ def fill_columns(count=130):
         return out
 
     one, other = chain(nose, tail), chain(tail, nose)
-    mean = lambda c: sum(p.imag for p in c) / len(c)
+    def mean(c):
+        return sum(p.imag for p in c) / len(c)
     upper, lower = (one, other) if mean(one) > mean(other) else (other, one)
 
     def edge_at(x, chain):

@@ -54,7 +54,8 @@ def ngon(sides: int, r: float, at=(0.0, 0.0), turn: float = 0.0) -> list:
     ]
 
 
-def star(points: int, r: float, inner: float = None, at=(0.0, 0.0), turn: float = 0.0) -> list:
+def star(points: int, r: float, inner: float = None, at=(0.0, 0.0),
+         turn: float = 0.0) -> list:
     """The corners of a star, for :meth:`Scene.polygon`.
 
         scene.polygon("s", cm.star(5, r=80, at=(640, 360)), color="yellow")
@@ -100,6 +101,35 @@ def width() -> float:
 def height() -> float:
     """The canvas height."""
     return _CANVAS[1]
+
+
+@dataclass(frozen=True)
+class Place:
+    """Where a shape goes, as one value.
+
+    Built by :func:`at`. Exists so a shape takes one placement argument
+    instead of six — the six were one idea wearing a disguise.
+    """
+
+    x: "float | None" = None
+    y: "float | None" = None
+    top: "float | None" = None
+    bottom: "float | None" = None
+
+
+def at(x=None, y=None, top=None, bottom=None) -> Place:
+    """A place, for a shape's ``at=``.
+
+        scene.rect("bar", h=40, at=cm.at(bottom=0))
+        scene.text("l", "hi", at=cm.at(x=col, top=y + 22))
+
+    Give one value per axis: ``x`` or nothing for horizontal, and ``y``,
+    ``top`` or ``bottom`` for vertical. A plain ``(x, y)`` or a `Slot` works
+    wherever a Place does, so you only need this for edges.
+    """
+    if y is not None and (top is not None or bottom is not None):
+        raise ValueError("give one of y=, top= or bottom=")
+    return Place(x=x, y=y, top=top, bottom=bottom)
 
 
 @dataclass(frozen=True)
@@ -175,20 +205,30 @@ def _spread(items, gap, size, extent, centre):
     return sequence, [first + i * (size + gap) for i in range(count)], size
 
 
+def _size(size):
+    """A Slot size: one number for both sides, or `(w, h)`."""
+    if size is None:
+        return None, None
+    if isinstance(size, (int, float)):
+        return float(size), None
+    return size
+
+
 def row(
     items,
     *,
     gap: float = 40.0,
-    w: "float | None" = None,
-    h: "float | None" = None,
-    bottom: "float | None" = None,
-    y: "float | None" = None,
+    size=None,
+    at: "Place | None" = None,
     within: "Slot | None" = None,
 ):
     """One Slot per item, evenly spaced and centred on the canvas.
 
-        for slot, item in cm.row(values, gap=40):
+        for slot, item in cm.row(values, gap=40, size=190):
             ...
+
+    ``size`` is one number for the Slot's width (its height follows), or
+    ``(w, h)`` for both.
 
     A row lays things out on a shared baseline, so its Slots anchor at
     bottom-centre — hand one straight to ``scene.group()``.
@@ -199,11 +239,14 @@ def row(
     Yields ``(slot, item)`` pairs, or bare Slots if you passed a count.
     """
     box = _within(within)
+    place = at or Place()
+    w, h = _size(size)
     sequence, xs, w = _spread(items, gap, w, box.w, box.x)
     if h is None:
         h = w
-    if y is None:
-        y = (box.bottom - box.h * 0.22 if bottom is None else bottom) - h / 2
+    # A row sits on a baseline near the bottom of its box unless told otherwise.
+    floor = box.bottom - box.h * 0.22 if place.bottom is None else place.bottom
+    y = place.y if place.y is not None else floor - h / 2
 
     for x, item in zip(xs, sequence):
         slot = Slot(x=x, y=y, w=w, h=h, anchor="bottom")
@@ -214,15 +257,13 @@ def column(
     items,
     *,
     gap: float = 40.0,
-    w: "float | None" = None,
-    h: "float | None" = None,
-    x: "float | None" = None,
-    y: "float | None" = None,
+    size=None,
+    at: "Place | None" = None,
     within: "Slot | None" = None,
 ):
     """One Slot per item, stacked vertically and centred on the canvas.
 
-        for slot in cm.column(4, gap=40, x=640):
+        for slot in cm.column(4, gap=40, at=cm.at(x=640)):
             ...
 
     A column stacks things around a centre line, so its Slots anchor at their
@@ -234,11 +275,13 @@ def column(
     Yields ``(slot, item)`` pairs, or bare Slots if you passed a count.
     """
     box = _within(within)
-    sequence, ys, h = _spread(items, gap, h, box.h, box.y if y is None else y)
+    place = at or Place()
+    w, h = _size(size)
+    centre = box.y if place.y is None else place.y
+    sequence, ys, h = _spread(items, gap, h, box.h, centre)
     if w is None:
         w = h
-    if x is None:
-        x = box.x
+    x = box.x if place.x is None else place.x
 
     for cy, item in zip(ys, sequence):
         slot = Slot(x=x, y=cy, w=w, h=h, anchor="center")
@@ -248,9 +291,10 @@ def column(
 _UNSET = object()
 
 
-def _resolve(centre, low, high, half, names, default=_UNSET):
+def _resolve(given, half, names, default=_UNSET):
     """Turn whichever anchor was given into a centre coordinate."""
-    given = [v for v in (centre, low, high) if v is not None]
+    centre, low, high = given
+    given = [v for v in given if v is not None]
     if len(given) > 1:
         raise ValueError(f"give only one of {', '.join(f'{n}=' for n in names)}")
     if not given:

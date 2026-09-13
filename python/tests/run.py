@@ -35,7 +35,8 @@ for path in sorted(HERE.glob("test_*.py")):
     failed += support.run(vars(importlib.import_module(path.stem)))
 
 if skipped:
-    print(f"\nskipped {skipped} file(s) that render video — run with --all before committing")
+    print(f"\nskipped {skipped} file(s) that render video"
+          " — run with --all before committing")
 if failed:
     print(f"\n{failed} failed")
 sys.exit(1 if failed else 0)

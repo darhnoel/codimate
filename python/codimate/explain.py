@@ -38,7 +38,8 @@ class Rule:
 
     def __init__(self, pattern, position: str = "straight", **options: float) -> None:
         if position not in PATHS:
-            raise ValueError(f"unknown path {position!r} — use one of {', '.join(PATHS)}")
+            raise ValueError(
+                f"unknown path {position!r} — use one of {', '.join(PATHS)}")
         self.pattern = _key(pattern) if isinstance(pattern, tuple) else str(pattern)
         self.position = position
         self.options = {k: float(v) for k, v in options.items()}

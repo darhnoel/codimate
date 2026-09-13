@@ -23,9 +23,9 @@ def bars(frame):
 
     for slot, item in cm.row(frame.state, gap=40):
         bar = scene.group(item.id, slot)
-        bar.rect("bar", h=item.value * 70, bottom=0,
-                 color="orange" if item in active else "blue")
-        bar.text("label", item.value, top=20, size=32)
+        bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0)) \
+           .fill("orange" if item in active else "blue")
+        bar.text("label", item.value, size=32, at=cm.at(top=20))
 
     return scene
 
@@ -151,26 +151,37 @@ position doesn't.
 ## What you can draw
 
 ```python
-scene.rect(name,   h=, w=, color=, layer=, opacity=)
-scene.circle(name, r=, color=, layer=, opacity=)
-scene.text(name, content, size=, color=, layer=, opacity=)
-scene.line(name, start=slot_or_point, end=slot_or_point, w=, color=)
-scene.formula(name, r"\frac{a}{b}", size=, color=)      # LaTeX, needs `typst`
+scene.rect(name, h=, w=, at=)
+scene.circle(name, r=, at=)
+scene.text(name, content, size=, at=)
+scene.polygon(name, points)                             # cm.ngon, cm.star
+scene.line(name, start=slot_or_point, end=slot_or_point, w=)
+scene.formula(name, r"\frac{a}{b}", size=, at=)         # LaTeX, needs `typst`
 cm.measure(text, size) -> (w, h)                        # to size a box around text
 scene.group(name, slot)      # a place to draw a thing made of several shapes
 ```
 
-**Place things by whichever edge you actually mean.** Give one horizontal
-anchor (`x`, `left`, `right`) and one vertical anchor (`y`, `top`, `bottom`):
+Each takes only what decides *what the shape is*. Everything else — colour,
+outline, rotation, layer, opacity — is said afterwards on the handle it hands
+back, so no call grows past five arguments:
 
 ```python
-scene.rect("bar", x=640, bottom=560, w=90, h=200)   # sits on a line
-scene.rect("box", left=100, top=100, w=200, h=80)   # from a corner
-scene.text("label", 3, x=640, top=580, size=32)     # just under something
+scene.circle("bob", r=28, at=(x, y)).fill("orange").on(layer=4)
+scene.rect("card", h=120, w=200).fill("#243046", edge="grey").round(8)
+scene.polygon("tri", cm.ngon(3, r=60)).grow(1.8).turn(12)
 ```
 
-No baselines, no `y - h/2`. Give two anchors on the same axis and you get an
-error, not a silent winner.
+**Place things by whichever edge you actually mean.** `at=` takes a point, a
+`Slot`, or `cm.at(...)` when an edge is what you mean:
+
+```python
+scene.rect("bar", h=200, w=90, at=(640, 460))               # a point
+scene.rect("bar", h=200, w=90, at=cm.at(x=640, bottom=560)) # sits on a line
+scene.text("label", 3, size=32, at=cm.at(x=640, top=580))   # under something
+```
+
+No baselines, no `y - h/2`. Give both `y` and `top` and you get an error, not
+a silent winner.
 
 Colors are names (`white`, `black`, `red`, `orange`, `blue`, `green`, `grey`,
 `yellow`, `cyan`) or `#rrggbb`. Higher `layer` draws on top.
@@ -187,12 +198,13 @@ thing in one:
 ```python
 for slot, item in cm.row(frame.state, gap=40):
     bar = scene.group(item.id, slot)
-    bar.rect("bar", h=item.value * 70, bottom=0)
-    bar.text("label", item.value, top=20)
+    bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
+    bar.text("label", item.value, at=cm.at(top=20))
 ```
 
-**Inside a group, `0` is the group's own point.** `bottom=0` stands the bar on
-it; `top=20` puts the label 20 below it. `w` defaults to the group's width and
+**Inside a group, `0` is the group's own point.** `cm.at(bottom=0)` stands the
+bar on it; `cm.at(top=20)` puts the label 20 below it. `w` defaults to the
+group's width and
 `x` to its centre, so the only thing left to say is the one thing a bar and a
 label disagree about.
 
@@ -217,12 +229,12 @@ you never take it apart; read `slot.x`, `slot.bottom`, `slot.left`, `slot.top`,
 tree — and its slots anchor at their centre rather than a baseline:
 
 ```python
-for slot in cm.column(4, gap=44, x=640):
+for slot in cm.column(4, gap=44, at=cm.at(x=640)):
     scene.group(("neuron", 1, i), slot).circle("body", r=30)
 ```
 
 Widths, spacing and the baseline come from the canvas unless you override them
-(`w=`, `h=`, `bottom=`, `x=`). The canvas is 1280x720 by default:
+(`size=`, `at=`, `within=`). The canvas is 1280x720 by default:
 
 ```python
 cm.canvas(1920, 1080)     # everything below follows

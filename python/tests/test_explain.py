@@ -13,7 +13,7 @@ def swap_once(values):
 def view(frame):
     scene = cm.Scene()
     for slot, item in cm.row(frame.state, gap=40):
-        scene.group(item.id, slot).rect("bar", h=item.value * 40, bottom=0)
+        scene.group(item.id, slot).rect("bar", h=item.value * 40, at=cm.at(bottom=0))
     return scene
 
 

@@ -120,7 +120,8 @@ class Flow:
                 continue
             if parcel.marked:
                 parcel.trail.append((parcel.x, parcel.y))
-                if was_before_tail and parcel.x >= 2.0 and parcel.side not in self.arrived:
+                crossed = was_before_tail and parcel.x >= 2.0
+                if crossed and parcel.side not in self.arrived:
                     self.arrived[parcel.side] = self.clock - parcel.born
 
         if self.clock >= self.next_release:

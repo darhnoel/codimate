@@ -6,11 +6,14 @@ only ever one place to look.
 
 import re
 
+from typing import NamedTuple
+
 import codimate as cm
 
 import attention as A
-from layout import (BAND_PAD, CAPTION_Y, CELL, DIM, EMPTY, FORMULA_Y, GRID,
-                    HEADS_IN_LAYER, INK, KEY, CAPTION_BG, MARK, MASKED, MIX_Y, NOTE_Y, ON_MARK,
+from layout import (BAND_PAD, CAPTION_BG, CAPTION_Y, CELL, DIM, EMPTY,
+                    FORMULA_Y, GRID, HEADS_IN_LAYER, INK, KEY, MARK, MASKED,
+                    MIX_Y, NOTE_Y, ON_MARK,
                     OUT_Y, PAIR_CELL, PAIR_LEFT, PAIR_RIGHT, PANEL, QUERY,
                     QUIET, ROW_ALT, ROW_VALUE, ROW_WORDS, SENTENCE_HIGH,
                     SENTENCE_MID, STRIP_W,
@@ -55,8 +58,7 @@ def _sentence(scene, walk):
             colour = KEY
         else:
             colour = QUIET        # masked: it exists, it just cannot be seen
-        scene.text(("word", i), word, x=left + span * i, y=y,
-                   size=40, color=colour)
+        scene.text(("word", i), word, size=40, at=(left + span * i, y)).fill(colour)
 
     # Which token supplies the query and which supply the keys — the one piece
     # of Q/K vocabulary the animation needs, attached to the words themselves
@@ -64,8 +66,9 @@ def _sentence(scene, walk):
     if walk.stage == "roles":
         for i in range(walk.query + 1):
             role = "Q" if i == walk.query else "K"
-            scene.text(("role", i), role, x=left + span * i, top=y + 22,
-                       size=24, color=QUERY if i == walk.query else KEY)
+            scene.text(("role", i), role, size=24,
+                       at=cm.at(x=left + span * i, top=y + 22)) \
+                 .fill(QUERY if i == walk.query else KEY)
 
 
 def _formula(scene, walk):
@@ -79,12 +82,11 @@ def _formula(scene, walk):
     `reveal` from 0 to 1 — a pen traces each glyph's outline and the solid
     letter fills in behind it, instead of the whole block fading up at once.
     """
-    scene.formula(
-        "formula",
-        r"\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left("
-        r"\frac{QK^{T}}{\sqrt{d_k}}\right)V",
-        x=640, y=FORMULA_Y, size=42, color=INK, pen=2.2,
-        reveal=1.0 if walk.stage == "formula" else 0.0)
+    scene.formula("formula",
+                  r"\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left("
+                  r"\frac{QK^{T}}{\sqrt{d_k}}\right)V",
+                  size=42, at=(640, FORMULA_Y)).fill(INK) \
+         .write(pen=2.2, reveal=1.0 if walk.stage == "formula" else 0.0)
 
 
 def _working(scene, walk):
@@ -124,38 +126,38 @@ def _working(scene, walk):
         # Sized from the number it is actually behind, so it stays correct when
         # the value, the font size or the sentence changes.
         width = cm.measure(f"{values[best]:.2f}", size)[0] + BAND_PAD
-        scene.rect("band", x=column(best), top=ROW_WORDS - 32, w=width,
-                   h=(ROW_VALUE + 42) - (ROW_WORDS - 32), radius=10, color=PANEL)
+        scene.rect("band", w=width, h=(ROW_VALUE + 42) - (ROW_WORDS - 32),
+                   at=cm.at(x=column(best), top=ROW_WORDS - 32)).fill(PANEL).round(10)
 
     for j in range(len(raw)):
-        scene.text(("word", j), A.WORDS[j], x=column(j), y=ROW_WORDS,
-                   size=34, color=QUERY if j == walk.query else KEY)
+        scene.text(("word", j), A.WORDS[j], size=34,
+                   at=(column(j), ROW_WORDS)).fill(QUERY if j == walk.query else KEY)
 
-    scene.formula("l_row", label, x=TABLE_LABEL, y=ROW_VALUE, size=32, color=DIM)
+    scene.formula("l_row", label, size=32, at=(TABLE_LABEL, ROW_VALUE)).fill(DIM)
     for j in range(shown):
-        scene.text(("val", j), f"{values[j]:.2f}", x=column(j), y=ROW_VALUE,
-                   size=size, color=INK if j == best else DIM)
+        scene.text(("val", j), f"{values[j]:.2f}", size=size,
+                   at=(column(j), ROW_VALUE)).fill(INK if j == best else DIM)
 
     # Where the 8 comes from, and then the division actually being done. Shown
     # once each, on the winning number, so the arithmetic is checkable rather
     # than asserted.
     if walk.stage == "sqrt":
-        scene.formula("note", rf"\sqrt{{d_k}} = \sqrt{{{A.D_K}}} = 8",
-                      x=640, y=NOTE_Y, size=40, color=KEY)
+        scene.formula("note", rf"\sqrt{{d_k}} = \sqrt{{{A.D_K}}} = 8", size=40,
+                      at=(640, NOTE_Y)).fill(KEY)
     elif walk.stage == "scale":
         scene.formula("note", rf"\frac{{{raw[best]:.2f}}}{{8}} = {scaled[best]:.2f}",
-                      x=640, y=NOTE_Y, size=40, color=KEY)
+                      size=40, at=(640, NOTE_Y)).fill(KEY)
     elif walk.stage == "sum":
         total = " + ".join(f"{w:.2f}" for w in weights)
-        scene.formula("note", rf"{total} = 1.00", x=640, y=NOTE_Y, size=38, color=KEY)
+        scene.formula("note", rf"{total} = 1.00", size=38, at=(640, NOTE_Y)).fill(KEY)
 
     if walk.stage == "compare":
         flat = A.softmax(raw)
-        scene.formula("l_flat", r"\mathrm{without}", x=TABLE_LABEL, y=ROW_ALT,
-                      size=26, color=WARN)
+        scene.formula("l_flat", r"\mathrm{without}", size=26,
+                      at=(TABLE_LABEL, ROW_ALT)).fill(WARN)
         for j in range(len(flat)):
-            scene.text(("flat", j), f"{flat[j]:.2f}", x=column(j), y=ROW_ALT,
-                       size=36, color=WARN)
+            scene.text(("flat", j), f"{flat[j]:.2f}", size=36,
+                       at=(column(j), ROW_ALT)).fill(WARN)
 
 
 def _values(scene, walk):
@@ -170,43 +172,38 @@ def _values(scene, walk):
 
     for j in range(walk.query + 1):
         lit = walk.stage != "values"
-        scene.text(("w", j), f"{weights[j]:.2f}", x=column(j), y=WEIGHT_Y,
-                   size=36, color=INK if j == 1 else DIM)
+        scene.text(("w", j), f"{weights[j]:.2f}", size=36,
+                   at=(column(j), WEIGHT_Y)).fill(INK if j == 1 else DIM)
 
         # The value vectors. One box each, labelled — not 64 numbers.
-        scene.rect(("vbox", j), x=column(j), y=VBOX_Y, w=VBOX_W, h=VBOX_H,
-                   radius=10, color=PANEL)
-        scene.formula(("vlab", j), rf"V_{{\mathrm{{{A.WORDS[j]}}}}}",
-                      x=column(j), y=VBOX_Y, size=30,
-                      color=INK if j == 1 else DIM)
+        scene.rect(("vbox", j), w=VBOX_W, h=VBOX_H,
+                   at=(column(j), VBOX_Y)).fill(PANEL).round(10)
+        scene.formula(("vlab", j), rf"V_{{\mathrm{{{A.WORDS[j]}}}}}", size=30,
+                      at=(column(j), VBOX_Y)).fill(INK if j == 1 else DIM)
 
         # Each value flows into the sum, weighted. Thickness carries the
         # weight, so 0.96 is visibly most of what arrives.
         if lit:
-            scene.line(("flow", j),
-                       start=(column(j), VBOX_Y + VBOX_H / 2),
+            scene.line(("flow", j), start=(column(j), VBOX_Y + VBOX_H / 2),
                        end=(640.0, MIX_Y - 14),
-                       w=1.0 + 7.0 * weights[j],
-                       color=heat(max(weights[j], 0.25)))
+                       w=1.0 + 7.0 * weights[j]).fill(heat(max(weights[j], 0.25)))
 
     if walk.stage == "values":
         return
 
-    scene.formula(
-        "mix",
-        " + ".join(rf"{weights[j]:.2f}\,V_{{\mathrm{{{A.WORDS[j]}}}}}"
-                   for j in range(walk.query + 1)),
-        x=640, y=MIX_Y + 22, size=32, color=INK)
+    terms = " + ".join(rf"{weights[j]:.2f}\,V_{{\mathrm{{{A.WORDS[j]}}}}}"
+                       for j in range(walk.query + 1))
+    scene.formula("mix", terms, size=32, at=(640, MIX_Y + 22)).fill(INK)
 
     if walk.stage == "output":
         label = 'a new representation of "sat"'
-        scene.rect("outbox", x=640, y=OUT_Y, w=cm.measure(label, 22)[0] + 56,
-                   h=VBOX_H, radius=10, color=PANEL)
+        scene.rect("outbox", w=cm.measure(label, 22)[0] + 56, h=VBOX_H,
+                   at=(640, OUT_Y)).fill(PANEL).round(10)
         # Not a repeat of the caption — the caption says what just happened,
         # the box says what the thing *is*. "ក្នុង Head នេះ" lives in the
         # caption so the shorter label keeps to the box's width.
-        scene.text("outlab", "លទ្ធផល Attention សម្រាប់ 'sat'",
-                   x=640, y=OUT_Y, size=24, color=KEY)
+        scene.text("outlab", "លទ្ធផល Attention សម្រាប់ 'sat'", size=24,
+                   at=(640, OUT_Y)).fill(KEY)
 
 
 def _heads(scene, walk):
@@ -226,52 +223,69 @@ def _heads(scene, walk):
             colour = QUERY
         else:
             colour = UNLIT
-        scene.rect(("head_mark", i), x=x, y=y, w=STRIP_W, h=16, color=colour)
+        scene.rect(("head_mark", i), w=STRIP_W, h=16, at=(x, y)).fill(colour)
 
     label = ("GPT-2, layer 4 — 2 ក្នុងចំណោម Head 12" if pair
              else "GPT-2, layer 4 — Head 12 នេះជា Head ដែលយើងកំពុងតាម")
-    scene.text("strip_label", label, x=640, top=STRIP_Y + 16, size=17, color=QUIET)
+    scene.text("strip_label", label, size=17,
+               at=cm.at(x=640, top=STRIP_Y + 16)).fill(QUIET)
 
 
-def _grid(scene, walk, head, origin, size, tag, rows):
+class Grid(NamedTuple):
+    """Where one matrix is drawn, and what its shapes are named.
+
+    Three numbers that always travel together: on their own they pushed
+    `_grid` past the five-argument limit, and separately they were three
+    chances to pass the wrong one.
+    """
+
+    origin: tuple
+    size: float
+    tag: str
+
+
+def _grid(scene, head, grid, rows):
+    origin, size, tag = grid
     for j, word in enumerate(A.WORDS):
         x, _ = cell(0, j, origin, size)
-        scene.text((tag, "col", j), word, x=x, bottom=origin[1] - 14,
-                   size=20 if size < CELL else 22, color=DIM)
+        scene.text((tag, "col", j), word, size=20 if size < CELL else 22,
+                   at=cm.at(x=x, bottom=origin[1] - 14)).fill(DIM)
     for i, word in enumerate(A.WORDS):
         _, y = cell(i, 0, origin, size)
-        scene.text((tag, "row", i), word, x=origin[0] - 46, y=y,
-                   size=20 if size < CELL else 22, color=DIM)
+        scene.text((tag, "row", i), word, size=20 if size < CELL else 22,
+                   at=(origin[0] - 46, y)).fill(DIM)
 
     for i in range(A.N):
         done = i in rows
         weights = A.row(head, i) if done else None
         for j in range(A.N):
             x, y = cell(i, j, origin, size)
-            box = scene.group((tag, "cell", i, j), x=x, y=y)
+            box = scene.group((tag, "cell", i, j), at=(x, y))
             if j > i:
-                box.rect("fill", w=size - 3, h=size - 3, color=MASKED)
+                box.rect("fill", w=size - 3, h=size - 3).fill(MASKED)
             elif not done:
-                box.rect("fill", w=size - 3, h=size - 3, color=EMPTY)
+                box.rect("fill", w=size - 3, h=size - 3).fill(EMPTY)
             else:
-                box.rect("fill", w=size - 3, h=size - 3, color=heat(weights[j]))
-                box.text("v", f"{weights[j]:.2f}", size=18 if size < CELL else 19,
-                         color=INK if weights[j] > 0.3 else DIM)
+                box.rect("fill", w=size - 3, h=size - 3).fill(heat(weights[j]))
+                box.text("v", f"{weights[j]:.2f}",
+                         size=18 if size < CELL else 19) \
+                   .fill(INK if weights[j] > 0.3 else DIM)
 
 
 def _matrix(scene, walk):
     if walk.stage not in PAIR:
-        _grid(scene, walk, walk.head, GRID, CELL, "one", walk.rows)
+        _grid(scene, walk.head, Grid(GRID, CELL, "one"), walk.rows)
         return
 
     every = set(range(A.N))
     for head, origin, tag, note in (
             ("subject", PAIR_LEFT, "left", "head 3 — subject-like pattern"),
             ("previous", PAIR_RIGHT, "right", "head 11 — previous-token pattern")):
-        _grid(scene, walk, head, origin, PAIR_CELL, tag, every)
-        scene.text((tag, "note"), note,
-                   x=origin[0] + PAIR_CELL * A.N / 2, y=origin[1] + PAIR_CELL * A.N + 38,
-                   size=21, color=KEY if head == "previous" else DIM)
+        _grid(scene, head, Grid(origin, PAIR_CELL, tag), every)
+        below = (origin[0] + PAIR_CELL * A.N / 2,
+                 origin[1] + PAIR_CELL * A.N + 38)
+        scene.text((tag, "note"), note, size=21, at=below) \
+             .fill(KEY if head == "previous" else DIM)
 
 
 def _wrap(text, size=40, max_px=1150):
@@ -311,14 +325,13 @@ def _statement(scene, walk):
     lines = _wrap(walk.card)
     y0 = 360.0 - (len(lines) - 1) * 26.0
     for i, line in enumerate(lines):
-        scene.text(("statement", i), line, x=640, y=y0 + i * 52,
-                   size=40, color=INK)
+        scene.text(("statement", i), line, size=40, at=(640, y0 + i * 52)).fill(INK)
 
 
 def draw(scene, walk):
     if walk.stage in TITLED:
-        scene.text("title", "ដំណើរការនៃ QKV នៅក្នុង ស្ថាបត្យកម្ម Attention",
-                   x=640, y=52, size=30, color=INK)
+        scene.text("title", "ដំណើរការនៃ QKV នៅក្នុង ស្ថាបត្យកម្ម Attention", size=30,
+                   at=(640, 52)).fill(INK)
     if walk.card:
         _statement(scene, walk)
         return
@@ -464,15 +477,14 @@ def _caption(scene, walk):
     # The plate. Sized to the line it holds, so it never runs wider than the
     # words — a bar of fixed width would look like chrome rather than like the
     # narration having a place of its own.
-    scene.rect("cap_bg", x=640, y=CAPTION_Y, w=x + 52, h=CAPTION_SIZE + 30,
-               radius=15, color=CAPTION_BG)
+    scene.rect("cap_bg", w=x + 52, h=CAPTION_SIZE + 30,
+               at=(640, CAPTION_Y)).fill(CAPTION_BG).round(15)
 
     # ONE rect for the mark, so the engine slides and resizes it from word to
     # word rather than blinking it out and in. That movement is the reading.
     if 0 <= here < len(pieces):
-        scene.rect("cap_mark", x=left + centres[here], y=CAPTION_Y,
-                   w=widths[here] + MARK_PAD, h=CAPTION_SIZE + 14, radius=7,
-                   color=MARK)
+        scene.rect("cap_mark", w=widths[here] + MARK_PAD, h=CAPTION_SIZE + 14,
+                   at=(left + centres[here], CAPTION_Y)).fill(MARK).round(7)
 
     for i, ((piece, _), centre) in enumerate(zip(pieces, centres)):
         colour = ON_MARK if i == here else INK
@@ -480,8 +492,8 @@ def _caption(scene, walk):
             # Real mathematics in the narration. A caption saying "sqrt(d_k)"
             # in ASCII beside an equation that renders it properly is the kind
             # of detail that makes the whole thing look unfinished.
-            scene.formula(("cap", i, piece), piece[1:-1], x=left + centre,
-                          y=CAPTION_Y, size=CAPTION_SIZE, color=colour)
+            scene.formula(("cap", i, piece), piece[1:-1], size=CAPTION_SIZE,
+                          at=(left + centre, CAPTION_Y)).fill(colour)
         else:
-            scene.text(("cap", i, piece), piece, x=left + centre, y=CAPTION_Y,
-                       size=CAPTION_SIZE, color=colour)
+            scene.text(("cap", i, piece), piece, size=CAPTION_SIZE,
+                       at=(left + centre, CAPTION_Y)).fill(colour)

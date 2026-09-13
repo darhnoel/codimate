@@ -49,11 +49,12 @@ def explain_frame(frame):
     clock = frame.state
     active, start, duration, local = clock.locate()
 
-    scene.text("title", "f(t) → Scene", x=cm.width() / 2, y=72, size=44, color=INK)
-    scene.text("sub", "three pictures are stored — every frame between them is computed",
-               x=cm.width() / 2, y=112, size=21, color="grey")
+    scene.text("title", "f(t) → Scene", size=44, at=(cm.width() / 2, 72)).fill(INK)
+    scene.text("sub",
+               "three pictures are stored — every frame between them is computed",
+               size=21, at=(cm.width() / 2, 112)).fill("grey")
     scene.text("formula", f"local = (t − {start:.1f}) / {duration:.1f}  =  {local:.2f}",
-               x=cm.width() / 2, y=310, size=26, color=INK)
+               size=26, at=(cm.width() / 2, 310)).fill(INK)
 
     timeline.draw(scene, clock, active)
     curve.draw(scene, local)

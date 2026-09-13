@@ -114,8 +114,8 @@ A Group makes that unrepresentable:
 
 ```python
 bar = scene.group(item.id, slot)
-bar.rect("bar", h=item.value * 70, bottom=0)
-bar.text("label", item.value, top=20)
+bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
+bar.text("label", item.value, at=cm.at(top=20))
 ```
 
 The Engine sees `3/bar` and `3/label` — one name, two shapes. Whatever the
@@ -157,9 +157,9 @@ def bars(frame):
     active = frame.items()
     for slot, item in cm.row(frame.state, gap=40):
         bar = scene.group(item.id, slot)
-        bar.rect("bar", h=item.value * 70, bottom=0,
-                 color="orange" if item in active else "blue")
-        bar.text("label", item.value, top=20)
+        bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0)) \
+           .fill("orange" if item in active else "blue")
+        bar.text("label", item.value, at=cm.at(top=20))
     return scene
 ```
 

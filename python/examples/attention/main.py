@@ -146,7 +146,8 @@ def explain(walk):
         # A caption may be a tuple of lines. Each is narrated in turn over the
         # same picture, the way a subtitle continues — rather than crammed onto
         # one line, which would run past the frame on the longer ones.
-        lines = (walk.caption,) if isinstance(walk.caption, str) else tuple(walk.caption)
+        one_line = isinstance(walk.caption, str)
+        lines = (walk.caption,) if one_line else tuple(walk.caption)
 
         # Shapes cross-fade over whatever segment they enter or leave in, so a
         # caption that changes during a 0.8s move fades for 0.8s. The way to

@@ -119,7 +119,8 @@ class Board:
                   closing = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny
                   if closing <= 0:
                       continue            # already moving apart
-                  impulse = closing * (1.0 + KNOCK) * (0.5 if not (a_fixed or b_fixed) else 1.0)
+                  share = 0.5 if not (a_fixed or b_fixed) else 1.0
+                  impulse = closing * (1.0 + KNOCK) * share
                   if not a_fixed:
                       a.vx -= impulse * nx
                       a.vy -= impulse * ny

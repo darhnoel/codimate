@@ -84,7 +84,8 @@ class _Recorder:
     events: "list[Event]"
 
 
-_recorder: ContextVar["_Recorder | None"] = ContextVar("codimate_recorder", default=None)
+_recorder: ContextVar["_Recorder | None"] = ContextVar(
+    "codimate_recorder", default=None)
 
 
 def emit(name: str, **data: Any) -> None:

@@ -32,19 +32,15 @@ def bars(frame):
     active = frame.items()
     done = frame.is_("done")
 
-    scene.text("title", "Bubble Sort", x=cm.width() / 2, y=90, size=40, color="grey")
+    scene.text("title", "Bubble Sort", size=40, at=(cm.width() / 2, 90)).fill("grey")
 
     for slot, item in cm.row(frame.state, gap=40):
         # The name is the ITEM, not the position — so a bar travels when it
         # moves. Naming it after the position would make it morph in place.
         bar = scene.group(item.id, slot)
-        bar.rect(
-            "bar",
-            h=item.value * 70,
-            bottom=0,
-            color="green" if done else "orange" if item in active else "blue",
-        )
-        bar.text("label", item.value, top=20, size=32)
+        colour = "green" if done else "orange" if item in active else "blue"
+        bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0)).fill(colour)
+        bar.text("label", item.value, size=32, at=cm.at(top=20))
 
     return scene
 

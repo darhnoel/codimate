@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any, Hashable
 
-from .layout import Slot, _UNSET, _resolve, width
+from .layout import Place, Slot, _UNSET, _resolve, width
 
 
 @dataclass(frozen=True)
@@ -37,32 +37,6 @@ class _Shape:
 
 
 PIVOTS = ("center", "top", "bottom", "left", "right")
-
-
-def _look(color, edge, edge_w, layer, opacity, scale, rotate, pivot) -> dict:
-    """The fields every drawable shape carries, resolved in one place.
-
-    Five shape methods used to repeat this pass-through, so adding one property
-    meant five near-identical edits and a chance to miss one. The signatures
-    stay explicit — they are what the generated reference and editor completion
-    read — but the body lives here.
-
-    ``scale`` takes a number for both axes, or ``(sx, sy)`` to stretch.
-    """
-    if pivot not in PIVOTS:
-        raise ValueError(f"unknown pivot {pivot!r} — use one of {', '.join(PIVOTS)}")
-    sx, sy = (scale, scale) if isinstance(scale, (int, float)) else scale
-    return {
-        "color": color,
-        "edge": edge,
-        "edge_w": float(edge_w),
-        "layer": int(layer),
-        "opacity": float(opacity),
-        "scale_x": float(sx),
-        "scale_y": float(sy),
-        "rotate": float(rotate),
-        "pivot": pivot,
-    }
 
 
 def _key(path) -> str:
@@ -112,6 +86,72 @@ def _at(at, x, y, edges):
     return _point(at)
 
 
+class Handle:
+    """What a shape call gives back: a way to say more about that shape.
+
+    Chained rather than passed, so no function carries eighteen arguments:
+
+        scene.rect("bar", h=40, at=cm.at(bottom=0)).fill("blue").turn(30)
+
+    Each call returns the handle again, and each one is small enough to read.
+    """
+
+    def __init__(self, shapes: dict, name: str):
+        self._shapes = shapes
+        self._name = name
+
+    def _set(self, **changes) -> "Handle":
+        # `_Shape` is frozen, so saying more about a shape replaces it rather
+        # than mutating it. A handful of copies per shape, and the payload
+        # stays a value.
+        self._shapes[self._name] = replace(self._shapes[self._name], **changes)
+        return self
+
+    def fill(self, color: str = "white", edge: str = None,
+             edge_w: float = 0.0) -> "Handle":
+        """Colour it. `edge` outlines it; `color="none"` leaves it unfilled."""
+        changes = {"color": color, "edge_w": float(edge_w)}
+        if edge is not None:
+            changes["edge"] = edge
+        return self._set(**changes)
+
+    def turn(self, degrees: float, pivot: str = "center") -> "Handle":
+        """Rotate it. `pivot` is center, top, bottom, left or right.
+
+        Text moves but does not turn — rotating glyphs is renderer work that
+        has not been done.
+        """
+        if pivot not in PIVOTS:
+            raise ValueError(
+                f"unknown pivot {pivot!r} — use one of {', '.join(PIVOTS)}")
+        return self._set(rotate=float(degrees), pivot=pivot)
+
+    def grow(self, scale) -> "Handle":
+        """Scale it: a number for both axes, or `(sx, sy)` to stretch."""
+        sx, sy = (scale, scale) if isinstance(scale, (int, float)) else scale
+        return self._set(scale_x=float(sx), scale_y=float(sy))
+
+    def on(self, layer: int = None, opacity: float = None) -> "Handle":
+        """Which layer it draws on, and how solid it is."""
+        changes = {}
+        if layer is not None:
+            changes["layer"] = int(layer)
+        if opacity is not None:
+            changes["opacity"] = float(opacity)
+        return self._set(**changes)
+
+    def round(self, radius: float) -> "Handle":
+        """Round a rectangle's corners, clamped to half its short side."""
+        return self._set(r=float(radius))
+
+    def write(self, reveal: float = None, pen: float = 0.0) -> "Handle":
+        """How much of a formula shows, and whether a pen draws it on."""
+        changes = {"w": float(pen)}
+        if reveal is not None:
+            changes["r"] = float(reveal)
+        return self._set(**changes)
+
+
 class Group:
     """Somewhere to draw, with its own origin and its own name.
 
@@ -141,265 +181,128 @@ class Group:
         return 0.0 if self._path else _UNSET
 
 
-    def _place(self, key, kind, *, x, y, x2=0.0, y2=0.0, w=0.0, h=0.0, r=0.0, **rest) -> "Group":
+    def _place(self, key, kind, **fields) -> "Handle":
         path = self._path + (key,)
         name = _key(path)
         if name in self._scene._shapes:
             raise ValueError(
                 f"two shapes share the name {name!r} — a name means exactly one thing"
             )
-        self._scene._shapes[name] = _Shape(
-            item=name, kind=kind,
-            x=self._ox + x, y=self._oy + y,
-            x2=self._ox + x2, y2=self._oy + y2,
-            w=w, h=h, r=r, **rest
+        # Positions arrive relative to this Group and leave absolute.
+        for axis, origin in (("x", self._ox), ("y", self._oy),
+                             ("x2", self._ox), ("y2", self._oy)):
+            if axis in fields:
+                fields[axis] = origin + fields[axis]
+        shape = _Shape(item=name, kind=kind, **fields)
+        self._scene._shapes[name] = shape
+        return Handle(self._scene._shapes, name)
+
+    def _where(self, at, half: float):
+        """One placement argument in, a centre out.
+
+        `at` may be a point, a Slot, a `cm.at(...)`, or nothing at all — inside
+        a Group, nothing means the Group's own point.
+        """
+        if at is None:
+            place = Place()
+        elif isinstance(at, Place):
+            place = at
+        else:
+            px, py = _point(at)
+            place = Place(x=px, y=py)
+        return (
+            _resolve((place.x, None, None), 0.0, ("x",), self._child_default),
+            _resolve((place.y, place.top, place.bottom), half,
+                     ("y", "top", "bottom"), self._child_default),
         )
-        return self
 
     # -- shapes ---------------------------------------------------------------
+    #
+    # Each one takes only what makes it that shape, plus where it goes.
+    # Everything optional — colour, outline, scale, rotation, layer — is said
+    # afterwards on the handle it returns:
+    #
+    #     scene.circle("bob", r=28, at=(x, y)).fill("orange").on(layer=4)
+    #
+    # That keeps every function small enough to hold in your head, and small
+    # enough for a linter: `ruff --select PLR0913` allows five arguments and
+    # these signatures used to carry eighteen.
 
-    def rect(
-        self,
-        key: Hashable,
-        *,
-        at: "Slot | tuple[float, float] | None" = None,
-        h: float,
-        w: float = None,
-        x: float = None,
-        y: float = None,
-        left: float = None,
-        right: float = None,
-        top: float = None,
-        bottom: float = None,
-        radius: float = 0.0,
-        edge: str = "white",
-        edge_w: float = 0.0,
-        scale=1.0,
-        rotate: float = 0.0,
-        pivot: str = "center",
-        color: str = "white",
-        layer: int = 0,
-        opacity: float = 1.0,
-    ) -> "Group":
-        """A rectangle. Place it by its centre or by any edge.
+    def rect(self, key: Hashable, *, h: float, w: float = None, at=None) -> "Handle":
+        """A rectangle. Say where with a point, a Slot, or `cm.at(...)`.
 
-        ``radius`` rounds the corners. It animates like anything else, so a
-        rectangle can square off or soften as the explanation moves.
+            scene.rect("box", h=40, at=cm.at(bottom=0)).fill("blue")
+
+        Round the corners with `.round(12)`.
         """
         if w is None:
-            w = _resolve(None, None, None, 0, ("w",), self._w if self._path else _UNSET)
-        x, y = _at(at, x, y, (left, right, top, bottom,))
-        return self._place(
-            key,
-            "rect",
-            x=_resolve(x, left, right, w / 2, ("x", "left", "right"), self._child_default),
-            y=_resolve(y, top, bottom, h / 2, ("y", "top", "bottom"), self._child_default),
-            w=w,
-            h=h,
-            r=radius,
-            **_look(color, edge, edge_w, layer, opacity,
-                    scale, rotate, pivot),
-        )
+            fallback = self._w if self._path else _UNSET
+            w = _resolve((None, None, None), 0, ("w",), fallback)
+        x, y = self._where(at, h / 2)
+        return self._place(key, "rect", x=x, y=y, w=w, h=h)
 
-    def circle(
-        self,
-        key: Hashable,
-        *,
-        at: "Slot | tuple[float, float] | None" = None,
-        r: float,
-        x: float = None,
-        y: float = None,
-        left: float = None,
-        right: float = None,
-        top: float = None,
-        bottom: float = None,
-        edge: str = "white",
-        edge_w: float = 0.0,
-        scale=1.0,
-        rotate: float = 0.0,
-        pivot: str = "center",
-        color: str = "white",
-        layer: int = 0,
-        opacity: float = 1.0,
-    ) -> "Group":
-        """A circle. Place it by its centre or by any edge, like a rect."""
-        x, y = _at(at, x, y, (left, right, top, bottom,))
-        return self._place(
-            key,
-            "circle",
-            x=_resolve(x, left, right, r, ("x", "left", "right"), self._child_default),
-            y=_resolve(y, top, bottom, r, ("y", "top", "bottom"), self._child_default),
-            r=r,
-            **_look(color, edge, edge_w, layer, opacity,
-                    scale, rotate, pivot),
-        )
+    def circle(self, key: Hashable, *, r: float, at=None) -> "Handle":
+        """A filled circle. `color="none"` with `.fill(edge=...)` draws a ring."""
+        x, y = self._where(at, r)
+        return self._place(key, "circle", x=x, y=y, r=r)
 
-    def text(
-        self,
-        key: Hashable,
-        content: Any,
-        *,
-        at: "Slot | tuple[float, float] | None" = None,
-        x: float = None,
-        y: float = None,
-        top: float = None,
-        bottom: float = None,
-        size: float = 16.0,
-        edge: str = "white",
-        edge_w: float = 0.0,
-        scale=1.0,
-        rotate: float = 0.0,
-        pivot: str = "center",
-        color: str = "white",
-        layer: int = 10,
-        opacity: float = 1.0,
-    ) -> "Group":
+    def text(self, key: Hashable, content: Any, *,
+             size: float = 16.0, at=None) -> "Handle":
         """Text, centred horizontally. You never deal with baselines."""
-        x, y = _at(at, x, y, (top, bottom,))
-        return self._place(
-            key,
-            "text",
-            x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
-            y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
-            text=str(content),
-            size=size,
-            **_look(color, edge, edge_w, layer, opacity,
-                    scale, rotate, pivot),
-        )
+        x, y = self._where(at, size / 2)
+        return self._place(key, "text", x=x, y=y, text=str(content), size=size,
+                           layer=10)
 
-    def formula(
-        self,
-        key: Hashable,
-        latex: str,
-        *,
-        at: "Slot | tuple[float, float] | None" = None,
-        x: float = None,
-        y: float = None,
-        top: float = None,
-        bottom: float = None,
-        size: float = 16.0,
-        reveal: float = 1.0,
-        pen: float = 0.0,
-        edge: str = "white",
-        edge_w: float = 0.0,
-        scale=1.0,
-        rotate: float = 0.0,
-        pivot: str = "center",
-        color: str = "white",
-        layer: int = 10,
-        opacity: float = 1.0,
-    ) -> "Group":
+    def formula(self, key: Hashable, latex: str, *,
+                size: float = 16.0, at=None) -> "Handle":
         r"""Real mathematics, written as LaTeX.
 
             scene.formula("eq", r"\frac{QK^{T}}{\sqrt{d_k}}", size=34)
 
-        Use a raw string, or every backslash needs doubling. ``size`` means
-        what it means for :meth:`text`, so a formula and a label at the same
-        size look the same weight.
+        Use a raw string, or every backslash needs doubling. `size` means what
+        it means for :meth:`text`. Draw it on with `.write(reveal=, pen=)`.
 
         The result is glyph outlines, not a font — so it moves, fades and
-        recolours like any other shape. It is typeset once when the video is
-        built, never per frame.
-
-        ``reveal`` is how much of it is showing, left to right: ``0.0`` is
-        nothing, ``1.0`` is all of it. Animate it and the equation writes
-        itself on, a term at a time::
-
-            scene.formula("eq", EQUATION, reveal=1.0 if frame.is_("shown") else 0.0)
-
-        ``pen`` draws it instead of fading it. Give it a stroke width and
-        each glyph's outline is traced by a moving pen, then filled in behind
-        it as the pen moves on. ``reveal`` still says how far the pen has got::
-
-            scene.formula("eq", EQUATION, pen=2.0,
-                          reveal=1.0 if frame.is_("shown") else 0.0)
-
-        Needs the ``typst`` binary on PATH, the way video export needs
-        ``ffmpeg``. You get a clear error naming the install if it is missing.
+        recolours like any other shape, and is typeset once when the video is
+        built. Needs the `typst` binary on PATH, the way rendering needs
+        `ffmpeg`.
         """
-        x, y = _at(at, x, y, (top, bottom,))
-        return self._place(
-            key,
-            "formula",
-            x=_resolve(x, None, None, 0.0, ("x",), self._child_default),
-            y=_resolve(y, top, bottom, size / 2, ("y", "top", "bottom"), self._child_default),
-            text=latex,
-            size=size,
-            r=reveal,
-            w=pen,
-            **_look(color, edge, edge_w, layer, opacity,
-                    scale, rotate, pivot),
-        )
+        x, y = self._where(at, size / 2)
+        return self._place(key, "formula", x=x, y=y, text=latex, size=size,
+                           layer=10, r=1.0)
 
-    def polygon(
-        self,
-        key: Hashable,
-        points,
-        *,
-        closed: bool = True,
-        scale=1.0,
-        rotate: float = 0.0,
-        pivot: str = "center",
-        color: str = "white",
-        edge: str = "white",
-        edge_w: float = 0.0,
-        layer: int = 0,
-        opacity: float = 1.0,
-    ) -> "Group":
+    def polygon(self, key: Hashable, points, *, closed: bool = True) -> "Handle":
         """A shape with corners: a triangle, a wedge, an arrow head, a wing.
 
-            scene.polygon("roof", [(0, 0), (60, -40), (120, 0)], color="brown")
-            scene.polygon("tri", cm.ngon(3, r=50, at=(640, 360)))
+            scene.polygon("tri", cm.ngon(3, r=50, at=(640, 360))).fill("green")
 
-        ``points`` is a sequence of ``(x, y)`` in canvas coordinates. Closed by
-        default, so it is filled; ``closed=False`` leaves an open outline, which
-        only shows if you give it an ``edge``.
+        `points` is a sequence of `(x, y)`. Closed and filled by default;
+        `closed=False` leaves an open outline, which shows only with an edge.
 
-        Two polygons only tween if they have the same number of corners —
+        Two polygons tween only if they have the same number of corners —
         interpolating a triangle into a pentagon has no answer worth inventing,
-        so the later shape stands for the whole beat instead. To make one morph,
-        keep the corner count fixed and move the corners.
+        so the later shape stands for the whole beat instead.
         """
         flat, xs, ys = [], [], []
-        for x, y in points:
-            flat += [float(x), float(y)]
-            xs.append(float(x))
-            ys.append(float(y))
+        for px, py in points:
+            flat += [float(px), float(py)]
+            xs.append(float(px))
+            ys.append(float(py))
         if not flat:
             raise ValueError(f"polygon {key!r} has no points")
-
         return self._place(
-            key,
-            "polygon",
-            # The anchor is the middle of the corners, so the whole shape
-            # travels as one thing when it moves.
-            x=(min(xs) + max(xs)) / 2,
-            y=(min(ys) + max(ys)) / 2,
-            points=tuple(flat),
-            w=1.0 if closed else 0.0,
-            **_look(color, edge, edge_w, layer, opacity,
-                    scale, rotate, pivot),
+            key, "polygon",
+            # Anchored at the middle of its corners, so it travels as one thing.
+            x=(min(xs) + max(xs)) / 2, y=(min(ys) + max(ys)) / 2,
+            points=tuple(flat), w=1.0 if closed else 0.0,
         )
 
-    def arrow(
-        self,
-        key: Hashable,
-        *,
-        start,
-        end,
-        w: float = 4.0,
-        head: float = 16.0,
-        color: str = "white",
-        layer: int = 0,
-        opacity: float = 1.0,
-    ) -> "Group":
-        """An arrow from one place to another, as a single filled shape.
-
-            scene.arrow("flow", start=at["a"], end=at["b"])
+    def arrow(self, key: Hashable, *, start, end, w: float = 4.0,
+              head: float = 16.0) -> "Handle":
+        """An arrow, as a single filled shape.
 
         One shape rather than a line plus a separate head, so it carries one
-        name and travels as one thing. ``w`` is the shaft thickness, ``head``
-        the length of the point.
+        name and travels as one thing. `w` is the shaft, `head` the point.
         """
         import math
 
@@ -407,84 +310,39 @@ class Group:
         dx, dy = x1 - x0, y1 - y0
         span = math.hypot(dx, dy) or 1.0
         ux, uy = dx / span, dy / span
-        px, py = -uy, ux                       # unit normal, for the thickness
+        px, py = -uy, ux
         head = min(head, span)
-        bx, by = x1 - ux * head, y1 - uy * head   # where the head meets the shaft
+        bx, by = x1 - ux * head, y1 - uy * head
         half, wing = w / 2, max(head * 0.55, w)
+        return self.polygon(key, [
+            (x0 + px * half, y0 + py * half), (bx + px * half, by + py * half),
+            (bx + px * wing, by + py * wing), (x1, y1),
+            (bx - px * wing, by - py * wing), (bx - px * half, by - py * half),
+            (x0 - px * half, y0 - py * half),
+        ])
 
-        return self.polygon(
-            key,
-            [
-                (x0 + px * half, y0 + py * half),
-                (bx + px * half, by + py * half),
-                (bx + px * wing, by + py * wing),
-                (x1, y1),
-                (bx - px * wing, by - py * wing),
-                (bx - px * half, by - py * half),
-                (x0 - px * half, y0 - py * half),
-            ],
-            color=color,
-            layer=layer,
-            opacity=opacity,
-        )
+    def line(self, key: Hashable, *, start, end, w: float = 2.0) -> "Handle":
+        """A line between two points. `w` is its thickness.
 
-    def line(
-        self,
-        key: Hashable,
-        *,
-        start: "Slot | tuple[float, float]",
-        end: "Slot | tuple[float, float]",
-        w: float = 2.0,
-        color: str = "white",
-        layer: int = 0,
-        opacity: float = 1.0,
-    ) -> "Group":
-        """A line between two points. ``w`` is its thickness.
-
-        A line has no centre to anchor, so it takes its two ends directly.
-        Each end may be a Slot — a line joins the middles of two places —
-        or a plain ``(x, y)``:
-
-            scene.line(key, start=at[src], end=at[dst])
+        A line has no centre to anchor, so it takes its two ends directly. Each
+        may be a Slot — a line joins the middles of two places — or an `(x, y)`.
         """
         (x, y), (x2, y2) = _point(start), _point(end)
-        return self._place(
-            key,
-            "line",
-            x=x,
-            y=y,
-            x2=x2,
-            y2=y2,
-            w=w,
-            color=color,
-            layer=layer,
-            opacity=opacity,
-        )
+        return self._place(key, "line", x=x, y=y, x2=x2, y2=y2, w=w)
 
     # -- nesting --------------------------------------------------------------
 
-    def group(
-        self,
-        key: Hashable,
-        slot: "Slot | None" = None,
-        *,
-        anchor: "str | None" = None,
-        x: float = None,
-        y: float = None,
-        left: float = None,
-        right: float = None,
-        top: float = None,
-        bottom: float = None,
-        w: float = None,
-    ) -> "Group":
+    def group(self, key: Hashable, slot: "Slot | None" = None, *,
+              at=None, anchor: str = None, w: float = None) -> "Group":
         """A place to draw a thing made of several shapes.
 
             bar = scene.group(item.id, slot)
             bar.rect("bar", h=item.value * 70, bottom=0)
             bar.text("label", item.value, top=20)
 
-        Give it a Slot and it sits where the Slot says. Inside it, ``0`` is
-        that point, and everything drawn on it moves as one.
+        Give it a Slot and it sits where the Slot says, or place it with ``at``
+        like any shape. Inside it, ``0`` is that point, and everything drawn on
+        it moves as one.
         """
         if slot is not None:
             gx, gy = slot.point(anchor)
@@ -493,8 +351,7 @@ class Group:
             # A group with no Slot and no anchors sits exactly where its
             # parent does — a group that exists only to name things.
             gw = self._w if w is None else w
-            gx = _resolve(x, left, right, gw / 2, ("x", "left", "right"), self._child_default)
-            gy = _resolve(y, top, bottom, 0.0, ("y", "top", "bottom"), self._child_default)
+            gx, gy = self._where(at, 0.0)
 
         return Group(self._scene, self._path + (key,), self._ox + gx, self._oy + gy, gw)
 
@@ -567,7 +424,7 @@ class Scene(Group):
         """
         # At the canvas origin, so its children are placed in plain screen
         # coordinates rather than relative to somewhere.
-        group = self.group("_overlay", x=0.0, y=0.0)
+        group = self.group("_overlay", at=(0.0, 0.0))
         self._overlays.add("_overlay")
         return group
 

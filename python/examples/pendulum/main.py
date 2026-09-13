@@ -109,61 +109,28 @@ def pendulum_view(frame):
     color_progress = min(decay / VISIBLE_DECAY, 1.0)
     angle_color = mix_color(HIGH_AMPLITUDE, LOW_AMPLITUDE, color_progress)
 
-    scene.text("title", "A Simple Pendulum", x=640, y=62, size=38, color="#e8eef7")
-    scene.text(
-        "equation",
-        "theta'' = -(g / L) sin(theta) - damping",
-        x=640,
-        y=104,
-        size=21,
-        color="#8f9bad",
-    )
+    scene.text("title", "A Simple Pendulum", size=38, at=(640, 62)).fill("#e8eef7")
+    scene.text("equation", "theta'' = -(g / L) sin(theta) - damping", size=21,
+               at=(640, 104)).fill("#8f9bad")
 
     # A quiet equilibrium marker makes the shrinking amplitude visible.
-    scene.line(
-        "equilibrium",
-        start=PIVOT,
-        end=(PIVOT[0], PIVOT[1] + ROD_LENGTH + 48),
-        w=1,
-        color="#303947",
-    )
-    scene.polygon(
-        "angle_sector",
-        sector_points(pendulum.angle),
-        color=angle_color,
-        edge=angle_color,
-        edge_w=2,
-        opacity=0.55,
-    )
-    scene.line("string", start=PIVOT, end=bob, w=5, color="#aab4c3", layer=1)
-    scene.circle("pivot", at=PIVOT, r=10, color="#e8eef7", layer=2)
-    scene.circle("bob", at=bob, r=30, color="#f5a623", layer=3)
-    scene.text(
-        "angle_value",
-        f"{abs(math.degrees(pendulum.angle)):.1f} deg",
-        at=point_on_swing(pendulum.angle / 2.0, SECTOR_RADIUS + 30),
-        size=20,
-        color=angle_color,
-    )
+    scene.line("equilibrium", start=PIVOT, end=(PIVOT[0], PIVOT[1] + ROD_LENGTH + 48),
+               w=1).fill("#303947")
+    scene.polygon("angle_sector", sector_points(pendulum.angle)).fill(angle_color,
+                  edge=angle_color, edge_w=2).on(opacity=0.55)
+    scene.line("string", start=PIVOT, end=bob, w=5).fill("#aab4c3").on(layer=1)
+    scene.circle("pivot", r=10, at=PIVOT).fill("#e8eef7").on(layer=2)
+    scene.circle("bob", r=30, at=bob).fill("#f5a623").on(layer=3)
+    scene.text("angle_value", f"{abs(math.degrees(pendulum.angle)):.1f} deg", size=20,
+               at=point_on_swing(pendulum.angle / 2.0,
+                                 SECTOR_RADIUS + 30)).fill(angle_color)
 
-    scene.text(
-        "reading",
-        f"t = {pendulum.time:4.1f} s",
-        x=640,
-        y=560,
-        size=24,
-        color="#aab4c3",
-    )
+    scene.text("reading", f"t = {pendulum.time:4.1f} s", size=24,
+               at=(640, 560)).fill("#aab4c3")
 
     if frame.is_("done"):
-        scene.text(
-            "done",
-            "10 seconds of simulated motion",
-            x=640,
-            y=620,
-            size=22,
-            color="#6fce88",
-        )
+        scene.text("done", "10 seconds of simulated motion", size=22,
+                   at=(640, 620)).fill("#6fce88")
 
     return scene
 
