@@ -62,6 +62,7 @@ class Pendulum:
         self.angle = math.radians(50.0)
         self.angular_velocity = 0.0
         self.time = 0.0
+        self.inspecting = False
 
     def step(self):
         acceleration = (
@@ -91,8 +92,27 @@ class Pendulum:
 
 @cm.trace()
 def swing(pendulum):
+    inspected = False
     for _ in range(round(DURATION / DT)):
+        previous_velocity = pendulum.angular_velocity
         pendulum.step()
+
+        # At the first far-side turning point, stop the physics long enough to
+        # inspect how the angle is measured. Separate events give the camera
+        # time to move in, hold the close-up, and return to the overview.
+        reached_turning_point = (
+            not inspected
+            and previous_velocity < 0.0 <= pendulum.angular_velocity
+        )
+        if reached_turning_point:
+            pendulum.inspecting = True
+            cm.emit("zoom_in")
+            cm.emit("inspect_angle")
+            pendulum.inspecting = False
+            cm.emit("zoom_out")
+            inspected = True
+            continue
+
         cm.emit("tick")
     cm.emit("done")
 
@@ -102,6 +122,7 @@ def swing(pendulum):
 
 def pendulum_view(frame):
     scene = cm.Scene()
+    hud = scene.overlay()
     pendulum = frame.state
     bob = pendulum.bob_position()
     initial_amplitude = math.radians(50.0)
@@ -109,9 +130,9 @@ def pendulum_view(frame):
     color_progress = min(decay / VISIBLE_DECAY, 1.0)
     angle_color = mix_color(HIGH_AMPLITUDE, LOW_AMPLITUDE, color_progress)
 
-    scene.text("title", "A Simple Pendulum", size=38, at=(640, 62)).fill("#e8eef7")
-    scene.text("equation", "theta'' = -(g / L) sin(theta) - damping", size=21,
-               at=(640, 104)).fill("#8f9bad")
+    # The title is a fixed heading, independent of the camera underneath it.
+    hud.text("title", "A Simple Pendulum", size=38,
+             at=(640, 62)).fill("#e8eef7")
 
     # A quiet equilibrium marker makes the shrinking amplitude visible.
     scene.line("equilibrium", start=PIVOT, end=(PIVOT[0], PIVOT[1] + ROD_LENGTH + 48),
@@ -121,16 +142,45 @@ def pendulum_view(frame):
     scene.line("string", start=PIVOT, end=bob, w=5).fill("#aab4c3").on(layer=1)
     scene.circle("pivot", r=10, at=PIVOT).fill("#e8eef7").on(layer=2)
     scene.circle("bob", r=30, at=bob).fill("#f5a623").on(layer=3)
-    scene.text("angle_value", f"{abs(math.degrees(pendulum.angle)):.1f} deg", size=20,
-               at=point_on_swing(pendulum.angle / 2.0,
-                                 SECTOR_RADIUS + 30)).fill(angle_color)
+    angle_text = f"{abs(math.degrees(pendulum.angle)):.2f} deg"
+    label_position = point_on_swing(
+        pendulum.angle / 2.0,
+        SECTOR_RADIUS + 34,
+    )
+    label_width, label_height = cm.measure(angle_text, 20)
+    angle_value = scene.group("angle_value", at=label_position)
+    angle_value.rect("background", w=label_width + 24, h=label_height + 14,
+                     at=(0, 0)).fill("#17202d", edge=angle_color,
+                                     edge_w=1.5).round(8).on(layer=4)
+    angle_value.text("text", angle_text, size=20,
+                     at=(0, 0)).fill("#f4f7fb").on(layer=5)
 
-    scene.text("reading", f"t = {pendulum.time:4.1f} s", size=24,
-               at=(640, 560)).fill("#aab4c3")
+    if pendulum.inspecting:
+        scene.focus("angle_sector", "angle_value/background",
+                    pad=45, least=300)
+    else:
+        scene.focus()
 
-    if frame.is_("done"):
-        scene.text("done", "10 seconds of simulated motion", size=22,
-                   at=(640, 620)).fill("#6fce88")
+    # Keep the same named HUD shapes in every scene. Opacity changes produce
+    # clean fades and preserve identity through the camera transition.
+    overview_opacity = 0.0 if pendulum.inspecting else 1.0
+    hud.formula(
+        "equation",
+        r"\ddot{\theta}=-\frac{g}{L}\sin(\theta)-c\dot{\theta}",
+        size=27,
+        at=(640, 505),
+    ).fill("#8f9bad").on(opacity=overview_opacity)
+    hud.text("reading", f"t = {pendulum.time:4.1f} s", size=24,
+             at=(640, 560)).fill("#aab4c3").on(opacity=overview_opacity)
+
+    message = "10 seconds of simulated motion"
+    message_width, message_height = cm.measure(message, 22)
+    done_opacity = 1.0 if frame.is_("done") else 0.0
+    hud.rect("done_box", w=message_width + 36, h=message_height + 22,
+             at=(640, 625)).fill("#17202d", edge="#6fce88",
+                                 edge_w=2).round(10).on(opacity=done_opacity)
+    hud.text("done", message, size=22,
+             at=(640, 625)).fill("#6fce88").on(opacity=done_opacity)
 
     return scene
 
@@ -145,7 +195,12 @@ cm.explain(
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(
         default=DT,
-        events={"done": 0.8},
+        events={
+            "zoom_in": 1.0,
+            "inspect_angle": 1.5,
+            "zoom_out": 1.0,
+            "done": 0.8,
+        },
         opening=1.0,
         final_hold=2.0,
     ),

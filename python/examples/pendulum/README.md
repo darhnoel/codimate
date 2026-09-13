@@ -47,6 +47,13 @@ motion=[cm.Rule("*", position="linear")]
 same objects in every moment. Their endpoints are interpolated together, so
 the string remains attached to the bob between samples.
 
+**The camera can turn an event into a teaching beat.** At the first far-side
+turning point, the physics pauses and `scene.focus(...)` frames the angle
+sector and its reading. The equation and clock are drawn on `scene.overlay()`;
+they fade away during the inspection and return when `scene.focus()` restores
+the full canvas. The zoom answers one question—where the angle is measured
+from—instead of merely decorating the motion.
+
 **One mark can carry two measurements.** The filled sector follows the rod, so
 its size and side show the instantaneous angle. Its colour comes from the
 pendulum's remaining mechanical energy: green at the initial amplitude,
