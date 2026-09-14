@@ -138,12 +138,15 @@ impl Default for Style {
 /// let grow = Animated::new(|t| 50.0 + t * 50.0);
 /// assert_eq!(grow.resolve(0.5), 75.0);
 /// ```
+/// The closure is `Send + Sync` so that whole frames can be resolved on
+/// several threads at once. That costs nothing: Invariant 1 already requires
+/// it to be pure, and a pure function of `f32` has nothing to share.
 #[derive(Clone)]
-pub struct Animated<T>(Arc<dyn Fn(f32) -> T>);
+pub struct Animated<T>(Arc<dyn Fn(f32) -> T + Send + Sync>);
 
 impl<T> Animated<T> {
     /// Escape hatch for custom motion. The closure MUST be pure (Invariant 1).
-    pub fn new(f: impl Fn(f32) -> T + 'static) -> Self {
+    pub fn new(f: impl Fn(f32) -> T + Send + Sync + 'static) -> Self {
         Animated(Arc::new(f))
     }
 
@@ -165,7 +168,7 @@ impl<T> Animated<T> {
     /// let r = tween(0.0, 100.0).ease(ease_in);
     /// assert_eq!(r.resolve(0.5), 25.0);   // eased: a quarter of the way, not half
     /// ```
-    pub fn ease(self, curve: impl Fn(f32) -> f32 + 'static) -> Animated<T>
+    pub fn ease(self, curve: impl Fn(f32) -> f32 + Send + Sync + 'static) -> Animated<T>
     where
         T: 'static,
     {
@@ -173,7 +176,7 @@ impl<T> Animated<T> {
     }
 
     /// Transform the wrapped value by `f` at resolve time.
-    pub fn map<U>(self, f: impl Fn(T) -> U + 'static) -> Animated<U>
+    pub fn map<U>(self, f: impl Fn(T) -> U + Send + Sync + 'static) -> Animated<U>
     where
         T: 'static,
         U: 'static,

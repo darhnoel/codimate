@@ -5,6 +5,7 @@
 use codimate_animation::Playable;
 use codimate_layout::{layout_scene, Viewport};
 use codimate_render::{rasterize, rasterize_scaled, render_frame, RenderFrame};
+use rayon::prelude::*;
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -122,9 +123,9 @@ pub fn playable_frames<'a>(
     config: ExportConfig,
 ) -> PlayableFrameIter<'a> {
     PlayableFrameIter {
+        times: FrameTimes::new(playable.duration(), config.fps),
         playable,
         config,
-        elapsed: 0.0,
     }
 }
 
@@ -133,37 +134,70 @@ pub fn playable_frames<'a>(
 pub struct PlayableFrameIter<'a> {
     playable: &'a dyn Playable,
     config: ExportConfig,
-    elapsed: f32,
+    times: FrameTimes,
 }
 
 impl<'a> Iterator for PlayableFrameIter<'a> {
     type Item = RenderFrame;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let duration = self.playable.duration();
+        let at = self.times.next()?;
+        Some(sample_render_frame(self.playable, &self.config, at))
+    }
+}
 
-        if self.elapsed > duration {
+/// The instants a Playable is sampled at, without sampling it.
+///
+/// Split out so frames can be resolved in any order — the parallel exporter
+/// needs a batch of instants up front, and a serial `Iterator<Item = f32>`
+/// is the only honest way to get them.
+///
+/// The step is **accumulated**, not computed as `i / fps`. The two disagree in
+/// the last bits of a float once `i` is large, and that is the difference
+/// between a render that is byte-identical to the old one and a render that is
+/// merely very close.
+#[derive(Clone, Debug)]
+pub struct FrameTimes {
+    duration: f32,
+    fps: f32,
+    elapsed: f32,
+}
+
+impl FrameTimes {
+    pub fn new(duration: f32, fps: f32) -> Self {
+        Self {
+            duration,
+            fps,
+            elapsed: 0.0,
+        }
+    }
+}
+
+impl Iterator for FrameTimes {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        if self.elapsed > self.duration {
             return None;
         }
+        let at = self.elapsed;
 
-        let frame = sample_render_frame(self.playable, &self.config, self.elapsed);
-
-        let step = if self.config.fps <= 0.0 {
-            duration
+        let step = if self.fps <= 0.0 {
+            self.duration
         } else {
-            1.0 / self.config.fps
+            1.0 / self.fps
         };
 
-        if self.elapsed >= duration {
-            self.elapsed = duration + 1.0;
+        if self.elapsed >= self.duration {
+            self.elapsed = self.duration + 1.0;
         } else {
             self.elapsed += step;
-            if self.elapsed > duration {
-                self.elapsed = duration;
+            if self.elapsed > self.duration {
+                self.elapsed = self.duration;
             }
         }
 
-        Some(frame)
+        Some(at)
     }
 }
 
@@ -247,7 +281,8 @@ fn encoder_binary() -> std::ffi::OsString {
 /// // If ffmpeg is installed on this machine, this produces a real mp4.
 /// ```
 pub fn export_mp4(
-    playable: &impl Playable,
+    // `Sync` because frames are rasterized across threads; see the loop below.
+    playable: &(impl Playable + Sync),
     config: &ExportConfig,
     output: impl AsRef<Path>,
 ) -> Result<(), ExportError> {
@@ -294,13 +329,45 @@ pub fn export_mp4(
 
     let stdin = child.stdin.take().ok_or(ExportError::EncoderNotFound)?;
 
-    for frame in playable_frames(playable, *config) {
-        let bitmap = if pixel_scale > 1.0 {
-            rasterize_scaled(&frame, pixel_scale)
-        } else {
-            rasterize(&frame)
-        };
-        (&stdin).write_all(&bitmap.rgba).map_err(ExportError::Io)?;
+    // Frames are resolved and rasterized across cores, then written in order.
+    //
+    // This is sound for the reason the whole engine is built on: `f(t) -> Scene`
+    // is pure (ADR 0008, Invariant 1), so no frame can observe another. The only
+    // state any of them share is the formula glyph cache, which is already a
+    // Mutex, and the font registry, which is immutable.
+    //
+    // Work is taken a batch at a time rather than all at once. Holding every
+    // bitmap would be `frames * width * height * 4` — for a two-minute 1080p
+    // render, tens of gigabytes. A batch bounds it at `BATCH * frame`, about
+    // 66 MB at 1080p, which is the price of the parallelism and is paid back
+    // several times over in wall time.
+    const BATCH: usize = 8;
+
+    let mut times = FrameTimes::new(playable.duration(), config.fps);
+    let mut batch: Vec<f32> = Vec::with_capacity(BATCH);
+
+    loop {
+        batch.clear();
+        batch.extend(times.by_ref().take(BATCH));
+        if batch.is_empty() {
+            break;
+        }
+
+        let bitmaps: Vec<_> = batch
+            .par_iter()
+            .map(|at| {
+                let frame = sample_render_frame(playable, config, *at);
+                if pixel_scale > 1.0 {
+                    rasterize_scaled(&frame, pixel_scale)
+                } else {
+                    rasterize(&frame)
+                }
+            })
+            .collect();
+
+        for bitmap in &bitmaps {
+            (&stdin).write_all(&bitmap.rgba).map_err(ExportError::Io)?;
+        }
     }
 
     // Drop stdin so ffmpeg sees EOF
