@@ -18,9 +18,9 @@ def draw(scene, local):
                w=1.0).fill(DIM)
     scene.line("axis_y", start=(CURVE_L, CURVE_BOT), end=(CURVE_L, CURVE_TOP),
                w=1.0).fill(DIM)
-    for i in range(24):
-        scene.line(("curve", i), start=_at(i / 24), end=_at((i + 1) / 24),
-                   w=2.5).fill(GHOST)
+    # Nine samples and one curve, rather than 24 straight pieces: `curve`
+    # passes through every point it is given, so the shape of `ease` survives.
+    scene.curve("curve", [_at(i / 8) for i in range(9)], w=2.5).fill(GHOST)
 
     x, y = _at(local)
     scene.circle("rider", r=8, at=(x, y)).fill(LIVE).on(layer=9)

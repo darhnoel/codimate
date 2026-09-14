@@ -94,6 +94,7 @@ scene.circle(name, *, r, at=None)                -> Handle
 scene.text(name, content, *, size=16.0, at=None) -> Handle
 scene.formula(name, latex, *, size=16.0, at=None) -> Handle
 scene.polygon(name, points, *, closed=True)      -> Handle
+scene.curve(name, points, *, w=2.0, closed=False) -> Handle
 scene.line(name, *, start, end, w=2.0)           -> Handle
 scene.arrow(name, *, start, end, w=4.0, head=16.0) -> Handle
 scene.group(name, slot=None, *, at=None, anchor=None, w=None) -> Group
@@ -106,6 +107,11 @@ height, some words. Everything else is said afterwards, on the Handle it hands
 back. No call takes more than five arguments; a shape used to take eighteen.
 
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
+
+`curve` draws a smooth line **through** every point you give it — they are
+samples, not control points, so you hand it a function you plotted or a path
+something travelled and it does the fitting. An open curve is stroked the way
+a line is (it encloses nothing); `closed=True` makes it a fillable shape.
 
 `polygon` takes a sequence of `(x, y)` — a triangle, a wedge, a wing. `cm.ngon`
 and `cm.star` produce the corners of the regular ones, so you rarely compute

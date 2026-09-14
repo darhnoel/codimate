@@ -20,7 +20,8 @@ encoding — happens in Rust (ADR 0008).
 
 ## What a moment looks like
 
-- `Scene` — one picture: `rect`, `circle`, `polygon`, `arrow`, `text`, `line`, `formula`
+- `Scene` — one picture: `rect`, `circle`, `polygon`, `curve`, `arrow`,
+  `text`, `line`, `formula`
 - `ngon`, `star` — corners for a polygon, so you do not compute them
 - `Group` — several shapes that move together
 - `Handle` — what a shape call returns: `.fill()`, `.round()`, `.turn()`,

@@ -85,7 +85,9 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 6] = ["rect", "circle", "text", "line", "formula", "polygon"];
+pub const KINDS: [&str; 7] = [
+    "rect", "circle", "text", "line", "formula", "polygon", "curve",
+];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
 ///
@@ -167,6 +169,72 @@ fn polygon_path(s: &Shape) -> Path {
     }
 }
 
+/// A smooth curve in local space, passing through every one of its points.
+///
+/// Control points are derived rather than authored (ADR 0012): the author has
+/// samples — an easing curve, a streamline, a traced outline — and wants a
+/// line through them, not a Bezier to solve for.
+///
+/// Uniform Catmull-Rom, converted to cubics:
+///
+/// ```text
+/// c1 = p[i]   + (p[i+1] - p[i-1]) / 6
+/// c2 = p[i+1] - (p[i+2] - p[i])   / 6
+/// ```
+///
+/// The ends reflect their neighbour so an open curve starts and finishes
+/// exactly where it was told to.
+fn curve_path(s: &Shape) -> Path {
+    let pts: Vec<Vec2> = s
+        .points
+        .chunks_exact(2)
+        .map(|p| Vec2::new(p[0] - s.x, p[1] - s.y))
+        .collect();
+
+    let closed = s.w > 0.0;
+    let n = pts.len();
+    if n < 2 {
+        return Path {
+            segments: Vec::new(),
+            closed,
+        };
+    }
+
+    // The neighbour used for a tangent: wrapped when closed, reflected when
+    // open, so the first and last points keep their exact position either way.
+    let at = |i: isize| -> Vec2 {
+        if closed {
+            pts[i.rem_euclid(n as isize) as usize]
+        } else if i < 0 {
+            let p0 = pts[0];
+            Vec2::new(2.0 * p0.x - pts[1].x, 2.0 * p0.y - pts[1].y)
+        } else if i as usize >= n {
+            let last = pts[n - 1];
+            Vec2::new(2.0 * last.x - pts[n - 2].x, 2.0 * last.y - pts[n - 2].y)
+        } else {
+            pts[i as usize]
+        }
+    };
+
+    let sixth = |a: Vec2, b: Vec2| Vec2::new((b.x - a.x) / 6.0, (b.y - a.y) / 6.0);
+
+    let mut segments = vec![Segment::MoveTo(pts[0])];
+    let spans = if closed { n } else { n - 1 };
+    for i in 0..spans as isize {
+        let (p0, p1) = (at(i), at(i + 1));
+        let d1 = sixth(at(i - 1), p1);
+        let d2 = sixth(p0, at(i + 2));
+        segments.push(Segment::Cubic(
+            p0,
+            Vec2::new(p0.x + d1.x, p0.y + d1.y),
+            Vec2::new(p1.x - d2.x, p1.y - d2.y),
+            p1,
+        ));
+    }
+
+    Path { segments, closed }
+}
+
 /// A line in local space: from the anchor to the far end.
 fn line_path(s: &Shape) -> Path {
     Path {
@@ -204,6 +272,16 @@ impl Shape {
                 }
             }
 
+            // Same rule as a polygon: matching sample counts interpolate, and
+            // otherwise the later shape stands for the whole segment.
+            "curve" => {
+                if self.points.len() == other.points.len() {
+                    Geometry::path(tween(curve_path(self), curve_path(other)))
+                } else {
+                    Geometry::path(curve_path(other).into_animated())
+                }
+            }
+
             // A formula is many glyph outlines, so it cannot be one Geometry.
             // `primitives()` expands it; this arm is never reached.
             "formula" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
@@ -222,9 +300,17 @@ impl Shape {
         let fill = parse_color(&self.color)?;
 
         // A line is drawn, not filled — `w` is its stroke width, and it has no
-        // separate edge.
+        // separate edge. An open curve reads the same way: it encloses nothing,
+        // so filling it would paint the region between the curve and the chord
+        // that closes it, which is never what was meant. Its width comes from
+        // `edge_w`, because `w` is already carrying the closed flag.
         if self.kind == "line" {
             return Ok(Style::new().fill(Color::TRANSPARENT).stroke(self.w, fill));
+        }
+        if self.kind == "curve" && self.w <= 0.0 {
+            return Ok(Style::new()
+                .fill(Color::TRANSPARENT)
+                .stroke(self.edge_w.max(1.0), fill));
         }
 
         let style = Style::new().fill(fill);
@@ -875,7 +961,10 @@ fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
         "circle" => (shape.r * 2.0, shape.r * 2.0),
         "text" => codimate_render::measure_text(&shape.text, shape.size),
         "formula" => formula_size(&shape.text, shape.size).unwrap_or((0.0, 0.0)),
-        "polygon" => {
+        // A Catmull-Rom curve can bulge a little past its samples between
+        // them, but never far, and framing by the samples is what an author
+        // means by "frame this curve".
+        "polygon" | "curve" => {
             let xs: Vec<f32> = shape.points.iter().step_by(2).copied().collect();
             let ys: Vec<f32> = shape.points.iter().skip(1).step_by(2).copied().collect();
             if xs.is_empty() {
@@ -1331,6 +1420,96 @@ mod tests {
         let end = scene.resolve(1.0);
         assert_ne!(start, end, "a swap must change the picture");
         assert_ne!(start, mid, "a swap must not snap at t=0");
+    }
+
+    fn curve_of(points: &[(f32, f32)], closed: bool) -> Shape {
+        let flat: Vec<f32> = points.iter().flat_map(|(x, y)| [*x, *y]).collect();
+        let xs: Vec<f32> = points.iter().map(|p| p.0).collect();
+        let ys: Vec<f32> = points.iter().map(|p| p.1).collect();
+        Shape {
+            item: "c".into(),
+            kind: "curve".into(),
+            x: (xs.iter().cloned().fold(f32::MAX, f32::min)
+                + xs.iter().cloned().fold(f32::MIN, f32::max))
+                / 2.0,
+            y: (ys.iter().cloned().fold(f32::MAX, f32::min)
+                + ys.iter().cloned().fold(f32::MIN, f32::max))
+                / 2.0,
+            points: flat,
+            w: if closed { 1.0 } else { 0.0 },
+            color: "white".into(),
+            opacity: 1.0,
+            ..Default::default()
+        }
+    }
+
+    /// The whole promise of `curve` is that the line goes through the samples
+    /// you gave it (ADR 0012). Control points are derived, so the only thing
+    /// worth asserting is that the derivation did not move the samples.
+    #[test]
+    fn a_curve_passes_through_every_point_it_was_given() {
+        let points = [(0.0, 0.0), (100.0, -50.0), (200.0, 0.0), (300.0, 80.0)];
+        let shape = curve_of(&points, false);
+        let path = curve_path(&shape);
+
+        let visited: Vec<Vec2> = path
+            .segments
+            .iter()
+            .filter_map(|s| match *s {
+                Segment::Cubic(from, _, _, to) => Some([from, to]),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+
+        for (px, py) in points {
+            let want = Vec2::new(px - shape.x, py - shape.y);
+            assert!(
+                visited
+                    .iter()
+                    .any(|v| (v.x - want.x).abs() < 0.001 && (v.y - want.y).abs() < 0.001),
+                "the curve never reaches {want:?} — visited {visited:?}"
+            );
+        }
+        assert_eq!(
+            path.segments.len(),
+            points.len(),
+            "one MoveTo, then a span per gap"
+        );
+    }
+
+    /// Open and closed differ by one span: the closed one comes back.
+    #[test]
+    fn a_closed_curve_joins_its_ends() {
+        let points = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)];
+        let open = curve_path(&curve_of(&points, false));
+        let closed = curve_path(&curve_of(&points, true));
+
+        assert_eq!(closed.segments.len(), open.segments.len() + 1);
+        assert!(closed.closed && !open.closed);
+
+        // The last span of a closed curve returns to where the first began.
+        let (Some(Segment::MoveTo(start)), Some(Segment::Cubic(_, _, _, end))) =
+            (closed.segments.first(), closed.segments.last())
+        else {
+            panic!("a closed curve should start with a MoveTo and end with a Cubic");
+        };
+        assert!((start.x - end.x).abs() < 0.001 && (start.y - end.y).abs() < 0.001);
+    }
+
+    /// Two points is a straight line, so `curve` is never wrong to reach for.
+    #[test]
+    fn a_curve_through_two_points_is_straight() {
+        let path = curve_path(&curve_of(&[(0.0, 0.0), (100.0, 100.0)], false));
+        let Some(Segment::Cubic(from, c1, c2, to)) = path.segments.get(1) else {
+            panic!("expected one cubic span");
+        };
+        // Every control point sits on the chord, so the cubic is a line.
+        for c in [c1, c2] {
+            let t = (c.x - from.x) / (to.x - from.x);
+            let on_chord = from.y + t * (to.y - from.y);
+            assert!((c.y - on_chord).abs() < 0.001, "{c:?} bulges off the chord");
+        }
     }
 
     fn box_at(item: &str, x: f32, y: f32, w: f32, h: f32) -> Shape {

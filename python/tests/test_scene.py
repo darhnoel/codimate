@@ -177,6 +177,35 @@ def test_every_drawable_shape_says_more_the_same_way():
         raise AssertionError("an unknown pivot should not reach the Engine")
 
 
+def test_a_curve_is_drawn_through_its_points_not_filled():
+    """`curve` hands the Engine samples, not control points (ADR 0012).
+
+    An open one is stroked the way a line is, because it encloses nothing —
+    so its width rides on `edge_w`, `w` being the closed flag a polygon uses.
+    """
+    scene = cm.Scene()
+    scene.curve("wave", [(0, 0), (10, 20), (20, 0)], w=3).fill("cyan")
+    shape = scene._payload()[0]
+    assert shape["kind"] == "curve", shape["kind"]
+    assert shape["points"] == (0.0, 0.0, 10.0, 20.0, 20.0, 0.0), shape["points"]
+    assert shape["w"] == 0.0, "open"
+    assert shape["edge_w"] == 3.0, "the stroke width travels as edge_w"
+
+    closed = cm.Scene()
+    closed.curve("ring", [(0, 0), (10, 20), (20, 0)], closed=True)
+    assert closed._payload()[0]["w"] == 1.0, "closed"
+
+    # Anchored at the middle of its samples, so it travels as one thing.
+    assert (shape["x"], shape["y"]) == (10.0, 10.0), (shape["x"], shape["y"])
+
+    try:
+        cm.Scene().curve("k", [(0, 0)])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("one point is not a curve")
+
+
 def test_a_polygon_carries_its_corners_flat():
     """`points` is the one payload field that is not a single number (ADR 0010),
     so it is worth pinning that it stays flat and in order."""

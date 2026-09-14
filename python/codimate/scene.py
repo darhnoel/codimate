@@ -108,11 +108,22 @@ class Handle:
         return self
 
     def fill(self, color: str = "white", edge: str = None,
-             edge_w: float = 0.0) -> "Handle":
-        """Colour it. `edge` outlines it; `color="none"` leaves it unfilled."""
-        changes = {"color": color, "edge_w": float(edge_w)}
+             edge_w: float = None) -> "Handle":
+        """Colour it. `edge` outlines it; `color="none"` leaves it unfilled.
+
+        Saying nothing about the outline leaves the outline alone, so
+        recolouring a shape does not silently erase the edge it was given —
+        by an earlier `fill`, or by `curve`, which carries its stroke width
+        there.
+        """
+        changes = {"color": color}
         if edge is not None:
             changes["edge"] = edge
+        if edge_w is not None:
+            changes["edge_w"] = float(edge_w)
+        elif edge is not None:
+            # An edge with no width was asked to be visible, so give it one.
+            changes["edge_w"] = max(self._shapes[self._name].edge_w, 1.0)
         return self._set(**changes)
 
     def turn(self, degrees: float, pivot: str = "center") -> "Handle":
@@ -295,6 +306,40 @@ class Group:
             # Anchored at the middle of its corners, so it travels as one thing.
             x=(min(xs) + max(xs)) / 2, y=(min(ys) + max(ys)) / 2,
             points=tuple(flat), w=1.0 if closed else 0.0,
+        )
+
+    def curve(self, key: Hashable, points, *, w: float = 2.0,
+              closed: bool = False) -> "Handle":
+        """A smooth line through every one of `points`.
+
+            scene.curve("plot", samples, w=3).fill("cyan")
+
+        The points are on the curve, not control points: you hand it samples —
+        a function you plotted, a path something travelled — and it draws a
+        smooth line through them. `w` is the stroke width.
+
+        Open by default, and an open curve is *drawn* rather than filled, the
+        way a line is. `closed=True` joins the ends and makes it a fillable
+        shape, like a polygon with rounded-off corners.
+
+        Two curves tween only if they have the same number of points, the same
+        rule polygons follow; otherwise the later one stands for the beat.
+        """
+        flat, xs, ys = [], [], []
+        for px, py in points:
+            flat += [float(px), float(py)]
+            xs.append(float(px))
+            ys.append(float(py))
+        if len(flat) < 4:
+            raise ValueError(f"curve {key!r} needs at least 2 points")
+        return self._place(
+            key, "curve",
+            # Anchored at the middle of its samples, so it travels as one thing.
+            x=(min(xs) + max(xs)) / 2, y=(min(ys) + max(ys)) / 2,
+            points=tuple(flat),
+            # `w` is the closed flag in the payload, the way it is for a
+            # polygon, so the stroke width travels as `edge_w`.
+            w=1.0 if closed else 0.0, edge_w=float(w),
         )
 
     def arrow(self, key: Hashable, *, start, end, w: float = 4.0,

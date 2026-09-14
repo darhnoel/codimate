@@ -25,6 +25,7 @@ Every one of these exists on a `Scene` and on any `Group`.
 | `scene.line(name, start=, end=, w=)` | two points and a **thickness** | a stroked line |
 | `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
 | `scene.polygon(name, points)` | corners | a filled shape with straight edges |
+| `scene.curve(name, points, w=)` | samples | a smooth line through all of them |
 | `scene.arrow(name, start=, end=)` | two points | a shaft and a head, as one shape |
 | `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
 
@@ -71,9 +72,17 @@ closed run of corners, and `cm.ngon`/`cm.star` produce the regular ones.
 fills its aerofoil with 140 vertical lines, one per column, the way a
 rasteriser would — correct, and no longer necessary.
 
-**A curve — from short straight pieces.** Twenty-four lines draw a smooth
-easing curve; the streamlines in `bernoulli_lift` are hundreds. At screen
-resolution nobody can tell.
+**A curve — with `scene.curve`.** Hand it samples and it draws a smooth line
+through all of them:
+
+```python
+scene.curve("plot", [(x, f(x)) for x in xs], w=2.5).fill("cyan")
+```
+
+The points are *on* the curve, not control points, so plotting a function is
+the obvious thing rather than a fitting exercise. `bernoulli_lift` predates it
+and still draws its streamlines as hundreds of straight pieces, which is
+correct and no longer necessary.
 
 **Rotation — from positions over time.** There is no `rotate`. Emit the angle
 at each moment and let the Engine work out everything between, exactly as it

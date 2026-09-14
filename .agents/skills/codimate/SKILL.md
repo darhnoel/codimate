@@ -79,6 +79,7 @@ scene.circle(name, r=, at=)
 scene.text(name, content, size=, at=)
 scene.formula(name, latex, size=, at=)   # real LaTeX; needs `typst`
 scene.polygon(name, points)              # cm.ngon / cm.star make the corners
+scene.curve(name, points, w=)            # a smooth line through the points
 scene.line(name, start=, end=, w=)       # start/end take a Slot or (x, y)
 scene.arrow(name, start=, end=, head=)
 scene.group(name, slot)                  # several shapes that move together
