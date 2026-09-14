@@ -63,19 +63,6 @@ to the copy that comes with `imageio-ffmpeg`, which pip installs for you. Point
 `typst` is needed **only** if you use `scene.formula` to typeset LaTeX maths
 (`brew install typst`). Everything else renders without it.
 
-## Onboarding path
-
-Follow the [Daily Workflow](docs/daily-workflow.md) for the canonical onboarding
-path. The two stages are:
-
-1. `circle-to-square` for the first render and the fastest feedback loop.
-2. `swap` for the canonical split-template example.
-
-```bash
-cargo run -p codimate-example-circle-to-square --release
-cargo run -p codimate-example-swap --release
-```
-
 ## The four pieces
 
 ```text

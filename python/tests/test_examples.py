@@ -10,10 +10,12 @@ An example is only re-rendered when something it depends on has changed —
 its own sources, the `codimate` package, or the compiled engine. So a run
 that changes nothing costs a few ffprobe calls instead of eight renders.
 
-    python python/tests/run.py             # skips this file
-python python/tests/run.py --all       # includes it entirely
+    python python/tests/run.py                 # skips this file
+    python python/tests/run.py --all           # every example
+    python python/tests/run.py --all pendulum  # only that one
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +23,15 @@ from pathlib import Path
 import support  # noqa: F401  (puts `codimate` on the import path)
 
 EXAMPLES = sorted(Path(__file__).resolve().parents[1].glob("examples/*/main.py"))
+
+# `run.py --all <name>...` grades only those, so working on one example does
+# not re-render the rest.
+_only = [n for n in os.environ.get("CODIMATE_ONLY", "").split(",") if n]
+if _only:
+    EXAMPLES = [m for m in EXAMPLES if m.parent.name in _only]
+    missing = set(_only) - {m.parent.name for m in EXAMPLES}
+    if missing:
+        raise SystemExit(f"no such example: {', '.join(sorted(missing))}")
 ROOT = Path(__file__).resolve().parents[2]
 
 WIDTH, HEIGHT, FPS = 1920, 1080, 60.0

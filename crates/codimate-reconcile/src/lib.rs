@@ -1117,6 +1117,7 @@ mod tests {
             size: 0.0,
             layer: 0,
             opacity: 1.0,
+            ..Default::default()
         };
         let flat = round_rect_path(&square).segments.len();
         square.r = 12.0;
@@ -1291,6 +1292,7 @@ mod tests {
             size: 16.0,
             layer: 0,
             opacity: 1.0,
+            ..Default::default()
         };
 
         let before = vec![bar("bar_3", 100.0), bar("bar_1", 180.0)];

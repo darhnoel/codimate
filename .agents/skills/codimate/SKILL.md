@@ -8,9 +8,8 @@ description: Create runnable Codimate examples in Python from user prompts, with
 Turn a prompt into a runnable Codimate explainer.
 
 **Python is the authoring surface. Rust is the engine** (ADR 0008). Never write
-a Rust example, never touch `crates/` for authoring work, and never wire
-anything into `codimate-previewer` — it is internal machinery and does not
-build.
+a Rust example and never touch `crates/` for authoring work. Examples live in
+`python/examples/<name>/`; there is no Rust example tree.
 
 ## The model, in one paragraph
 

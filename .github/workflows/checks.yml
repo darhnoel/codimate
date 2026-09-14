@@ -1,0 +1,29 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  onboarding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo fmt check
+        run: cargo fmt --check
+
+      - name: Workspace check
+        run: cargo check --workspace
+
+      # The whole suite, not one test. Until the Rust examples were removed the
+      # only `cargo test` here was an onboarding contract that asserted the
+      # README mentioned `cargo run -p codimate-example-*` — so 237 real tests
+      # never ran, and two of them had stopped compiling without anyone
+      # noticing, because `cargo check` does not build `#[cfg(test)]` code.
+      - name: Tests
+        run: cargo test --workspace

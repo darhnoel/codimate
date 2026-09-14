@@ -288,17 +288,22 @@ codimate/
 ├── crates/
 │   ├── codimate-core/      # Layer 1 + 2 — no I/O, no Skia
 │   ├── codimate-animation/ # Layer 3 — Animation duration + composition
-│   ├── codimate-effects/   # Pure timeless visual change recipes + explicit Timing adapter
 │   ├── codimate-layout/    # taffy integration, layout pass
 │   ├── codimate-fonts/     # Central font registry with Unicode coverage
 │   ├── codimate-glyph/     # Text -> animatable glyph paths (harfbuzz + ttf)
 │   ├── codimate-math/      # Formula: LaTeX -> Typst subprocess -> Paths (see ADR 0005)
 │   ├── codimate-render/    # tiny-skia CPU raster, Renderer trait (see ADR 0001)
-│   ├── codimate-previewer/ # interactive preview window, sampled from Playable
 │   ├── codimate-export/    # raw RGBA -> ffmpeg pipe (PNG optional, see ADR 0001)
+│   ├── codimate-reconcile/ # the diff: two Scenes -> movement (no PyO3 anywhere)
 │   └── codimate-py/        # PyO3 bindings — the Authoring Surface (see ADR 0008)
-├── python/                 # the `codimate` Python package
-└── examples/
+└── python/
+    ├── codimate/           # the `codimate` Python package
+    └── examples/           # every example, in Python
+
+**Every crate here is reachable from the wheel.** The Rust authoring path —
+`codimate` (facade), `codimate-effects`, `codimate-arrange`,
+`codimate-previewer` and the `examples/` tree — was removed once Python became
+the Authoring Surface; git history has it if it is ever wanted back.
 
 **codimate-core has zero non-pure dependencies.** If a PR adds an I/O import
 to codimate-core, reject it.
