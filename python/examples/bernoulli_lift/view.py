@@ -9,16 +9,16 @@ COLUMN_W = (COLUMNS[-1][0] - COLUMNS[0][0]) / len(COLUMNS) * SCALE + 1.6
 
 
 def _wing(scene):
-    """Filled a column at a time, because there is no polygon to fill."""
-    for i, (x, top, bottom) in enumerate(COLUMNS):
-        scene.line(("wing", i), start=place(x, top), end=place(x, bottom),
-                   w=COLUMN_W).fill(WING).on(layer=4)
-    for i, (x, top, bottom) in enumerate(COLUMNS[:-1]):
-        nx, ntop, nbottom = COLUMNS[i + 1]
-        scene.line(("edge_top", i), start=place(x, top), end=place(nx, ntop),
-                   w=2.0).fill(WING_EDGE).on(layer=5)
-        scene.line(("edge_bot", i), start=place(x, bottom), end=place(nx, nbottom),
-                   w=2.0).fill(WING_EDGE).on(layer=5)
+    """One closed curve: over the top, back along the bottom.
+
+    This used to be 140 vertical lines, one per column, because nothing could
+    fill a closed outline — and then 278 more to draw the edges. An aerofoil
+    is a smooth shape, which is exactly what `curve` is for.
+    """
+    outline = ([place(x, top) for x, top, _ in COLUMNS]
+               + [place(x, bottom) for x, _, bottom in reversed(COLUMNS)])
+    scene.curve("wing", outline, w=2.0, closed=True) \
+         .fill(WING, edge=WING_EDGE, edge_w=2.0).on(layer=4)
 
 
 def _labels(scene, flow):
@@ -69,9 +69,10 @@ def draw(scene, flow):
         if not parcel.marked:
             continue
         color = OVER if parcel.side == "over" else UNDER
-        for i, ((ax, ay), (bx, by)) in enumerate(zip(parcel.trail, parcel.trail[1:])):
-            scene.line(("path", parcel.side, i), start=place(ax, ay), end=place(bx, by),
-                       w=2.2).fill(color).on(opacity=0.55, layer=9)
+        if len(parcel.trail) >= 2:
+            scene.curve(("path", parcel.side),
+                        [place(px, py) for px, py in parcel.trail],
+                        w=2.2).fill(color).on(opacity=0.55, layer=9)
         px, py = place(parcel.x, parcel.y)
         scene.circle(("mark", parcel.side), r=7.5, at=(px, py)).fill(color).on(layer=10)
 
