@@ -10,9 +10,11 @@ __pycache__/
 # rendered output — the folder is tracked, its contents are not
 /results/*
 !/results/.gitkeep
-/examples/attention-is-all-you-need-architecture/
-/examples/transformer/
-/examples/logo-animation/
+
+# The last of the Rust example tree, never committed and left on disk when the
+# rest went. It no longer builds — the facade crate it imports was removed with
+# the authoring path — so it is kept out of the way rather than kept working.
+/examples/
 
 # API keys for authoring-time tools (Kiri TTS). Never committed.
 .env
@@ -23,6 +25,14 @@ __pycache__/
 # not be recovered.
 python/examples/attention/audio/*
 !python/examples/attention/audio/spoken.json
+
+# Examples kept local. `fourier_einstein` traces a copyrighted engraving it
+# reads at build time, so the input is not ours to redistribute even though
+# the code is; `pypi_nightly` is a one-off announcement clip. Both still run
+# and are graded by `tests/run.py --all` like any other example — they are
+# simply not published.
+python/examples/fourier_einstein/
+python/examples/pypi_nightly/
 
 # Frames pulled out of a render while checking it.
 /scenes/
