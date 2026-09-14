@@ -27,3 +27,37 @@ jobs:
       # noticing, because `cargo check` does not build `#[cfg(test)]` code.
       - name: Tests
         run: cargo test --workspace
+
+  # Python is the Authoring Surface, and until now none of it ran here. The
+  # cost of that showed up immediately: the wheel published to PyPI failed
+  # `test_layout` because the harfbuzz it vendors rounds advances differently
+  # from the system one a developer builds against, and nothing was watching.
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the toolchain
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet maturin ruff
+
+      - name: Lint
+        run: .venv/bin/ruff check
+
+      # The same harfbuzz the wheels vendor, so the metrics tested here are
+      # the metrics a `pip install` actually gets. Without this, a runner with
+      # libharfbuzz-dev would quietly test a different shaper.
+      - name: Build the extension
+        env:
+          HARFBUZZ_SYS_NO_PKG_CONFIG: "1"
+        run: .venv/bin/maturin develop
+
+      # The fast suite: no video, so no ffmpeg and no typst. Rendering every
+      # example takes minutes and is the job of a release, not of every push.
+      - name: Tests
+        run: .venv/bin/python python/tests/run.py
