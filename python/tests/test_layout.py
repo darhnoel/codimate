@@ -90,9 +90,14 @@ def test_measure_is_real_and_not_a_guess():
     w, h = cm.measure("cat", 30)
     assert w > 0 and h > 0, (w, h)
 
-    # Scales linearly with size.
+    # Scales linearly with size. The tolerance is a quantisation budget, not a
+    # slack: harfbuzz reports advances in 1/64ths, and how a build rounds them
+    # differs between harfbuzz versions — the copy the wheels vendor is 3/64
+    # off doubling where a system harfbuzz is exact. What this is really
+    # guarding against is hinting or a bitmap strike, which would be off by a
+    # percent or more rather than a hundredth of a pixel.
     w2, h2 = cm.measure("cat", 60)
-    assert abs(w2 - 2 * w) < 0.01 and abs(h2 - 2 * h) < 0.01, (w, w2, h, h2)
+    assert abs(w2 - 2 * w) < 0.1 and abs(h2 - 2 * h) < 0.1, (w, w2, h, h2)
 
     # Longer text is wider.
     assert cm.measure("cattle", 30)[0] > w
