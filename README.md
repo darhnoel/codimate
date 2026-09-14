@@ -1,5 +1,8 @@
 # Codimate
 
+[![PyPI](https://img.shields.io/pypi/v/codimate)](https://pypi.org/project/codimate/)
+[![Python](https://img.shields.io/pypi/pyversions/codimate)](https://pypi.org/project/codimate/)
+
 Turn a running algorithm into an explainer video.
 
 You write your algorithm as normal Python and say what each step looks like.
@@ -41,8 +44,17 @@ That is the whole program. Run it, get `results/bubble_sort.mp4`.
 
 ## Install
 
-Codimate is a Rust engine with a Python front end. Wheels are not published
-yet, so for now build from source — you need a Rust toolchain:
+```bash
+pip install codimate
+```
+
+Codimate is a Rust engine with a Python front end, but the wheels are
+prebuilt, so there is no Rust toolchain to install. One wheel covers every
+Python from 3.9 up, on Linux, macOS and Windows.
+
+### Working on the engine
+
+Only if you are changing the Rust, rather than using Codimate:
 
 ```bash
 git clone https://github.com/darhnoel/codimate && cd codimate
@@ -54,6 +66,8 @@ python3 -m venv .venv && .venv/bin/pip install maturin
 **Use `--release`.** Without it the Rust engine is unoptimized and renders
 roughly 17x slower — a scene that draws in 6ms takes 100ms. Only leave it off
 if you are debugging the engine itself.
+
+### What else you need
 
 `ffmpeg` does the video encoding. Codimate uses the one on your PATH if you
 have it (`brew install ffmpeg`, `apt install ffmpeg`) and otherwise falls back

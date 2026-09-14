@@ -12,8 +12,9 @@ them.
 
 ## Setting Up
 
-If you haven't installed Codimate yet, follow [the install
-steps](../README.md#install) first, then come back.
+If you haven't installed Codimate yet, `pip install codimate` is the whole of
+it — see [the install steps](../README.md#install) for what `ffmpeg` and
+`typst` are for.
 
 Create a file called `coins.py` in the repository root, alongside `README.md`.
 Run every command in this chapter from that folder, so your video lands in
