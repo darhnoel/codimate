@@ -132,9 +132,8 @@ fn render(
         .collect();
 
     let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
-    let explanation =
-        reconcile::explanation(&scenes, &cameras, &rules, &durations, (width, height))
-            .map_err(py)?;
+    let explanation = reconcile::explanation(scenes, &cameras, &rules, &durations, (width, height))
+        .map_err(py)?;
 
     // `pixel_scale` rasterizes at the larger size rather than upscaling
     // afterwards, so 1080p is genuinely drawn at 1080p.
@@ -170,9 +169,8 @@ fn render_frame_png(
         .map(|scene| scene.into_iter().map(Shape::from).collect())
         .collect();
     let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
-    let explanation =
-        reconcile::explanation(&scenes, &cameras, &rules, &durations, (width, height))
-            .map_err(py)?;
+    let explanation = reconcile::explanation(scenes, &cameras, &rules, &durations, (width, height))
+        .map_err(py)?;
 
     let viewport = Viewport::new(width, height);
     let scene = explanation.resolve_at(seconds);

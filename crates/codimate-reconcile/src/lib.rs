@@ -998,7 +998,7 @@ fn framed(shapes: Vec<Shape>, focus: Option<&Focus>, viewport: (f32, f32)) -> Re
 /// This is the whole surface a frontend needs. Everything else in this crate
 /// is how it is done.
 pub fn explanation(
-    scenes: &[Vec<Shape>],
+    scenes: Vec<Vec<Shape>>,
     cameras: &[Option<Focus>],
     rules: &[Rule],
     durations: &[f32],
@@ -1024,33 +1024,38 @@ pub fn explanation(
         }
     }
 
-    // Frame every Scene before diffing any of them, so the diff only ever sees
-    // screen coordinates and knows nothing about cameras.
-    let framed: Vec<Vec<Shape>> = scenes
-        .iter()
-        .enumerate()
-        .map(|(i, scene)| {
-            framed(
-                scene.clone(),
-                cameras.get(i).and_then(|c| c.as_ref()),
-                viewport,
-            )
-        })
-        .collect::<Result<_>>()?;
+    // Scenes are framed as the diff walks them, not all at once. The diff
+    // never looks further than one step back, so two framed Scenes are alive
+    // at a time rather than one per event — on a Scene of a few thousand
+    // shapes that is the difference between holding the whole payload again
+    // and holding a pair of them.
+    //
+    // `scenes` is consumed for the same reason: framing used to clone every
+    // Scene while the caller's copy was still alive, so the payload existed
+    // twice before a single frame was drawn.
+    let mut scenes = scenes.into_iter();
+    let mut prev = framed(
+        scenes.next().expect("scene count checked above"),
+        cameras.first().and_then(|c| c.as_ref()),
+        viewport,
+    )?;
 
     let mut segments = Vec::new();
     let mut cursor = 0.0f32;
 
     for (i, duration) in durations.iter().enumerate() {
-        if *duration <= 0.0 {
-            continue;
+        // Framed even when the segment is dropped: a zero-length event still
+        // advances which Scene the next segment diffs against.
+        let next = framed(
+            scenes.next().expect("scene count checked above"),
+            cameras.get(i + 1).and_then(|c| c.as_ref()),
+            viewport,
+        )?;
+        if *duration > 0.0 {
+            segments.push((cursor, *duration, build_segment(&prev, &next, rules)?));
+            cursor += duration;
         }
-        segments.push((
-            cursor,
-            *duration,
-            build_segment(&framed[i], &framed[i + 1], rules)?,
-        ));
-        cursor += duration;
+        prev = next;
     }
 
     if segments.is_empty() {
