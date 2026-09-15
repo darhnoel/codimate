@@ -26,6 +26,7 @@ Every one of these exists on a `Scene` and on any `Group`.
 | `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
 | `scene.polygon(name, points)` | corners | a filled shape with straight edges |
 | `scene.curve(name, points, w=)` | samples | a smooth line through all of them |
+| `scene.svg(name, file, size=)` | a file | vector art, as geometry you can animate |
 | `scene.arrow(name, start=, end=)` | two points | a shaft and a head, as one shape |
 | `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
 

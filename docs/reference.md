@@ -95,6 +95,7 @@ scene.text(name, content, *, size=16.0, at=None) -> Handle
 scene.formula(name, latex, *, size=16.0, at=None) -> Handle
 scene.polygon(name, points, *, closed=True)      -> Handle
 scene.curve(name, points, *, w=2.0, closed=False) -> Handle
+scene.svg(name, file, *, size=120.0, at=None)    -> Handle
 scene.line(name, *, start, end, w=2.0)           -> Handle
 scene.arrow(name, *, start, end, w=4.0, head=16.0) -> Handle
 scene.group(name, slot=None, *, at=None, anchor=None, w=None) -> Group
@@ -107,6 +108,13 @@ height, some words. Everything else is said afterwards, on the Handle it hands
 back. No call takes more than five arguments; a shape used to take eighteen.
 
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
+
+`svg` imports vector art — a logo, an icon, a diagram exported from
+somewhere else — as real geometry, so it tweens, `.turn()` and `.grow()`
+transform it, and `.write(pen=2)` draws it on stroke by stroke. `size` is a box
+it fits inside, one number or `(w, h)`, aspect always kept. It keeps the file's
+own colours; `.fill(colour)` flattens it to a silhouette. An SVG that draws
+text is refused — export it with text converted to outlines.
 
 `curve` draws a smooth line **through** every point you give it — they are
 samples, not control points, so you hand it a function you plotted or a path

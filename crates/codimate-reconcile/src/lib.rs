@@ -85,8 +85,8 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 7] = [
-    "rect", "circle", "text", "line", "formula", "polygon", "curve",
+pub const KINDS: [&str; 8] = [
+    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg",
 ];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
@@ -282,9 +282,10 @@ impl Shape {
                 }
             }
 
-            // A formula is many glyph outlines, so it cannot be one Geometry.
-            // `primitives()` expands it; this arm is never reached.
-            "formula" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
+            // A formula is many glyph outlines and an imported SVG is many
+            // paths, so neither can be one Geometry. `primitives()` expands
+            // them; these arms are never reached.
+            "formula" | "svg" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
 
             // Square corners stay a real Rect — the common case keeps the
             // cheaper primitive and the renderer's own rectangle path.
@@ -297,7 +298,15 @@ impl Shape {
     }
 
     fn style(&self) -> Result<Style> {
-        let fill = parse_color(&self.color)?;
+        // An imported SVG may say nothing about colour, which means "as
+        // authored" (ADR 0014). Its per-path styles are built during
+        // expansion; this shared one is only the fallback for a path the file
+        // gave no paint at all, so white is as good an answer as any.
+        let fill = if self.kind == "svg" && self.color.is_empty() {
+            Color::WHITE
+        } else {
+            parse_color(&self.color)?
+        };
 
         // A line is drawn, not filled — `w` is its stroke width, and it has no
         // separate edge. An open curve reads the same way: it encloses nothing,
@@ -691,6 +700,9 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
             codimate_math::FormulaError::Svg(m) => {
                 format!("could not read the typeset {latex:?}: {m}")
             }
+            // Only an imported file can raise these; typst's own output is
+            // never read from disk and never contains text elements.
+            codimate_math::FormulaError::SvgRead(m) | codimate_math::FormulaError::SvgText(m) => m,
         })
     })?;
 
@@ -742,12 +754,215 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
     Ok(shared)
 }
 
+/// An imported SVG, ready to draw.
+///
+/// Paths are centred on the artwork's own bounding box and scaled so its
+/// longest side is 1.0, which makes `size` mean the same thing whatever units
+/// the file was drawn in — a 24-unit icon and a 1000-unit diagram both arrive
+/// the same size (ADR 0014).
+struct SvgArt {
+    paths: Vec<(Path, Option<Color>)>,
+    /// Normalised extent. The longer side is 1.0.
+    size: (f32, f32),
+}
+
+/// How much to scale normalised artwork so it fits inside `box`.
+///
+/// Aspect is always preserved: the drawing fits inside the box the author
+/// named, whichever way round it is. A zero or missing box falls back to the
+/// artwork's own normalised size, which keeps a forgotten `size=` visible
+/// rather than invisible.
+fn fit_scale(art: (f32, f32), fit: (f32, f32)) -> f32 {
+    let (w, h) = fit;
+    if w <= 0.0 && h <= 0.0 {
+        return 1.0;
+    }
+    let by_w = if w > 0.0 { w / art.0 } else { f32::MAX };
+    let by_h = if h > 0.0 { h / art.1 } else { f32::MAX };
+    by_w.min(by_h)
+}
+
+/// Read, parse and normalise an SVG file — once per path, for the life of the
+/// process.
+///
+/// Cached for the same reason formula glyphs are: a 1,200-frame render must
+/// not re-parse the same file 1,200 times. It also means editing the file
+/// mid-session and re-rendering shows the old drawing.
+fn svg_art(file: &str) -> Result<Arc<SvgArt>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, Arc<SvgArt>>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+
+    if let Some(hit) = cache.lock().unwrap().get(file) {
+        return Ok(hit.clone());
+    }
+
+    let source = std::fs::read_to_string(file)
+        .map_err(|e| Error(format!("could not read the SVG {file:?}: {e}")))?;
+    let imported = codimate_math::import_svg(&source).map_err(|e| {
+        Error(match e {
+            codimate_math::FormulaError::SvgText(m) => format!("{file:?}: {m}"),
+            other => format!("could not read the SVG {file:?}: {other:?}"),
+        })
+    })?;
+
+    let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
+    let (mut max_x, mut max_y) = (f32::MIN, f32::MIN);
+    for item in &imported {
+        if let Some((x0, y0, x1, y1)) = item.path.bounding_box() {
+            min_x = min_x.min(x0);
+            min_y = min_y.min(y0);
+            max_x = max_x.max(x1);
+            max_y = max_y.max(y1);
+        }
+    }
+    if min_x > max_x {
+        return Err(Error(format!("{file:?} has nothing visible in it")));
+    }
+
+    let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+    let longest = (max_x - min_x).max(max_y - min_y).max(1e-6);
+
+    let mut paths: Vec<(Path, Option<Color>)> = imported
+        .iter()
+        .map(|item| {
+            (
+                map_path(&item.path, |v| {
+                    Vec2::new((v.x - cx) / longest, (v.y - cy) / longest)
+                }),
+                item.fill,
+            )
+        })
+        .collect();
+
+    // Left to right, so the pen draws across the picture. Document order was
+    // the alternative and is better for artwork a person built stroke by
+    // stroke, but most files come out of a tool where the saved order is
+    // arbitrary — a Mermaid diagram emits arrows before boxes (ADR 0014).
+    paths.sort_by(|a, b| {
+        let key = |p: &Path| p.bounding_box().map(|(x0, ..)| x0).unwrap_or(0.0);
+        key(&a.0)
+            .partial_cmp(&key(&b.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let art = Arc::new(SvgArt {
+        paths,
+        size: ((max_x - min_x) / longest, (max_y - min_y) / longest),
+    });
+    cache.lock().unwrap().insert(file.to_string(), art.clone());
+    Ok(art)
+}
+
 // ============================================================
 // The diff — motion is implied by identity
 // ============================================================
 
-/// One Item becomes one Primitive — except a formula, which becomes one per
-/// glyph. They share a position, style and opacity, so they move as a unit.
+/// How much of a many-outlined Item is showing, and whether a pen is drawing
+/// it.
+///
+/// Shared by `formula` and `svg`, which are the same animation over different
+/// artwork: a list of outlines, revealed left to right, optionally traced.
+struct Reveal {
+    /// The reveal edge at t=0 and t=1, in outline counts.
+    edge: (f32, f32),
+    /// Opacity at t=0 and t=1.
+    fade: (f32, f32),
+    /// Pen width. Zero means the outlines simply fade in.
+    pen: f32,
+}
+
+impl Reveal {
+    /// `pen` is passed rather than read off the Shape because the two kinds
+    /// keep it in different fields: a formula in `w`, an imported SVG in
+    /// `size`, because `w` there is already the fit box.
+    fn of(before: &Shape, after: &Shape, count: usize, pen: f32) -> Self {
+        // `r` is the revealed fraction. Scaled to an outline count it becomes a
+        // moving edge: outlines behind it are solid, the one under it is
+        // part-faded, the rest are not there yet — so a drawing assembles
+        // itself instead of appearing all at once. The edge travels past the
+        // last outline by the overlap so the tail finishes fading rather than
+        // snapping on.
+        let span = count as f32 + REVEAL_OVERLAP;
+        Reveal {
+            edge: (before.r * span, after.r * span),
+            fade: (before.opacity, after.opacity),
+            pen,
+        }
+    }
+}
+
+/// Draw outlines as one Item, swept by the reveal edge and optionally traced
+/// by a pen.
+fn revealed(
+    outlines: &[(Path, Animated<Style>)],
+    show: Reveal,
+    pen_ink: Color,
+    path: Animated<Vec2>,
+) -> Vec<Primitive> {
+    let (edge_from, edge_to) = show.edge;
+    let (fade_from, fade_to) = show.fade;
+    let pen = show.pen;
+
+    // How far this outline has got, 0 to 1. The edge is eased; a linear sweep
+    // starts and stops abruptly, which is most of what makes a reveal look
+    // mechanical. Plain opacity stays linear, matching `tween`.
+    let progress = move |index: f32, t: f32| {
+        let edge = edge_from + (edge_to - edge_from) * ease_in_out(t);
+        ((edge - index) / REVEAL_OVERLAP).clamp(0.0, 1.0)
+    };
+    let fade = move |t: f32| fade_from + (fade_to - fade_from) * t;
+
+    let mut out = Vec::with_capacity(outlines.len() * if pen > 0.0 { 2 } else { 1 });
+    for (index, (outline, look)) in outlines.iter().enumerate() {
+        let index = index as f32;
+
+        if pen <= 0.0 {
+            out.push(
+                Primitive::new(Geometry::path(outline.clone().into_animated()))
+                    .pos(path.clone())
+                    .style(look.clone())
+                    .opacity(Animated::new(move |t| fade(t) * progress(index, t))),
+            );
+            continue;
+        }
+
+        // The solid outline, arriving only at the end of its own trace.
+        out.push(
+            Primitive::new(Geometry::path(outline.clone().into_animated()))
+                .pos(path.clone())
+                .style(look.clone())
+                .opacity(Animated::new(move |t| {
+                    let u = progress(index, t);
+                    fade(t) * ((u - (1.0 - FILL_TAKEOVER)) / FILL_TAKEOVER).clamp(0.0, 1.0)
+                })),
+        );
+
+        // The pen, drawing that outline and then lifting.
+        let traced = flatten(outline);
+        out.push(
+            Primitive::new(Geometry::path(Animated::new(move |t| {
+                trim(&traced, progress(index, t))
+            })))
+            .pos(path.clone())
+            .style(
+                Style::new()
+                    .fill(Color::TRANSPARENT)
+                    .stroke(pen, pen_ink)
+                    .into_animated(),
+            )
+            .opacity(Animated::new(move |t| {
+                let u = progress(index, t);
+                let lifting = ((1.0 - u) / FILL_TAKEOVER).clamp(0.0, 1.0);
+                fade(t) * lifting
+            })),
+        );
+    }
+    out
+}
+
+/// One Item becomes one Primitive — except a formula or an imported SVG, which
+/// become one per outline. They share a position and opacity, so they move as
+/// a unit.
 fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primitive>> {
     if before.kind != after.kind {
         return Err(Error(format!(
@@ -774,79 +989,58 @@ fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primi
         // the segment. An author who wants a formula read before it changes
         // emits a move and then a hold, exactly as they already do for text.
         let size = before.size;
-        let glyphs = formula_glyphs(&before.text)?;
-
-        // `r` is the revealed fraction. Scaled to a glyph count, it becomes a
-        // moving edge: glyphs behind it are solid, the one under it is
-        // part-faded, the rest are not there yet. So an equation can assemble
-        // itself term by term instead of appearing all at once.
-        // The edge travels past the last glyph by the overlap, so the tail
-        // finishes fading instead of snapping on at the end.
-        let span = glyphs.len() as f32 + REVEAL_OVERLAP;
-        let (edge_from, edge_to) = (before.r * span, after.r * span);
-        let (fade_from, fade_to) = (before.opacity, after.opacity);
-
-        // How far this glyph has got, 0 to 1. The edge is eased; a linear
-        // sweep starts and stops abruptly, which is most of what makes a
-        // reveal look mechanical. Plain opacity stays linear, matching `tween`.
-        let progress = move |index: f32, t: f32| {
-            let edge = edge_from + (edge_to - edge_from) * ease_in_out(t);
-            ((edge - index) / REVEAL_OVERLAP).clamp(0.0, 1.0)
-        };
-        let fade = move |t: f32| fade_from + (fade_to - fade_from) * t;
-
-        // `w` is the pen. Zero means no pen: glyphs simply fade in, which is
-        // cheaper and right for a formula that is just arriving.
-        let pen = before.w.max(after.w);
         let ink = parse_color(&before.color)?;
-
-        let mut out = Vec::with_capacity(glyphs.len() * if pen > 0.0 { 2 } else { 1 });
-        for (index, glyph) in glyphs.iter().enumerate() {
-            let scaled = map_path(glyph, |v| Vec2::new(v.x * size, v.y * size));
-            let index = index as f32;
-
-            if pen <= 0.0 {
-                out.push(
-                    Primitive::new(Geometry::path(scaled.into_animated()))
-                        .pos(path.clone())
-                        .style(style.clone())
-                        .opacity(Animated::new(move |t| fade(t) * progress(index, t))),
-                );
-                continue;
-            }
-
-            // The solid glyph, arriving only at the end of its own trace.
-            out.push(
-                Primitive::new(Geometry::path(scaled.clone().into_animated()))
-                    .pos(path.clone())
-                    .style(style.clone())
-                    .opacity(Animated::new(move |t| {
-                        let u = progress(index, t);
-                        fade(t) * ((u - (1.0 - FILL_TAKEOVER)) / FILL_TAKEOVER).clamp(0.0, 1.0)
-                    })),
-            );
-
-            // The pen, drawing that glyph's outline and then lifting.
-            let traced = flatten(&scaled);
-            out.push(
-                Primitive::new(Geometry::path(Animated::new(move |t| {
-                    trim(&traced, progress(index, t))
-                })))
-                .pos(path.clone())
-                .style(
-                    Style::new()
-                        .fill(Color::TRANSPARENT)
-                        .stroke(pen, ink)
-                        .into_animated(),
+        let outlines: Vec<(Path, Animated<Style>)> = formula_glyphs(&before.text)?
+            .iter()
+            .map(|g| {
+                (
+                    map_path(g, |v| Vec2::new(v.x * size, v.y * size)),
+                    style.clone(),
                 )
-                .opacity(Animated::new(move |t| {
-                    let u = progress(index, t);
-                    let lifting = ((1.0 - u) / FILL_TAKEOVER).clamp(0.0, 1.0);
-                    fade(t) * lifting
-                })),
-            );
-        }
-        return Ok(out);
+            })
+            .collect();
+        return Ok(revealed(
+            &outlines,
+            Reveal::of(before, after, outlines.len(), before.w.max(after.w)),
+            ink,
+            path,
+        ));
+    }
+
+    if before.kind == "svg" {
+        // Same shape as a formula: one Item, many outlines, revealed left to
+        // right. The difference is that the artwork brought its own colours
+        // (ADR 0014), so each outline carries a Style instead of sharing one.
+        let art = svg_art(&before.text)?;
+        let scale = fit_scale(art.size, (before.w, before.h));
+        let authored = before.color.is_empty();
+        let ink = if authored {
+            Color::WHITE
+        } else {
+            parse_color(&before.color)?
+        };
+
+        let outlines: Vec<(Path, Animated<Style>)> = art
+            .paths
+            .iter()
+            .map(|(p, own)| {
+                let geometry = map_path(p, |v| Vec2::new(v.x * scale, v.y * scale));
+                // An empty `color` means "as authored"; anything else is an
+                // override the author asked for, and flattens the drawing.
+                let look = match (authored, own) {
+                    (true, Some(c)) => Style::new().fill(*c).into_animated(),
+                    _ => style.clone(),
+                };
+                (geometry, look)
+            })
+            .collect();
+        let pen = before.size.max(after.size);
+        return Ok(revealed(
+            &outlines,
+            Reveal::of(before, after, outlines.len(), pen),
+            ink,
+            path,
+        ));
     }
 
     Ok(vec![Primitive::new(before.geometry(after))
@@ -961,6 +1155,15 @@ fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
         "circle" => (shape.r * 2.0, shape.r * 2.0),
         "text" => codimate_render::measure_text(&shape.text, shape.size),
         "formula" => formula_size(&shape.text, shape.size).unwrap_or((0.0, 0.0)),
+        // The fitted box, not the box asked for: a wide drawing in a square
+        // `size` does not fill the square, and framing the square would leave
+        // the camera looking at empty air above and below.
+        "svg" => svg_art(&shape.text)
+            .map(|art| {
+                let s = fit_scale(art.size, (shape.w, shape.h));
+                (art.size.0 * s, art.size.1 * s)
+            })
+            .unwrap_or((0.0, 0.0)),
         // A Catmull-Rom curve can bulge a little past its samples between
         // them, but never far, and framing by the samples is what an author
         // means by "frame this curve".

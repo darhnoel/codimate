@@ -177,6 +177,48 @@ def test_every_drawable_shape_says_more_the_same_way():
         raise AssertionError("an unknown pivot should not reach the Engine")
 
 
+def test_an_svg_keeps_its_own_colours_until_told_otherwise():
+    """`color` is empty for an import, meaning "as authored" (ADR 0014).
+
+    `"white"` could not say that: it is the default every other shape carries,
+    so there would be no way to tell a deliberate white silhouette from a
+    caller who said nothing at all.
+    """
+    scene = cm.Scene()
+    scene.svg("logo", "brand.svg", size=90, at=(100, 200))
+    shape = scene._payload()[0]
+    assert shape["kind"] == "svg", shape["kind"]
+    assert shape["text"] == "brand.svg", "the path travels in `text`"
+    assert shape["color"] == "", "empty means as authored"
+    assert (shape["w"], shape["h"]) == (90.0, 90.0), "a scalar size is a square box"
+    assert shape["r"] == 1.0, "fully revealed unless .write says otherwise"
+    assert shape["size"] == 0.0, "no pen unless .write says otherwise"
+
+    scene.svg("wide", "flow.svg", size=(900, 420), at=(640, 360))
+    wide = scene._payload()[1]
+    assert (wide["w"], wide["h"]) == (900.0, 420.0), "a pair is the box"
+
+    flat = cm.Scene()
+    flat.svg("logo", "brand.svg", at=(0, 0)).fill("red")
+    assert flat._payload()[0]["color"] == "red", "fill overrides every path"
+
+
+def test_the_pen_rides_in_a_different_field_for_an_svg():
+    """`w` is a formula's pen and an SVG's fit box, so `write` has to know
+    which it is holding. This is the one place the payload's per-kind field
+    reuse is visible from Python."""
+    formula = cm.Scene()
+    formula.formula("eq", r"x^2", size=30, at=(0, 0)).write(reveal=0.5, pen=2.0)
+    assert formula._payload()[0]["w"] == 2.0, "a formula's pen is `w`"
+
+    svg = cm.Scene()
+    svg.svg("logo", "brand.svg", size=90, at=(0, 0)).write(reveal=0.5, pen=2.0)
+    shape = svg._payload()[0]
+    assert shape["size"] == 2.0, "an SVG's pen is `size`"
+    assert shape["w"] == 90.0, "and its box survives"
+    assert shape["r"] == 0.5
+
+
 def test_a_curve_is_drawn_through_its_points_not_filled():
     """`curve` hands the Engine samples, not control points (ADR 0012).
 

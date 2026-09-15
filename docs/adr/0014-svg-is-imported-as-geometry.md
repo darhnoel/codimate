@@ -1,6 +1,6 @@
 # ADR 0014 — SVG is imported as geometry, not pasted as a picture
 
-**Status:** Proposed — 2026-09-15
+**Status:** Accepted — 2026-09-15
 
 ## Context
 
@@ -123,17 +123,27 @@ is real work, and no file yet demands it.
 - **Two imports, for two kinds of picture.** SVG for vector art, and ADR 0013's
   raster images for photographs and screenshots, which cannot be vectorised.
   Neither replaces the other.
-- **`KINDS` grows.** With `curve` at seven and both this and images pending,
-  the union reaches nine — past the "8–10 kinds" the architecture review quoted
-  in ADR 0010 predicted it would strain at. Whichever of these lands second
-  should be the moment that prediction is re-examined rather than waved past.
+- **`KINDS` reaches eight**, the bottom of the "8–10 kinds" the architecture
+  review quoted in ADR 0010 predicted the flat union would strain at. If ADR
+  0013's images land too it is nine, and that should be the moment the
+  prediction is re-examined rather than waved past.
+- **The pen moved fields, which is the strain showing.** `w` is a formula's pen
+  width and an imported SVG's fit box, so `.write(pen=)` cannot simply write to
+  `w` any more — it asks the shape what kind it is and puts an SVG's pen in
+  `size`, which text and formula use and `svg` does not. Found by building it:
+  the first pen test fitted the artwork into a three-pixel box. Reusing fields
+  per kind is the payload's design, but this is the first time the reuse became
+  visible from Python rather than staying inside the Engine.
 - **Gradients flatten.** `Style` carries a flat colour, so a gradient fill
   becomes one of its stops. Better than refusing the file; worth stating so it
   is not discovered.
 - **The file is read once per process**, cached by path exactly as formula
   glyphs are, because a 1,200-frame render must not parse the same SVG 1,200
   times. Editing the file mid-session and re-rendering shows the old one.
-- **No new dependency**, no new payload field, no new `Geometry` variant.
+- **No new dependency**, no new payload field, no new `Geometry` variant. The
+  reveal machinery is now shared: `formula` and `svg` both hand a list of
+  outlines to one `revealed()`, which was previously the formula branch inline.
+  `pendulum` renders byte-identical across that refactor.
 
 ## Alternatives rejected
 

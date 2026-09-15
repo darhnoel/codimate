@@ -29,6 +29,10 @@ pub enum FormulaError {
     TypstCompile(String),
     /// The emitted SVG could not be parsed into paths.
     Svg(String),
+    /// An imported SVG file could not be read.
+    SvgRead(String),
+    /// An imported SVG draws text, which this build cannot render.
+    SvgText(String),
 }
 
 /// Typeset a LaTeX **math** string (e.g. `r"\frac{Q_{enc}}{\epsilon_0}"`) into a
@@ -135,6 +139,118 @@ fn cache_dir() -> PathBuf {
 /// Walks the usvg tree, extracts path geometry from every visible Path node,
 /// applies the node's absolute transform, and produces one `PathNode` per
 /// glyph with multi-contour support (MoveTo / Close segments).
+/// One path out of an imported SVG, with the colour it was authored in.
+///
+/// `fill` is `None` when the file gave the path no paint this build can read —
+/// a pattern, say. The caller decides what to do about it.
+pub struct SvgPath {
+    pub path: codimate_core::Path,
+    pub fill: Option<Color>,
+}
+
+/// Read an SVG's geometry, keeping each path's own colour (ADR 0014).
+///
+/// This is the same stage the formula pipeline ends with — LaTeX becomes SVG
+/// and then paths — with two differences: the source is a file rather than
+/// typst's output, and the artwork's own fills are kept instead of being
+/// replaced by one ink.
+///
+/// Text is refused rather than dropped. `usvg` is built without its `text`
+/// feature, so a `<text>` element would silently vanish and the render would
+/// succeed with a wrong picture — an imported flowchart would come out as
+/// unlabelled boxes. Detected in the source rather than the parsed tree,
+/// because by then it is already gone.
+pub fn import_svg(svg: &str) -> Result<Vec<SvgPath>, FormulaError> {
+    if has_text_element(svg) {
+        return Err(FormulaError::SvgText(
+            "this SVG draws text, which Codimate cannot render yet — \
+             export it with text converted to outlines"
+                .into(),
+        ));
+    }
+
+    let opts = usvg::Options::default();
+    let tree = usvg::Tree::from_str(svg, &opts).map_err(|e| FormulaError::Svg(e.to_string()))?;
+    let mut out = Vec::new();
+    collect_svg(tree.root(), &mut out);
+    Ok(out)
+}
+
+/// Is there a `<text>` or `<tspan>` element in the source?
+///
+/// A scan rather than a parse: `<textPath` and an attribute like `textLength`
+/// must not match, so the tag name has to end where a tag name can end.
+fn has_text_element(svg: &str) -> bool {
+    let mut rest = svg;
+    while let Some(at) = rest.find("<text") {
+        rest = &rest[at + 5..];
+        if rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') {
+            return true;
+        }
+    }
+    svg.contains("<tspan")
+}
+
+fn collect_svg(group: &usvg::Group, out: &mut Vec<SvgPath>) {
+    for node in group.children() {
+        match node {
+            usvg::Node::Path(path) => {
+                if !path.is_visible() {
+                    continue;
+                }
+                let segments = extract_segments(path);
+                if segments.is_empty() {
+                    continue;
+                }
+                out.push(SvgPath {
+                    path: codimate_core::Path {
+                        segments,
+                        closed: false,
+                    },
+                    fill: authored_colour(path),
+                });
+            }
+            usvg::Node::Group(g) => collect_svg(g, out),
+            _ => {}
+        }
+    }
+}
+
+/// The colour a path was drawn in.
+///
+/// A stroke-only path reports its stroke, because `extract_segments` turned
+/// that stroke into a fillable outline and the outline should be the colour
+/// the stroke was. A gradient collapses to its first stop: `Style` carries one
+/// flat colour, and one of the real colours beats refusing the file.
+fn authored_colour(path: &usvg::Path) -> Option<Color> {
+    fn from_paint(paint: &usvg::Paint, opacity: f32) -> Option<Color> {
+        let (r, g, b) = match paint {
+            usvg::Paint::Color(c) => (c.red, c.green, c.blue),
+            usvg::Paint::LinearGradient(g) => {
+                let s = g.stops().first()?.color();
+                (s.red, s.green, s.blue)
+            }
+            usvg::Paint::RadialGradient(g) => {
+                let s = g.stops().first()?.color();
+                (s.red, s.green, s.blue)
+            }
+            usvg::Paint::Pattern(_) => return None,
+        };
+        Some(Color {
+            r: r as f32 / 255.0,
+            g: g as f32 / 255.0,
+            b: b as f32 / 255.0,
+            a: opacity,
+        })
+    }
+
+    if let Some(fill) = path.fill() {
+        return from_paint(fill.paint(), fill.opacity().get());
+    }
+    path.stroke()
+        .and_then(|s| from_paint(s.paint(), s.opacity().get()))
+}
+
 fn svg_to_paths(svg: &str, fill: Color) -> Result<Vec<PathNode>, FormulaError> {
     let opts = usvg::Options::default();
     let tree = usvg::Tree::from_str(svg, &opts).map_err(|e| FormulaError::Svg(e.to_string()))?;
@@ -289,5 +405,63 @@ mod tests {
             y1 - y0 > 0.0,
             "the fraction bar is a zero-height line, so it fills to nothing"
         );
+    }
+}
+
+#[cfg(test)]
+mod svg_import_tests {
+    use super::*;
+
+    // `r##` because the artwork contains `"#` in every hex colour, which
+    // would close an `r#` string early.
+    const ART: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect x="0" y="0" width="40" height="40" fill="#ff0000"/>
+        <path d="M60 10 L90 10" stroke="#00ff00" stroke-width="4" fill="none"/>
+    </svg>"##;
+
+    /// The whole point of importing rather than pasting a picture: each path
+    /// arrives with the colour it was drawn in (ADR 0014).
+    #[test]
+    fn each_path_keeps_the_colour_it_was_authored_in() {
+        let paths = import_svg(ART).expect("should import");
+        assert_eq!(paths.len(), 2, "a rect and a line");
+
+        let red = paths[0].fill.expect("the rect has a fill");
+        assert!((red.r - 1.0).abs() < 0.01 && red.g < 0.01, "{red:?}");
+
+        // A stroke-only path reports its stroke: `extract_segments` turned the
+        // stroke into a fillable outline, so the outline should be the colour
+        // the stroke was, not the fill it never had.
+        let green = paths[1].fill.expect("the line reports its stroke");
+        assert!(green.g > 0.99 && green.r < 0.01, "{green:?}");
+    }
+
+    /// `usvg` is built without its `text` feature, so a `<text>` element is
+    /// dropped and the render would succeed with a wrong picture — an
+    /// imported flowchart would come out as unlabelled boxes.
+    #[test]
+    fn text_is_refused_rather_than_silently_dropped() {
+        let with_text =
+            r#"<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="2">hi</text></svg>"#;
+        assert!(matches!(
+            import_svg(with_text),
+            Err(FormulaError::SvgText(_))
+        ));
+
+        let with_tspan = r#"<svg xmlns="http://www.w3.org/2000/svg"><tspan>hi</tspan></svg>"#;
+        assert!(matches!(
+            import_svg(with_tspan),
+            Err(FormulaError::SvgText(_))
+        ));
+    }
+
+    /// The scan must not fire on a tag or attribute that merely starts with
+    /// the same letters, or ordinary files would be refused for no reason.
+    #[test]
+    fn a_name_that_starts_with_text_is_not_a_text_element() {
+        assert!(!has_text_element(r#"<rect textLength="3"/>"#));
+        assert!(!has_text_element(r##"<textPath href="#a"/>"##));
+        assert!(has_text_element(r#"<text>x</text>"#));
+        assert!(has_text_element(r#"<text/>"#));
     }
 }

@@ -156,8 +156,16 @@ class Handle:
         return self._set(r=float(radius))
 
     def write(self, reveal: float = None, pen: float = 0.0) -> "Handle":
-        """How much of a formula shows, and whether a pen draws it on."""
-        changes = {"w": float(pen)}
+        """How much of a formula or an imported SVG shows, and whether a pen
+        draws it on.
+
+        The pen rides in a different field for the two kinds — `w` for a
+        formula, `size` for an SVG, whose `w` is already the box it fits
+        inside. The payload reuses fields per kind by design (ADR 0008); this
+        is the one place that reuse is visible from Python.
+        """
+        svg = self._shapes[self._name].kind == "svg"
+        changes = {"size" if svg else "w": float(pen)}
         if reveal is not None:
             changes["r"] = float(reveal)
         return self._set(**changes)
@@ -281,6 +289,45 @@ class Group:
         x, y = self._where(at, size / 2)
         return self._place(key, "formula", x=x, y=y, text=latex, size=size,
                            layer=10, r=1.0)
+
+    def svg(self, key: Hashable, file, *, size=120.0, at=None) -> "Handle":
+        """Vector art from a file, drawn as real geometry.
+
+            scene.svg("logo", "brand.svg", size=90, at=cm.at(x=1180, top=24))
+            scene.svg("chart", "flow.svg", size=(900, 420))
+
+        Because it arrives as geometry rather than pixels it behaves like
+        anything else you draw: it tweens, `.turn()` and `.grow()` transform
+        it, `focus()` frames it, and `.write(pen=2)` draws it on stroke by
+        stroke.
+
+        `size` is a box it fits inside — one number for a square, or `(w, h)`.
+        The aspect ratio is always kept, so a wide diagram and a tall one both
+        land inside the box you named.
+
+        The artwork keeps its own colours. `.fill(colour)` overrides all of
+        them at once, which flattens it to a silhouette on purpose.
+
+        An SVG that draws text is refused: this build cannot render `<text>`,
+        and dropping it silently would give you unlabelled boxes. Export it
+        with text converted to outlines.
+        """
+        # A scalar is a square box, not a width — `_size` reads a bare number
+        # as "width, height follows", which is right for a Slot and wrong for
+        # something being fitted inside a box.
+        box = (size, size) if isinstance(size, (int, float)) else size
+        w, h = float(box[0]), float(box[1])
+        x, y = self._where(at, 0.0)
+        return self._place(
+            key, "svg", x=x, y=y, text=str(file), w=w, h=h,
+            # Empty means "as authored" — the Engine reads it as leave the
+            # file's own colours alone, which `"white"` could not say.
+            color="",
+            # Fully revealed unless `.write(reveal=...)` says otherwise, the
+            # same default a formula takes. `size` is the pen width here and
+            # starts at zero — no pen — because `w` is the fit box.
+            r=1.0, size=0.0,
+        )
 
     def polygon(self, key: Hashable, points, *, closed: bool = True) -> "Handle":
         """A shape with corners: a triangle, a wedge, an arrow head, a wing.
