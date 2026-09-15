@@ -1,13 +1,14 @@
 """Drawing the wheel: rim, finials, spokes, hub.
 
-Everything here is a filled circle or a thick line. Two tricks do the work:
+Circles, thick lines, and one trick:
 
-* **Rings come from discs.** A circle can only be filled, so a ring is a large
-  disc with a smaller one of the background colour on top. Stack four and you
-  get a gold band with a dark edge on both sides.
 * **A thick line is a rotated rectangle.** `line(start, end, w=24)` strokes a
   path, so a short span at a large width draws a block at any angle — which is
   how the spokes taper and how the ornaments sit square to the spoke.
+
+The rim used to be a second trick — four stacked discs, the innermost painted
+in the background colour to fake a hole. A stroked circle draws a band
+directly, and the hole it leaves is a real one.
 """
 
 import math
@@ -16,7 +17,6 @@ EDGE = "#8a5a12"
 GOLD = "#f2c230"
 GOLD_DEEP = "#d9a020"
 GOLD_LIT = "#fff1c4"
-GROUND = "black"
 
 RIM_OUT, RIM_IN = 167.0, 140.0
 FINIAL_R = 185.0
@@ -52,14 +52,18 @@ def _finials(scene, centre, angle, spokes):
 
 
 def _rim(scene, centre):
-    """Four discs: dark, gold, dark, ground — a banded ring."""
-    for name, radius, color, layer in (
-        ("edge_out", RIM_OUT + _E, EDGE, 3),
-        ("band", RIM_OUT, GOLD, 4),
-        ("edge_in", RIM_IN + _E, EDGE, 5),
-        ("hollow", RIM_IN, GROUND, 6),
-    ):
-        scene.circle(("rim", name), r=radius, at=centre).fill(color).on(layer=layer)
+    """Three stroked circles: a gold band with a dark edge either side.
+
+    A stroke is centred on its radius, so a band covering `inner..outer` is
+    drawn at the mean radius with a width of the difference. Nothing is painted
+    over anything, so the middle of the wheel is genuinely empty rather than
+    a black disc — whatever is drawn behind it shows through.
+    """
+    band = ((RIM_IN + _E, RIM_OUT, GOLD), (RIM_OUT, RIM_OUT + _E, EDGE),
+            (RIM_IN, RIM_IN + _E, EDGE))
+    for name, (inner, outer, color) in zip(("band", "edge_out", "edge_in"), band):
+        scene.circle(("rim", name), r=(inner + outer) / 2, at=centre) \
+             .fill("none", edge=color, edge_w=outer - inner).on(layer=4)
 
 
 def _spokes(scene, centre, angle, spokes):
