@@ -294,6 +294,14 @@ pub fn export_mp4(
     let mut command = Command::new(encoder_binary());
     command
         .arg("-y")
+        // ffmpeg's default is 46 lines of banner, build configuration and
+        // libx264 internals per render, which buries anything that actually
+        // went wrong and is the first thing a new author sees. `error` keeps
+        // the failures; `-stats` keeps the one rewriting progress line, so a
+        // two-minute render still looks alive rather than hung.
+        .arg("-loglevel")
+        .arg("error")
+        .arg("-stats")
         .arg("-f")
         .arg("rawvideo")
         .arg("-pix_fmt")
