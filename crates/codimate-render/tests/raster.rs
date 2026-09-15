@@ -4,6 +4,7 @@ use codimate_core::{circle_path, Color, Segment, TextAlign, Vec2};
 use codimate_fonts::FontRegistry;
 use codimate_layout::Viewport;
 use codimate_render::{rasterize, RenderCommand, RenderFrame};
+use std::sync::Arc;
 
 fn red_circle_frame() -> RenderFrame {
     RenderFrame {
@@ -333,4 +334,74 @@ fn rasterize_path_cubic_circle() {
     assert_eq!(img.pixel(32, 32), (255, 0, 0, 255));
     // Far corner is black (background)
     assert_eq!(img.pixel(0, 0), (0, 0, 0, 255));
+}
+
+/// A picture actually reaching the pixels — the end of the path that ADR 0013
+/// added and that nothing else here covers.
+fn image_frame(transform: [f32; 6], opacity: f32) -> RenderFrame {
+    // One solid red pixel, stretched by the affine into whatever box it names.
+    let pixels = Arc::new(codimate_core::Pixels {
+        width: 1,
+        height: 1,
+        rgba: vec![255, 0, 0, 255],
+    });
+    RenderFrame {
+        name: "image-test".to_string(),
+        elapsed_seconds: 0.0,
+        viewport: Viewport::new(100.0, 100.0),
+        commands: vec![RenderCommand::Image {
+            pixels,
+            transform,
+            opacity,
+        }],
+    }
+}
+
+#[test]
+fn rasterize_image_fills_the_box_it_is_given() {
+    // Twenty by twenty, placed at (40, 40).
+    let img = rasterize(&image_frame([20.0, 0.0, 0.0, 20.0, 40.0, 40.0], 1.0));
+
+    assert_eq!(img.pixel(50, 50), (255, 0, 0, 255), "inside the box");
+    assert_eq!(img.pixel(5, 5), (0, 0, 0, 255), "outside it");
+    assert_eq!(img.pixel(90, 90), (0, 0, 0, 255), "and past the far edge");
+}
+
+/// The regression the command-level test guards from the other side: a turned
+/// image must actually land turned. A square drawn axis-aligned has black
+/// corners inside its bounding box only when it is rotated.
+#[test]
+fn rasterize_image_honours_rotation() {
+    let (sin, cos) = 45f32.to_radians().sin_cos();
+    let (w, h) = (30.0, 30.0);
+    // The same composition `render_primitive_commands` builds: rotate, then
+    // offset so the box is centred on (50, 50).
+    let (a, b, c, d) = (cos * w, sin * w, -sin * h, cos * h);
+    let turned = rasterize(&image_frame(
+        [a, b, c, d, 50.0 - (a + c) / 2.0, 50.0 - (b + d) / 2.0],
+        1.0,
+    ));
+    let square = rasterize(&image_frame([w, 0.0, 0.0, h, 35.0, 35.0], 1.0));
+
+    // Centre is red either way; the corner of the upright square is red and
+    // the corner of the diamond is not, because it rotated away.
+    assert_eq!(turned.pixel(50, 50), (255, 0, 0, 255));
+    assert_eq!(square.pixel(50, 50), (255, 0, 0, 255));
+    assert_eq!(
+        square.pixel(37, 37),
+        (255, 0, 0, 255),
+        "upright fills its corner"
+    );
+    assert_eq!(turned.pixel(37, 37), (0, 0, 0, 255), "turned does not");
+}
+
+#[test]
+fn rasterize_image_honours_opacity() {
+    let half = rasterize(&image_frame([20.0, 0.0, 0.0, 20.0, 40.0, 40.0], 0.5));
+    let (r, g, b, a) = half.pixel(50, 50);
+    assert!(
+        (100..=160).contains(&r) && g == 0 && b == 0 && a == 255,
+        "half-opaque red over black should be mid red, got {:?}",
+        (r, g, b, a)
+    );
 }

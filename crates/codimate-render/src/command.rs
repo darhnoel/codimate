@@ -293,3 +293,80 @@ pub trait Renderer {
 
     fn render(&mut self, frame: &LayoutFrame) -> Result<(), Self::Error>;
 }
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+    use codimate_core::{ConcretePrimitive, ConcreteTransform, Pixels, Style, Vec2};
+    use std::sync::Arc;
+
+    fn one_red_pixel() -> Arc<Pixels> {
+        Arc::new(Pixels {
+            width: 1,
+            height: 1,
+            rgba: vec![255, 0, 0, 255],
+        })
+    }
+
+    fn placed(rotation_deg: f32, scale: Vec2) -> ConcretePrimitive {
+        ConcretePrimitive {
+            transform: ConcreteTransform {
+                pos: Vec2::new(100.0, 50.0),
+                scale,
+                rotation_deg,
+                pivot: Vec2::new(0.0, 0.0),
+                opacity: 1.0,
+            },
+            style: Style::new(),
+            geometry: ConcreteGeometry::Image {
+                pixels: one_red_pixel(),
+                width: 20.0,
+                height: 10.0,
+            },
+        }
+    }
+
+    fn affine_of(primitive: &ConcretePrimitive) -> [f32; 6] {
+        match render_primitive_commands(primitive).remove(0) {
+            RenderCommand::Image { transform, .. } => transform,
+            other => panic!("expected an Image command, got {other:?}"),
+        }
+    }
+
+    /// The regression this exists for. Every other command is geometry and is
+    /// transformed point by point; the first version of the image command
+    /// placed the picture by transforming its centre and emitting an
+    /// axis-aligned box, which put it in exactly the right place and silently
+    /// threw the rotation away. Nothing caught it but looking at a picture.
+    #[test]
+    fn a_turned_image_carries_its_rotation() {
+        let [_, ky, kx, _, _, _] = affine_of(&placed(25.0, Vec2::new(1.0, 1.0)));
+        assert!(
+            ky.abs() > 0.01 && kx.abs() > 0.01,
+            "a rotated image must have skew terms, got kx={kx} ky={ky}"
+        );
+
+        let [_, ky, kx, _, _, _] = affine_of(&placed(0.0, Vec2::new(1.0, 1.0)));
+        assert!(
+            ky.abs() < 1e-6 && kx.abs() < 1e-6,
+            "an unrotated image must not, got kx={kx} ky={ky}"
+        );
+    }
+
+    /// The affine maps the image's own pixel space, so a one-pixel source
+    /// drawn into a 20x10 box scales by exactly that.
+    #[test]
+    fn the_affine_maps_pixels_to_the_box() {
+        let [sx, _, _, sy, tx, ty] = affine_of(&placed(0.0, Vec2::new(1.0, 1.0)));
+        assert_eq!((sx, sy), (20.0, 10.0), "one source pixel fills the box");
+        // Centred on the primitive's position, like every other geometry.
+        assert_eq!((tx, ty), (100.0 - 10.0, 50.0 - 5.0));
+    }
+
+    /// `.grow()` reaches an image, unlike `.turn()` before this was fixed.
+    #[test]
+    fn scale_reaches_an_image() {
+        let [sx, _, _, sy, _, _] = affine_of(&placed(0.0, Vec2::new(2.0, 0.5)));
+        assert_eq!((sx, sy), (40.0, 5.0));
+    }
+}
