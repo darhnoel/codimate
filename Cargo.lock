@@ -211,6 +211,7 @@ version = "0.1.0"
 dependencies = [
  "codimate-core",
  "mitex",
+ "roxmltree",
  "usvg",
 ]
 

@@ -134,11 +134,6 @@ fn cache_dir() -> PathBuf {
     std::env::temp_dir().join("codimate-math")
 }
 
-/// Stage 3 — SVG -> core `PathNode`s via the `usvg` crate.
-///
-/// Walks the usvg tree, extracts path geometry from every visible Path node,
-/// applies the node's absolute transform, and produces one `PathNode` per
-/// glyph with multi-contour support (MoveTo / Close segments).
 /// One path out of an imported SVG, with the colour it was authored in.
 ///
 /// `fill` is `None` when the file gave the path no paint this build can read —
@@ -155,20 +150,10 @@ pub struct SvgPath {
 /// typst's output, and the artwork's own fills are kept instead of being
 /// replaced by one ink.
 ///
-/// Text is refused rather than dropped. `usvg` is built without its `text`
-/// feature, so a `<text>` element would silently vanish and the render would
-/// succeed with a wrong picture — an imported flowchart would come out as
-/// unlabelled boxes. Detected in the source rather than the parsed tree,
-/// because by then it is already gone.
+/// Geometry only. `usvg` is built without its `text` feature and drops
+/// `<text>` while parsing, so labels are read separately by
+/// [`import_svg_text`].
 pub fn import_svg(svg: &str) -> Result<Vec<SvgPath>, FormulaError> {
-    if has_text_element(svg) {
-        return Err(FormulaError::SvgText(
-            "this SVG draws text, which Codimate cannot render yet — \
-             export it with text converted to outlines"
-                .into(),
-        ));
-    }
-
     let opts = usvg::Options::default();
     let tree = usvg::Tree::from_str(svg, &opts).map_err(|e| FormulaError::Svg(e.to_string()))?;
     let mut out = Vec::new();
@@ -176,19 +161,129 @@ pub fn import_svg(svg: &str) -> Result<Vec<SvgPath>, FormulaError> {
     Ok(out)
 }
 
-/// Is there a `<text>` or `<tspan>` element in the source?
+/// A line of text from an imported SVG, in the file's own coordinates.
 ///
-/// A scan rather than a parse: `<textPath` and an attribute like `textLength`
-/// must not match, so the tag name has to end where a tag name can end.
-fn has_text_element(svg: &str) -> bool {
-    let mut rest = svg;
-    while let Some(at) = rest.find("<text") {
-        rest = &rest[at + 5..];
-        if rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') {
-            return true;
+/// Not shaped here. It becomes a `Geometry::Text` primitive and is shaped at
+/// draw time by the same call that draws every `scene.text` — one text stack
+/// rather than two (ADR 0014).
+pub struct SvgText {
+    pub content: String,
+    /// Where the anchor sits, after `text-anchor` has been applied.
+    pub x: f32,
+    pub y: f32,
+    pub size: f32,
+    pub fill: Option<Color>,
+    /// `start`, `middle` or `end`, as written.
+    pub anchor: String,
+}
+
+/// Read an imported SVG's `<text>` elements.
+///
+/// A second pass over the source rather than a walk of the parsed tree,
+/// because `usvg` is built without its `text` feature and has already thrown
+/// these away by the time it hands back a tree. Enabling that feature was the
+/// alternative and was rejected: it brings a second font database and a second
+/// shaper, so the same string in the same font would be shaped one way from
+/// `scene.text` and another from an import, inside one frame.
+///
+/// Deliberately narrow. A `<tspan>`, a `<textPath>`, or text under a
+/// transformed group is refused rather than guessed at — this reads the common
+/// case, which is a label placed at an absolute point.
+pub fn import_svg_text(svg: &str) -> Result<Vec<SvgText>, FormulaError> {
+    let doc = roxmltree::Document::parse(svg).map_err(|e| FormulaError::Svg(e.to_string()))?;
+
+    for node in doc.descendants() {
+        if node.has_tag_name("tspan") || node.has_tag_name("textPath") {
+            return Err(FormulaError::SvgText(
+                "this SVG lays out text in a way Codimate cannot read \
+                 (tspan or textPath) — export it with text converted to outlines"
+                    .into(),
+            ));
         }
     }
-    svg.contains("<tspan")
+
+    let mut out = Vec::new();
+    for node in doc.descendants().filter(|n| n.has_tag_name("text")) {
+        // Text nodes only. `descendants()` yields the element as well, and
+        // `Node::text()` on an element returns its first text child — so
+        // collecting from everything counts the content twice.
+        let content: String = node
+            .descendants()
+            .filter(|n| n.is_text())
+            .filter_map(|n| n.text())
+            .collect();
+        if content.trim().is_empty() {
+            continue;
+        }
+
+        // A transform on the label, or on anything above it, is nearly always
+        // a rotation — and the renderer cannot turn glyphs at all, the same
+        // limitation `.turn()` has on `scene.text`. So this is not a shortcut:
+        // there is no way to draw the label correctly, and drawing it upright
+        // in the wrong place would be a silently wrong picture. Named, so the
+        // author knows which label to outline.
+        if node.ancestors().any(|a| a.attribute("transform").is_some()) {
+            return Err(FormulaError::SvgText(format!(
+                "this SVG turns the label {:?}, and Codimate cannot draw \
+                 turned text — export it with text converted to outlines",
+                content.trim()
+            )));
+        }
+
+        out.push(SvgText {
+            content: content.trim().to_string(),
+            x: inherited(&node, "x").unwrap_or(0.0),
+            y: inherited(&node, "y").unwrap_or(0.0),
+            size: inherited(&node, "font-size").unwrap_or(16.0),
+            fill: inherited_str(&node, "fill")
+                .as_deref()
+                .and_then(parse_css_colour),
+            anchor: inherited_str(&node, "text-anchor").unwrap_or_else(|| "start".into()),
+        });
+    }
+    Ok(out)
+}
+
+/// An attribute on this element or the nearest ancestor that sets it — SVG
+/// presentation attributes inherit, and `font-size` is usually on the root.
+fn inherited_str(node: &roxmltree::Node, name: &str) -> Option<String> {
+    node.ancestors()
+        .find_map(|n| n.attribute(name))
+        .map(|v| v.trim().to_string())
+}
+
+fn inherited(node: &roxmltree::Node, name: &str) -> Option<f32> {
+    let raw = inherited_str(node, name)?;
+    // `12`, `12px` and `12pt` all appear; anything with other units is left to
+    // the default rather than guessed at.
+    let digits: String = raw
+        .chars()
+        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
+    digits.parse().ok()
+}
+
+/// `#rgb`, `#rrggbb` or `none`. Anything else — a named colour, a gradient
+/// reference — falls back to the caller's choice rather than being invented.
+fn parse_css_colour(raw: &str) -> Option<Color> {
+    let hex = raw.trim().strip_prefix('#')?;
+    let (r, g, b) = match hex.len() {
+        3 => {
+            let d = |i: usize| u8::from_str_radix(&hex[i..i + 1].repeat(2), 16).ok();
+            (d(0)?, d(1)?, d(2)?)
+        }
+        6 => {
+            let d = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
+            (d(0)?, d(2)?, d(4)?)
+        }
+        _ => return None,
+    };
+    Some(Color {
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        a: 1.0,
+    })
 }
 
 fn collect_svg(group: &usvg::Group, out: &mut Vec<SvgPath>) {
@@ -436,32 +531,35 @@ mod svg_import_tests {
         assert!(green.g > 0.99 && green.r < 0.01, "{green:?}");
     }
 
-    /// `usvg` is built without its `text` feature, so a `<text>` element is
-    /// dropped and the render would succeed with a wrong picture — an
-    /// imported flowchart would come out as unlabelled boxes.
+    /// Labels come back as text to shape later, not as outlines — that is
+    /// what keeps one text stack rather than two (ADR 0014).
     #[test]
-    fn text_is_refused_rather_than_silently_dropped() {
-        let with_text =
-            r#"<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="2">hi</text></svg>"#;
-        assert!(matches!(
-            import_svg(with_text),
-            Err(FormulaError::SvgText(_))
-        ));
-
-        let with_tspan = r#"<svg xmlns="http://www.w3.org/2000/svg"><tspan>hi</tspan></svg>"#;
-        assert!(matches!(
-            import_svg(with_tspan),
-            Err(FormulaError::SvgText(_))
-        ));
+    fn labels_are_read_with_their_placement() {
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" font-size="12">
+            <text x="44" y="340" text-anchor="end" fill="#888">0.0</text>
+        </svg>"##;
+        let labels = import_svg_text(svg).expect("should read");
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].content, "0.0");
+        assert_eq!((labels[0].x, labels[0].y), (44.0, 340.0));
+        assert_eq!(labels[0].anchor, "end");
+        // `font-size` is inherited from the root, which is where files put it.
+        assert_eq!(labels[0].size, 12.0);
+        assert!(labels[0].fill.is_some(), "#888 should parse");
     }
 
-    /// The scan must not fire on a tag or attribute that merely starts with
-    /// the same letters, or ordinary files would be refused for no reason.
+    /// Anything whose placement this does not implement is refused rather
+    /// than drawn in the wrong spot.
     #[test]
-    fn a_name_that_starts_with_text_is_not_a_text_element() {
-        assert!(!has_text_element(r#"<rect textLength="3"/>"#));
-        assert!(!has_text_element(r##"<textPath href="#a"/>"##));
-        assert!(has_text_element(r#"<text>x</text>"#));
-        assert!(has_text_element(r#"<text/>"#));
+    fn layout_we_cannot_read_is_refused() {
+        for svg in [
+            r#"<svg xmlns="http://www.w3.org/2000/svg"><text><tspan>a</tspan></text></svg>"#,
+            r#"<svg xmlns="http://www.w3.org/2000/svg"><g transform="rotate(90)"><text x="1" y="2">a</text></g></svg>"#,
+        ] {
+            assert!(
+                matches!(import_svg_text(svg), Err(FormulaError::SvgText(_))),
+                "{svg}"
+            );
+        }
     }
 }

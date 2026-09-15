@@ -106,17 +106,25 @@ A missing or unreadable file is an error naming the path, for the reason
 `focus("typo")` is an error: a blank space where the logo should be is worse
 than a render that stops and says why.
 
-**An SVG containing a `<text>` element is refused**, with a message saying to
-export it with text converted to outlines. `usvg` is built with
-`default-features = false` and `text` is a default feature, so `<text>` is
-silently dropped — a Mermaid flowchart would import as unlabelled boxes, and
-the render would succeed. A silent wrong picture is the failure this project
-has consistently refused to ship.
+**Labels are translated, not shaped.** `usvg` is built with
+`default-features = false`, so it drops `<text>` while parsing; the elements
+are read from the source in a second pass and become `Geometry::Text`
+primitives, shaped at draw time by the same `codimate_glyph::shape` call that
+draws every `scene.text`.
 
-The proper fix is to enable `usvg`'s `text` feature and hand it a `fontdb`
-built from the faces `codimate-fonts` already embeds, which would keep renders
-deterministic without touching system fonts. It is deferred, not rejected: it
-is real work, and no file yet demands it.
+Enabling `usvg`'s own `text` feature was the obvious route and was rejected. It
+brings a second font database and a second shaper, so the same string in the
+same font would be shaped one way from `scene.text` and another from an import,
+inside one frame. It also would not have helped: the first real file tried
+asks for `system-ui`, which no embedded face provides, so its labels would be
+substituted either way — and a Khmer wireframe rendered correctly *because* the
+import went through the pipeline that already carries Noto Sans Khmer.
+
+What is still refused is layout this cannot read: a `<tspan>`, a `<textPath>`,
+or a label under a transform. The last is not a shortcut — the renderer cannot
+turn glyphs at all, which is the same limitation `.turn()` has on `scene.text`,
+so a rotated axis label has no correct rendering to fall back on. The error
+names the label so the author knows which one to outline.
 
 ## Consequences
 

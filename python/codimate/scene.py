@@ -308,9 +308,10 @@ class Group:
         The artwork keeps its own colours. `.fill(colour)` overrides all of
         them at once, which flattens it to a silhouette on purpose.
 
-        An SVG that draws text is refused: this build cannot render `<text>`,
-        and dropping it silently would give you unlabelled boxes. Export it
-        with text converted to outlines.
+        Labels come across as real text, shaped by the same code that draws
+        every `scene.text`. Layout that cannot be read is refused rather than
+        guessed at — a `tspan`, a `textPath`, or a turned label, since the
+        renderer cannot turn glyphs.
         """
         # A scalar is a square box, not a width — `_size` reads a bare number
         # as "width, height follows", which is right for a Slot and wrong for

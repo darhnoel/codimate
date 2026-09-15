@@ -762,8 +762,26 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
 /// the same size (ADR 0014).
 struct SvgArt {
     paths: Vec<(Path, Option<Color>)>,
+    /// Labels, in the same normalised space as the paths. Not glyph outlines:
+    /// these become `Geometry::Text` and are shaped at draw time by the call
+    /// that shapes every other label in the frame (ADR 0014).
+    texts: Vec<SvgLabel>,
     /// Normalised extent. The longer side is 1.0.
     size: (f32, f32),
+}
+
+struct SvgLabel {
+    content: String,
+    /// The baseline anchor, normalised. SVG places text on its baseline and so
+    /// does the Engine, so this needs no conversion.
+    at: Vec2,
+    size: f32,
+    fill: Option<Color>,
+    align: TextAlign,
+    /// True when the file said `text-anchor="end"`. The Engine has no right
+    /// alignment, so the label is drawn left-aligned from a point shifted back
+    /// by its own measured width.
+    from_right: bool,
 }
 
 /// How much to scale normalised artwork so it fits inside `box`.
@@ -822,6 +840,27 @@ fn svg_art(file: &str) -> Result<Arc<SvgArt>> {
     let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
     let longest = (max_x - min_x).max(max_y - min_y).max(1e-6);
 
+    let labels = codimate_math::import_svg_text(&source).map_err(|e| match e {
+        codimate_math::FormulaError::SvgText(m) => Error(format!("{file:?}: {m}")),
+        other => Error(format!("could not read the SVG {file:?}: {other:?}")),
+    })?;
+
+    let texts: Vec<SvgLabel> = labels
+        .into_iter()
+        .map(|l| SvgLabel {
+            content: l.content,
+            at: Vec2::new((l.x - cx) / longest, (l.y - cy) / longest),
+            size: l.size / longest,
+            fill: l.fill,
+            align: if l.anchor == "middle" {
+                TextAlign::Center
+            } else {
+                TextAlign::Left
+            },
+            from_right: l.anchor == "end",
+        })
+        .collect();
+
     let mut paths: Vec<(Path, Option<Color>)> = imported
         .iter()
         .map(|item| {
@@ -847,6 +886,7 @@ fn svg_art(file: &str) -> Result<Arc<SvgArt>> {
 
     let art = Arc::new(SvgArt {
         paths,
+        texts,
         size: ((max_x - min_x) / longest, (max_y - min_y) / longest),
     });
     cache.lock().unwrap().insert(file.to_string(), art.clone());
@@ -1035,12 +1075,48 @@ fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primi
             })
             .collect();
         let pen = before.size.max(after.size);
-        return Ok(revealed(
+        let mut out = revealed(
             &outlines,
             Reveal::of(before, after, outlines.len(), pen),
             ink,
-            path,
-        ));
+            path.clone(),
+        );
+
+        // Labels are translated, not traced: each becomes a `Geometry::Text`
+        // and is shaped at draw time by the same call that shapes every other
+        // label in the frame. They cannot be pen-drawn, which is exactly true
+        // of `scene.text` too, so it is consistent rather than surprising.
+        let fade = tween(before.opacity, after.opacity);
+        for label in &art.texts {
+            let size = label.size * scale;
+            // The Engine aligns left or centre; `text-anchor="end"` becomes a
+            // left-aligned label starting one measured width earlier.
+            let shift = if label.from_right {
+                -codimate_render::measure_text(&label.content, size).0
+            } else {
+                0.0
+            };
+            let offset = Vec2::new(label.at.x * scale + shift, label.at.y * scale);
+            let anchored = path.clone();
+            let colour = match (authored, label.fill) {
+                (true, Some(c)) => Style::new().fill(c).into_animated(),
+                _ => style.clone(),
+            };
+            out.push(
+                Primitive::new(Geometry::Text {
+                    text: label.content.clone().into_animated(),
+                    font_size: size.into_animated(),
+                    align: label.align,
+                })
+                .pos(Animated::new(move |t| {
+                    let base = anchored.resolve(t);
+                    Vec2::new(base.x + offset.x, base.y + offset.y)
+                }))
+                .style(colour)
+                .opacity(fade.clone()),
+            );
+        }
+        return Ok(out);
     }
 
     Ok(vec![Primitive::new(before.geometry(after))

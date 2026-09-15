@@ -113,8 +113,10 @@ back. No call takes more than five arguments; a shape used to take eighteen.
 somewhere else — as real geometry, so it tweens, `.turn()` and `.grow()`
 transform it, and `.write(pen=2)` draws it on stroke by stroke. `size` is a box
 it fits inside, one number or `(w, h)`, aspect always kept. It keeps the file's
-own colours; `.fill(colour)` flattens it to a silhouette. An SVG that draws
-text is refused — export it with text converted to outlines.
+own colours; `.fill(colour)` flattens it to a silhouette. Labels come across as real text, shaped by the same code that draws every
+`scene.text` — so an imported diagram keeps its Khmer or its CJK. Layout that
+cannot be read is refused rather than guessed at: a `tspan`, a `textPath`, or
+a turned label, since the renderer cannot turn glyphs.
 
 `curve` draws a smooth line **through** every point you give it — they are
 samples, not control points, so you hand it a function you plotted or a path
