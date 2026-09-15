@@ -177,6 +177,27 @@ def test_every_drawable_shape_says_more_the_same_way():
         raise AssertionError("an unknown pivot should not reach the Engine")
 
 
+def test_an_image_is_placed_by_a_fit_box_like_an_svg():
+    """Two imports, one sizing rule (ADR 0013). `size` is a box the picture
+    fits inside with its aspect kept; leaving it out draws the file at its own
+    pixel size, which `w`/`h` of zero says."""
+    scene = cm.Scene()
+    scene.image("shot", "screen.png", size=(520, 300), at=(100, 200))
+    shape = scene._payload()[0]
+    assert shape["kind"] == "image", shape["kind"]
+    assert shape["text"] == "screen.png", "the path travels in `text`"
+    assert (shape["w"], shape["h"]) == (520.0, 300.0)
+
+    square = cm.Scene()
+    square.image("logo", "logo.png", size=90, at=(0, 0))
+    assert square._payload()[0]["w"] == 90.0, "a scalar is a square box"
+
+    natural = cm.Scene()
+    natural.image("as_is", "logo.png", at=(0, 0))
+    got = natural._payload()[0]
+    assert (got["w"], got["h"]) == (0.0, 0.0), "no box means the file's own size"
+
+
 def test_an_svg_keeps_its_own_colours_until_told_otherwise():
     """`color` is empty for an import, meaning "as authored" (ADR 0014).
 

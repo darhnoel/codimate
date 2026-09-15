@@ -28,6 +28,18 @@ pub enum RenderCommand {
         height: f32,
         fill: Color,
     },
+    /// A decoded picture and the affine that places it.
+    ///
+    /// Every other command is geometry that can be transformed point by point.
+    /// A picture cannot, so the transform travels with it, as
+    /// `[sx, ky, kx, sy, tx, ty]` mapping the image's own pixel space to the
+    /// frame. `opacity` rides here rather than in a fill, because an image has
+    /// no fill colour to carry it.
+    Image {
+        pixels: std::sync::Arc<codimate_core::Pixels>,
+        transform: [f32; 6],
+        opacity: f32,
+    },
     Path {
         segments: Vec<Segment>,
         closed: bool,
@@ -125,6 +137,42 @@ fn render_primitive_commands(primitive: &ConcretePrimitive) -> Vec<RenderCommand
                 fill,
                 stroke_width: primitive.style.stroke_width * scale_factor,
                 stroke_color: stroke,
+            }]
+        }
+        ConcreteGeometry::Image {
+            pixels,
+            width,
+            height,
+        } => {
+            // The same mapping `transform_point` performs, written as an
+            // affine because a picture is blitted rather than walked. Doing it
+            // by corner points would place the box but lose the rotation,
+            // which is what an earlier version of this did.
+            let t = &primitive.transform;
+            let (sin, cos) = t.rotation_deg.to_radians().sin_cos();
+            let (a, b) = (t.scale.x * cos, t.scale.x * sin);
+            let (c, d) = (-t.scale.y * sin, t.scale.y * cos);
+            let e = t.pos.x + t.pivot.x - t.pivot.x * a - t.pivot.y * c;
+            let f = t.pos.y + t.pivot.y - t.pivot.x * b - t.pivot.y * d;
+
+            // Composed with the map from the image's pixels to its box, which
+            // is centred on the primitive's origin like every other geometry.
+            let (w, h) = (*width, *height);
+            let (px, py) = (
+                w / pixels.width.max(1) as f32,
+                h / pixels.height.max(1) as f32,
+            );
+            vec![RenderCommand::Image {
+                pixels: pixels.clone(),
+                transform: [
+                    a * px,
+                    b * px,
+                    c * py,
+                    d * py,
+                    e - a * w / 2.0 - c * h / 2.0,
+                    f - b * w / 2.0 - d * h / 2.0,
+                ],
+                opacity: t.opacity,
             }]
         }
         ConcreteGeometry::Text {

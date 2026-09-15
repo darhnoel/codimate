@@ -34,6 +34,36 @@ pub enum Geometry {
         font_size: Animated<f32>,
         align: TextAlign,
     },
+    /// A decoded raster picture, drawn into a box (ADR 0013).
+    ///
+    /// The pixels are shared rather than owned: a 1,200-frame render resolves
+    /// this once per frame, and copying a megabyte each time would be the
+    /// whole cost of the feature.
+    Image {
+        pixels: std::sync::Arc<Pixels>,
+        width: Animated<f32>,
+        height: Animated<f32>,
+    },
+}
+
+/// Decoded pixels: premultiplied RGBA, ready to blit.
+///
+/// Core does no decoding — it would need a codec and an opinion about file
+/// formats, and neither belongs in the layer that owns no I/O. Something
+/// upstream hands these over already decoded.
+#[derive(Clone, PartialEq)]
+pub struct Pixels {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+}
+
+// Dimensions only. The derived version would print several megabytes of
+// channel bytes the first time anyone put a Scene in a debug log.
+impl std::fmt::Debug for Pixels {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Pixels({}x{})", self.width, self.height)
+    }
 }
 
 /// A `Geometry` resolved at a specific `t` — plain shape data, still local-space.
@@ -53,6 +83,11 @@ pub enum ConcreteGeometry {
         text: String,
         font_size: f32,
         align: TextAlign,
+    },
+    Image {
+        pixels: std::sync::Arc<Pixels>,
+        width: f32,
+        height: f32,
     },
 }
 
@@ -110,6 +145,7 @@ impl Geometry {
                 }
             }
             Geometry::Text { .. } => Vec2::new(0.0, 0.0),
+            Geometry::Image { .. } => Vec2::new(0.0, 0.0),
         }
     }
 
@@ -134,10 +170,34 @@ impl Geometry {
                 font_size: font_size.resolve(t),
                 align: *align,
             },
+            Geometry::Image {
+                pixels,
+                width,
+                height,
+            } => ConcreteGeometry::Image {
+                pixels: pixels.clone(),
+                width: width.resolve(t),
+                height: height.resolve(t),
+            },
         }
     }
 
     pub(crate) fn ease_with(self, curve: super::TimeCurve) -> Self {
+        // An image eases by its box; the pixels are the same pixels whatever
+        // the time is.
+        if let Geometry::Image {
+            pixels,
+            width,
+            height,
+        } = self
+        {
+            let width_curve = curve.clone();
+            return Geometry::Image {
+                pixels,
+                width: Animated::new(move |t| width.resolve(width_curve(t))),
+                height: Animated::new(move |t| height.resolve(curve(t))),
+            };
+        }
         match self {
             Geometry::Circle { radius } => Geometry::Circle {
                 radius: Animated::new(move |t| radius.resolve(curve(t))),
@@ -164,6 +224,9 @@ impl Geometry {
                     align,
                 }
             }
+            // Handled above, before the match, because it needs to move its
+            // Arc rather than borrow it.
+            Geometry::Image { .. } => unreachable!("eased before the match"),
         }
     }
 
@@ -239,6 +302,7 @@ impl Geometry {
             Geometry::Rect { .. } => "Rect",
             Geometry::Path { .. } => "Path",
             Geometry::Text { .. } => "Text",
+            Geometry::Image { .. } => "Image",
         }
     }
 }

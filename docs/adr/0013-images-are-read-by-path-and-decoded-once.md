@@ -1,6 +1,6 @@
 # ADR 0013 — Images, read by path and decoded once
 
-**Status:** Proposed — 2026-09-14
+**Status:** Accepted — 2026-09-15
 
 ## Context
 
@@ -28,8 +28,8 @@ anything of that picture onto the screen.
 **Add a fifth `Geometry`, `Image`, whose payload carries a path. The Engine
 reads and decodes the file once and caches the pixels.**
 
-    scene.image("figure", "paper/attention.png", w=520)
-    scene.image("logo", "brand.png", at=cm.at(x=1180, top=24), w=90)
+    scene.image("figure", "paper/attention.png", size=(520, 300))
+    scene.image("shot", "screen.png", size=400).on(opacity=0.4)
 
 ### The payload carries a path, not pixels
 
@@ -51,20 +51,24 @@ the formula glyph cache, which solves the identical problem for typeset
 mathematics.
 
 The cache must be `Send + Sync`, because frames rasterize in parallel (ADR
-0011). A `OnceLock<Mutex<HashMap<String, Arc<Pixmap>>>>` matches what the
+0011). A `OnceLock<Mutex<HashMap<String, Arc<Pixels>>>>` matches what the
 formula cache already does, and is on the hit path after the first frame.
+`Pixels` is core's own plain struct — width, height and premultiplied bytes —
+so nothing about a codec reaches the layer that owns no I/O.
 
 **A consequence worth stating plainly: the file is read once per process and
 never re-read.** Editing an image mid-session and re-rendering shows the old
 one. That is the right trade for a render, and it will surprise somebody.
 
-### Sizing, and the aspect ratio
+### `size` is a box to fit inside, as for an SVG
 
-`w` and `h` carry the drawn size, as for a rect. Giving neither draws the image
-at its pixel size; giving one derives the other from the file's aspect ratio,
-so a caller does not have to know the dimensions of their own asset to avoid
-distorting it. Giving both stretches, because sometimes that is what is wanted
-and an author who writes both has said so.
+Written before `scene.svg` existed, this ADR proposed `w`/`h` with one deriving
+the other. Shipped after it, `size` is the same fit box an import already uses:
+one number for a square, or `(w, h)`, aspect always kept, and nothing at all
+meaning the file's own pixel size.
+
+Two imports with one sizing rule is worth more than the extra reach of separate
+dimensions, and `.grow((2.0, 0.5))` still stretches for anyone who means it.
 
 ### A missing file is an error
 
@@ -79,6 +83,12 @@ render that stops and says which path it could not open.
 the way they work on a rect. Rotating text still moves the shape without
 turning the glyphs. That asymmetry is not new, but images make it visible — the
 first primitive where every part of the Handle does what it says.
+
+Getting there needed one correction. Every other command is geometry, which is
+transformed point by point; the first version of this placed an image by
+transforming its centre and emitting an axis-aligned box, which positioned it
+correctly and silently dropped the rotation. A picture is blitted rather than
+walked, so the transform has to travel with it as an affine.
 
 ### Two images tween only if they are the same file
 
@@ -104,9 +114,12 @@ happens once, at decode, not per frame.
   directory, and are not bundled into anything. A moved file breaks a render,
   the way a moved file breaks an `import`.
 - **The wheel grows** by a JPEG decoder.
-- **`KINDS` reaches eight**, which is the top of the range the architecture
-  review quoted in ADR 0010 predicted the flat union would strain at. The next
-  kind after this one should expect a harder argument than this one got.
+- **`KINDS` reaches nine**, past the "8–10 kinds" the architecture review
+  quoted in ADR 0010 predicted the flat union would strain at. ADR 0014 said
+  whichever of these landed second should re-examine that prediction rather
+  than wave past it. The strain has already shown once, in `.write(pen=)`
+  colliding with `svg`'s fit box. **The next kind needs a harder argument than
+  this one got, or the payload needs rethinking first.**
 - **Memory scales with distinct images, not with frames or Scenes**, because of
   the cache. Ten images at 4K is roughly 330 MB of decoded pixels, which is
   worth knowing before someone builds a slideshow.

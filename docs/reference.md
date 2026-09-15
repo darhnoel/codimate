@@ -96,6 +96,7 @@ scene.formula(name, latex, *, size=16.0, at=None) -> Handle
 scene.polygon(name, points, *, closed=True)      -> Handle
 scene.curve(name, points, *, w=2.0, closed=False) -> Handle
 scene.svg(name, file, *, size=120.0, at=None)    -> Handle
+scene.image(name, file, *, size=None, at=None)   -> Handle
 scene.line(name, *, start, end, w=2.0)           -> Handle
 scene.arrow(name, *, start, end, w=4.0, head=16.0) -> Handle
 scene.group(name, slot=None, *, at=None, anchor=None, w=None) -> Group
@@ -108,6 +109,12 @@ height, some words. Everything else is said afterwards, on the Handle it hands
 back. No call takes more than five arguments; a shape used to take eighteen.
 
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
+
+`image` draws a picture — a photo, a screenshot, a figure. PNG and JPEG,
+read by content rather than extension. `size` is a fit box as for `svg`;
+leaving it out draws the file at its own pixel size. It moves, scales, turns
+and fades like anything else, but it is pixels, so `.fill()` cannot recolour it
+and the pen cannot draw it. For a logo or a diagram prefer `svg`.
 
 `svg` imports vector art — a logo, an icon, a diagram exported from
 somewhere else — as real geometry, so it tweens, `.turn()` and `.grow()`

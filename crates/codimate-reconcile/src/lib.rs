@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use codimate_animation::Playable;
 use codimate_core::{
     scene::AnchorKind, scene::Transformable, tween, Animated, Color, ConcreteScene, Geometry,
-    IntoAnimated, Path, Primitive, Scene, Segment, Style, TextAlign, Vec2,
+    IntoAnimated, Path, Pixels, Primitive, Scene, Segment, Style, TextAlign, Vec2,
 };
 
 /// Why a Scene could not be built.
@@ -85,8 +85,8 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 8] = [
-    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg",
+pub const KINDS: [&str; 9] = [
+    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg", "image",
 ];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
@@ -285,7 +285,10 @@ impl Shape {
             // A formula is many glyph outlines and an imported SVG is many
             // paths, so neither can be one Geometry. `primitives()` expands
             // them; these arms are never reached.
-            "formula" | "svg" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
+            // `primitives()` handles these three and returns before asking
+            // for a Geometry: a formula and an SVG are many, and an image can
+            // fail to decode, which this signature cannot report.
+            "formula" | "svg" | "image" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
 
             // Square corners stay a real Rect — the common case keeps the
             // cheaper primitive and the renderer's own rectangle path.
@@ -754,6 +757,110 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
     Ok(shared)
 }
 
+/// Decode, premultiply and cache a picture — once per path, for the life of
+/// the process.
+///
+/// Cached for the reason the formula glyphs and SVG artwork are: a 1,200-frame
+/// render must not decode the same megabyte 1,200 times. As with those, it
+/// also means editing the file mid-session and re-rendering shows the old
+/// picture.
+fn image_pixels(file: &str) -> Result<Arc<Pixels>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, Arc<Pixels>>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+
+    if let Some(hit) = cache.lock().unwrap().get(file) {
+        return Ok(hit.clone());
+    }
+
+    let bytes = std::fs::read(file)
+        .map_err(|e| Error(format!("could not read the image {file:?}: {e}")))?;
+
+    // By content, not by extension: a `.png` that is really a JPEG is a
+    // mistake worth surviving, and the magic numbers are unambiguous.
+    let decoded = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+        decode_png(&bytes)
+    } else if bytes.starts_with(&[0xFF, 0xD8]) {
+        decode_jpeg(&bytes)
+    } else {
+        return Err(Error(format!(
+            "{file:?} is not a PNG or a JPEG — those are the two Codimate reads"
+        )));
+    }
+    .map_err(|m| Error(format!("could not read the image {file:?}: {m}")))?;
+
+    let shared = Arc::new(decoded);
+    cache
+        .lock()
+        .unwrap()
+        .insert(file.to_string(), shared.clone());
+    Ok(shared)
+}
+
+/// Straight RGBA to premultiplied, which is what tiny-skia blits.
+fn premultiplied(width: u32, height: u32, rgba: Vec<u8>) -> Pixels {
+    let mut rgba = rgba;
+    for px in rgba.chunks_exact_mut(4) {
+        let a = px[3] as u32;
+        if a == 255 {
+            continue;
+        }
+        for c in 0..3 {
+            px[c] = ((px[c] as u32 * a + 127) / 255) as u8;
+        }
+    }
+    Pixels {
+        width,
+        height,
+        rgba,
+    }
+}
+
+fn decode_png(bytes: &[u8]) -> std::result::Result<Pixels, String> {
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(bytes));
+    // Normalise greyscale, palette and 16-bit down to 8-bit colour, and expand
+    // transparency into a real alpha channel, so the rest of this sees one
+    // layout instead of six.
+    decoder.set_transformations(
+        png::Transformations::normalize_to_color8() | png::Transformations::ALPHA,
+    );
+    let mut reader = decoder.read_info().map_err(|e| e.to_string())?;
+    let mut buffer = vec![0; reader.output_buffer_size().unwrap_or(0)];
+    let info = reader.next_frame(&mut buffer).map_err(|e| e.to_string())?;
+    buffer.truncate(info.buffer_size());
+
+    let rgba = match info.color_type {
+        png::ColorType::Rgba => buffer,
+        png::ColorType::GrayscaleAlpha => buffer
+            .chunks_exact(2)
+            .flat_map(|p| [p[0], p[0], p[0], p[1]])
+            .collect(),
+        other => return Err(format!("unsupported PNG colour type {other:?}")),
+    };
+    Ok(premultiplied(info.width, info.height, rgba))
+}
+
+fn decode_jpeg(bytes: &[u8]) -> std::result::Result<Pixels, String> {
+    let mut decoder = jpeg_decoder::Decoder::new(std::io::Cursor::new(bytes));
+    let pixels = decoder.decode().map_err(|e| e.to_string())?;
+    let info = decoder.info().ok_or("no JPEG header")?;
+
+    // JPEG has no alpha, so every pixel is opaque and premultiplying is a
+    // no-op — the conversion is only about layout.
+    let rgba: Vec<u8> = match info.pixel_format {
+        jpeg_decoder::PixelFormat::RGB24 => pixels
+            .chunks_exact(3)
+            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .collect(),
+        jpeg_decoder::PixelFormat::L8 => pixels.iter().flat_map(|&g| [g, g, g, 255]).collect(),
+        other => return Err(format!("unsupported JPEG pixel format {other:?}")),
+    };
+    Ok(Pixels {
+        width: info.width as u32,
+        height: info.height as u32,
+        rgba,
+    })
+}
+
 /// An imported SVG, ready to draw.
 ///
 /// Paths are centred on the artwork's own bounding box and scaled so its
@@ -798,6 +905,28 @@ fn fit_scale(art: (f32, f32), fit: (f32, f32)) -> f32 {
     let by_w = if w > 0.0 { w / art.0 } else { f32::MAX };
     let by_h = if h > 0.0 { h / art.1 } else { f32::MAX };
     by_w.min(by_h)
+}
+
+/// The size a picture is actually drawn at, fitted inside the box the author
+/// named with its aspect kept — the same rule `scene.svg` follows, so the two
+/// imports size the same way.
+fn fitted_box(pixels: &Pixels, fit: (f32, f32)) -> (f32, f32) {
+    let natural = (pixels.width.max(1) as f32, pixels.height.max(1) as f32);
+    if fit.0 <= 0.0 && fit.1 <= 0.0 {
+        return natural;
+    }
+    let by_w = if fit.0 > 0.0 {
+        fit.0 / natural.0
+    } else {
+        f32::MAX
+    };
+    let by_h = if fit.1 > 0.0 {
+        fit.1 / natural.1
+    } else {
+        f32::MAX
+    };
+    let scale = by_w.min(by_h);
+    (natural.0 * scale, natural.1 * scale)
 }
 
 /// Read, parse and normalise an SVG file — once per path, for the life of the
@@ -1047,6 +1176,26 @@ fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Result<Vec<Primi
         ));
     }
 
+    // One Geometry, not an expansion — an image is a single thing. It is here
+    // rather than in `geometry()` only because decoding can fail, and that
+    // signature has no way to say so.
+    if before.kind == "image" {
+        let pixels = image_pixels(&before.text)?;
+        let from = fitted_box(&pixels, (before.w, before.h));
+        let to = fitted_box(&pixels, (after.w, after.h));
+        return Ok(vec![Primitive::new(Geometry::Image {
+            pixels,
+            width: tween(from.0, to.0),
+            height: tween(from.1, to.1),
+        })
+        .pos(path)
+        .scale_xy(scale)
+        .rotate(spin)
+        .pivot(pivot)
+        .style(style)
+        .opacity(opacity)]);
+    }
+
     if before.kind == "svg" {
         // Same shape as a formula: one Item, many outlines, revealed left to
         // right. The difference is that the artwork brought its own colours
@@ -1234,6 +1383,9 @@ fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
         // The fitted box, not the box asked for: a wide drawing in a square
         // `size` does not fill the square, and framing the square would leave
         // the camera looking at empty air above and below.
+        "image" => image_pixels(&shape.text)
+            .map(|p| fitted_box(&p, (shape.w, shape.h)))
+            .unwrap_or((0.0, 0.0)),
         "svg" => svg_art(&shape.text)
             .map(|art| {
                 let s = fit_scale(art.size, (shape.w, shape.h));

@@ -27,7 +27,7 @@ pub use connection::{connection, Connection};
 pub use path::{path_node, ConcretePath, PathNode};
 pub use primitive::{
     primitive_circle, primitive_path, primitive_rect, primitive_text, ConcreteGeometry,
-    ConcretePrimitive, Geometry, Primitive, Transformable,
+    ConcretePrimitive, Geometry, Pixels, Primitive, Transformable,
 };
 pub use pulse::{pulse_on, Pulse};
 pub use rect::{rect, ConcreteRect, Rect};

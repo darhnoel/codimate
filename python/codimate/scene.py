@@ -290,6 +290,26 @@ class Group:
         return self._place(key, "formula", x=x, y=y, text=latex, size=size,
                            layer=10, r=1.0)
 
+    def image(self, key: Hashable, file, *, size=None, at=None) -> "Handle":
+        """A picture — a photo, a screenshot, a figure — drawn into the frame.
+
+            scene.image("paper", "figures/attention.png", size=(520, 300))
+            scene.image("shot", "screen.png", size=400).on(opacity=0.4)
+
+        PNG and JPEG, read by content rather than by extension. `size` is a box
+        it fits inside, one number or `(w, h)`, aspect always kept; leave it out
+        and the picture is drawn at its own pixel size.
+
+        It moves, scales, turns and fades like anything else, and `focus()`
+        frames it. For a logo or a diagram prefer `svg`, which arrives as
+        geometry you can recolour and draw on — an image is pixels, so it can
+        only be placed.
+        """
+        box = (size, size) if isinstance(size, (int, float)) else size
+        w, h = (0.0, 0.0) if box is None else (float(box[0]), float(box[1]))
+        x, y = self._where(at, 0.0)
+        return self._place(key, "image", x=x, y=y, text=str(file), w=w, h=h)
+
     def svg(self, key: Hashable, file, *, size=120.0, at=None) -> "Handle":
         """Vector art from a file, drawn as real geometry.
 

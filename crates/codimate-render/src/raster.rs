@@ -88,6 +88,36 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                     pixmap.fill_path(&path, &paint, FillRule::Winding, transform, None);
                 }
             }
+            RenderCommand::Image {
+                pixels,
+                transform: affine,
+                opacity,
+            } => {
+                if let Some(view) = tiny_skia::PixmapRef::from_bytes(
+                    &pixels.rgba,
+                    pixels.width.max(1),
+                    pixels.height.max(1),
+                ) {
+                    let placed = transform.pre_concat(tiny_skia::Transform::from_row(
+                        affine[0], affine[1], affine[2], affine[3], affine[4], affine[5],
+                    ));
+                    pixmap.draw_pixmap(
+                        0,
+                        0,
+                        view,
+                        &tiny_skia::PixmapPaint {
+                            opacity: opacity.clamp(0.0, 1.0),
+                            // Bilinear: an image is nearly always drawn at some
+                            // size other than its own, and nearest neighbour on
+                            // a photograph is visibly wrong.
+                            quality: tiny_skia::FilterQuality::Bilinear,
+                            ..Default::default()
+                        },
+                        placed,
+                        None,
+                    );
+                }
+            }
             RenderCommand::Rect {
                 x,
                 y,
