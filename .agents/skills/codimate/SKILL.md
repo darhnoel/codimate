@@ -80,6 +80,7 @@ scene.text(name, content, size=, at=)
 scene.formula(name, latex, size=, at=)   # real LaTeX; needs `typst`
 scene.polygon(name, points)              # cm.ngon / cm.star make the corners
 scene.curve(name, points, w=)            # a smooth line through the points
+scene.arc(name, r=, sweep=)              # an arc, a dial, a pie slice
 scene.svg(name, file, size=)             # vector art imported as geometry
 scene.image(name, file, size=)           # a picture: PNG or JPEG
 scene.line(name, start=, end=, w=)       # start/end take a Slot or (x, y)

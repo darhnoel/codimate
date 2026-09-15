@@ -290,6 +290,36 @@ class Group:
         return self._place(key, "formula", x=x, y=y, text=latex, size=size,
                            layer=10, r=1.0)
 
+    def arc(self, key: Hashable, *, r, sweep, at=None) -> "Handle":
+        """A slice of a circle — an angle mark, a pie, a dial, an orbit.
+
+            scene.arc("angle", r=90, sweep=(0, 50)).fill("none", edge="cyan",
+                                                          edge_w=3)
+            scene.arc("slice", r=120, sweep=(0, 120)).fill("orange").round(1)
+
+        `sweep` is `(start, end)` in degrees, clockwise from twelve o'clock —
+        the same zero `cm.ngon` uses. `r` is the radius, or `(rx, ry)` for an
+        ellipse.
+
+        Open by default, so it draws as a curved line. `.round(1)` closes it
+        back to the centre and makes a pie slice you can fill.
+
+        Two arcs always tween, however far apart their angles are, so an angle
+        mark grows and a pie fills smoothly. That is what this cannot be done
+        with `curve`: a curve through points on a circle changes its point
+        count when the sweep changes, and then it snaps instead of sweeping.
+        """
+        rx, ry = (r, r) if isinstance(r, (int, float)) else r
+        start, end = sweep
+        x, y = self._where(at, 0.0)
+        return self._place(
+            key, "arc", x=x, y=y,
+            # The bounding box, so an ellipse costs nothing extra.
+            w=float(rx) * 2, h=float(ry) * 2,
+            # `x2`/`y2` are the line's endpoints elsewhere and free here.
+            x2=float(start), y2=float(end),
+        )
+
     def image(self, key: Hashable, file, *, size=None, at=None) -> "Handle":
         """A picture — a photo, a screenshot, a figure — drawn into the frame.
 

@@ -85,8 +85,8 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 9] = [
-    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg", "image",
+pub const KINDS: [&str; 10] = [
+    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg", "image", "arc",
 ];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
@@ -235,6 +235,79 @@ fn curve_path(s: &Shape) -> Path {
     Path { segments, closed }
 }
 
+/// How many cubics an arc is built from, whatever it sweeps.
+///
+/// Fixed rather than "one per 90 degrees", because two arcs only tween if they
+/// have the same path structure — the rule `polygon` follows for corners. A
+/// fixed count is what lets a pie fill or an angle mark grow smoothly, which is
+/// the whole reason this kind exists rather than a `curve` through points on a
+/// circle. Eight keeps every span under 45 degrees even at a full turn, where
+/// the cubic approximation is good to a few thousandths of a radius.
+const ARC_SPANS: usize = 8;
+
+/// An arc or a sector in local space.
+///
+/// `w`/`h` are the bounding box, so an ellipse costs nothing extra; `x2`/`y2`
+/// are the start and end angle in degrees; `r` above zero closes it back to the
+/// centre, making a pie slice rather than an open curve.
+///
+/// Angles run clockwise from twelve o'clock, matching `cm.ngon`, whose first
+/// corner also points straight up.
+/// The same arc, from plain numbers — so the tween can interpolate the
+/// *angles* and build a true arc at every instant.
+///
+/// Interpolating the path's control points instead looks right for an open
+/// arc and is wrong for a sector: halfway between a collapsed slice and a
+/// 300-degree one is not a 150-degree slice, it is a self-crossing shape that
+/// fills as a sliver and a half-disc. Caught by rendering one.
+fn arc_at(rx: f32, ry: f32, from_deg: f32, to_deg: f32, sector: bool) -> Path {
+    // Screen y grows downward, so subtracting a quarter turn puts zero at the
+    // top and makes a rising angle read as clockwise.
+    let at = |deg: f32| {
+        let a = deg.to_radians() - std::f32::consts::FRAC_PI_2;
+        (Vec2::new(rx * a.cos(), ry * a.sin()), a)
+    };
+
+    let (start, theta0) = at(from_deg);
+    let (_, theta1) = at(to_deg);
+    let step = (theta1 - theta0) / ARC_SPANS as f32;
+    // The classic cubic fit to a circular span: exact at both ends and at the
+    // midpoint, which is why the error stays small for spans under a quarter
+    // turn.
+    let k = 4.0 / 3.0 * (step / 4.0).tan();
+
+    let mut segments = Vec::with_capacity(ARC_SPANS + 3);
+    if sector {
+        segments.push(Segment::MoveTo(Vec2::new(0.0, 0.0)));
+        segments.push(Segment::Line(Vec2::new(0.0, 0.0), start));
+    } else {
+        segments.push(Segment::MoveTo(start));
+    }
+
+    let mut from = start;
+    let mut a = theta0;
+    for _ in 0..ARC_SPANS {
+        let b = a + step;
+        let to = Vec2::new(rx * b.cos(), ry * b.sin());
+        // The tangent at each end, scaled by the span — the control points sit
+        // along it, which is what keeps the join smooth.
+        let c1 = Vec2::new(from.x - k * rx * a.sin(), from.y + k * ry * a.cos());
+        let c2 = Vec2::new(to.x + k * rx * b.sin(), to.y - k * ry * b.cos());
+        segments.push(Segment::Cubic(from, c1, c2, to));
+        from = to;
+        a = b;
+    }
+
+    if sector {
+        segments.push(Segment::Line(from, Vec2::new(0.0, 0.0)));
+    }
+
+    Path {
+        segments,
+        closed: sector,
+    }
+}
+
 /// A line in local space: from the anchor to the far end.
 fn line_path(s: &Shape) -> Path {
     Path {
@@ -270,6 +343,29 @@ impl Shape {
                 } else {
                     Geometry::path(polygon_path(other).into_animated())
                 }
+            }
+
+            // The angles tween, and the arc is rebuilt at every instant — so
+            // a dial sweeps and a pie fills through shapes that are all
+            // genuinely arcs. This is the point of the kind: a `curve` through
+            // points on a circle changes its point count when the sweep
+            // changes, and then it snaps instead of sweeping.
+            "arc" => {
+                let (rx0, ry0) = (self.w / 2.0, self.h / 2.0);
+                let (rx1, ry1) = (other.w / 2.0, other.h / 2.0);
+                let (a0, b0) = (self.x2, self.y2);
+                let (a1, b1) = (other.x2, other.y2);
+                let sector = other.r > 0.0;
+                Geometry::path(Animated::new(move |t| {
+                    let mix = |x: f32, y: f32| x + (y - x) * t;
+                    arc_at(
+                        mix(rx0, rx1),
+                        mix(ry0, ry1),
+                        mix(a0, a1),
+                        mix(b0, b1),
+                        sector,
+                    )
+                }))
             }
 
             // Same rule as a polygon: matching sample counts interpolate, and
@@ -1408,6 +1504,9 @@ fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
                 ys.iter().cloned().fold(f32::MIN, f32::max),
             );
         }
+        // The whole ellipse, not the swept part: an arc that grows would
+        // otherwise resize the camera as it sweeps.
+        "arc" => (shape.w, shape.h),
         "line" => {
             let (x0, x1) = (shape.x.min(shape.x2), shape.x.max(shape.x2));
             let (y0, y1) = (shape.y.min(shape.y2), shape.y.max(shape.y2));
@@ -1855,6 +1954,108 @@ mod tests {
 
     /// An SVG on disk, because `svg_art` reads a path rather than a string —
     /// the payload carries a file name, so the cache can key on it.
+    fn arc_path(s: &Shape) -> Path {
+        arc_at(s.w / 2.0, s.h / 2.0, s.x2, s.y2, s.r > 0.0)
+    }
+
+    fn arc_shape(r: f32, from: f32, to: f32, sector: bool) -> Shape {
+        Shape {
+            item: "arc".into(),
+            kind: "arc".into(),
+            w: r * 2.0,
+            h: r * 2.0,
+            x2: from,
+            y2: to,
+            r: if sector { 1.0 } else { 0.0 },
+            color: "white".into(),
+            opacity: 1.0,
+            ..Default::default()
+        }
+    }
+
+    /// Every point the arc visits is on the circle it claims to be — the
+    /// eight-span cubic fit is an approximation, so this is what says how good.
+    #[test]
+    fn an_arc_stays_on_its_circle() {
+        for (from, to) in [(0.0, 90.0), (0.0, 270.0), (0.0, 360.0), (45.0, -120.0)] {
+            let path = arc_path(&arc_shape(100.0, from, to, false));
+            for seg in &path.segments {
+                let ends = match *seg {
+                    Segment::Cubic(a, _, _, b) => vec![a, b],
+                    Segment::MoveTo(a) => vec![a],
+                    _ => vec![],
+                };
+                for p in ends {
+                    let radius = (p.x * p.x + p.y * p.y).sqrt();
+                    assert!(
+                        (radius - 100.0).abs() < 0.5,
+                        "{from}..{to}: a point sits at {radius}, not 100"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A sector closes back to its centre and an open arc does not — the
+    /// difference between a pie slice and a curved line.
+    #[test]
+    fn a_sector_returns_to_the_centre() {
+        let open = arc_path(&arc_shape(50.0, 0.0, 120.0, false));
+        let pie = arc_path(&arc_shape(50.0, 0.0, 120.0, true));
+
+        assert!(!open.closed && pie.closed);
+        // Distance from the centre, not `x`: an arc starting at zero degrees
+        // begins at the top, where `x` is zero.
+        assert!(
+            matches!(open.segments.first(), Some(Segment::MoveTo(p)) if p.x.hypot(p.y) > 1.0),
+            "an open arc starts on its circle, not at the centre"
+        );
+        assert!(
+            matches!(pie.segments.first(), Some(Segment::MoveTo(p)) if p.x.abs() < 1e-6 && p.y.abs() < 1e-6),
+            "a pie starts at its centre"
+        );
+        assert!(
+            matches!(pie.segments.last(), Some(Segment::Line(_, p)) if p.x.abs() < 1e-6 && p.y.abs() < 1e-6),
+            "and comes back to it"
+        );
+    }
+
+    /// The reason this kind exists rather than a `curve` through points on a
+    /// circle, and the bug the first version had: halfway through a sweep the
+    /// shape must be a real arc at the halfway angle.
+    ///
+    /// Interpolating the path's control points gives a self-crossing sliver
+    /// instead, which looks fine on an open arc and obviously wrong on a pie.
+    #[test]
+    fn a_sweep_passes_through_real_arcs() {
+        let closed = arc_shape(100.0, 0.0, 0.0, true);
+        let open_to_300 = arc_shape(100.0, 0.0, 300.0, true);
+
+        let geometry = closed.geometry(&open_to_300);
+        let codimate_core::ConcreteGeometry::Path { path: halfway } = geometry.resolve(0.5) else {
+            panic!("an arc resolves to a path");
+        };
+        let expected = arc_path(&arc_shape(100.0, 0.0, 150.0, true));
+
+        let ends = |p: &Path| -> Vec<Vec2> {
+            p.segments
+                .iter()
+                .filter_map(|s| match *s {
+                    Segment::Cubic(_, _, _, b) => Some(b),
+                    _ => None,
+                })
+                .collect()
+        };
+        let (got, want) = (ends(&halfway), ends(&expected));
+        assert_eq!(got.len(), want.len());
+        for (a, b) in got.iter().zip(&want) {
+            assert!(
+                (a.x - b.x).abs() < 0.01 && (a.y - b.y).abs() < 0.01,
+                "halfway through a 0..300 sweep should be the 150 arc: {a:?} vs {b:?}"
+            );
+        }
+    }
+
     fn svg_on_disk(name: &str, body: &str) -> String {
         let path = std::env::temp_dir().join(format!("codimate-test-{name}.svg"));
         std::fs::write(&path, body).expect("temp file");

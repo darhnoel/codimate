@@ -170,6 +170,7 @@ scene.circle(name, r=, at=)
 scene.text(name, content, size=, at=)
 scene.polygon(name, points)                             # cm.ngon, cm.star
 scene.curve(name, points, w=)                           # smooth, through the points
+scene.arc(name, r=, sweep=(0, 120))                     # an arc, a dial, a pie slice
 scene.svg(name, "logo.svg", size=)                       # vector art, as real geometry
 scene.image(name, "photo.jpg", size=)                    # a picture: PNG or JPEG
 scene.line(name, start=slot_or_point, end=slot_or_point, w=)

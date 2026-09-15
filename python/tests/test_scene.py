@@ -177,6 +177,28 @@ def test_every_drawable_shape_says_more_the_same_way():
         raise AssertionError("an unknown pivot should not reach the Engine")
 
 
+def test_an_arc_carries_its_angles_and_whether_it_closes():
+    """An arc adds no payload field: `w`/`h` are its box, `x2`/`y2` its angles
+    (free, since only a line uses them), and `r` says whether it closes back to
+    the centre. That is what let it be the tenth kind (ADR 0015)."""
+    scene = cm.Scene()
+    scene.arc("mark", r=90, sweep=(0, 50), at=(100, 200))
+    shape = scene._payload()[0]
+    assert shape["kind"] == "arc", shape["kind"]
+    assert (shape["w"], shape["h"]) == (180.0, 180.0), "the bounding box"
+    assert (shape["x2"], shape["y2"]) == (0.0, 50.0), "start and end angle"
+    assert shape["r"] == 0.0, "open unless told otherwise"
+
+    pie = cm.Scene()
+    pie.arc("slice", r=90, sweep=(0, 120), at=(0, 0)).round(1)
+    assert pie._payload()[0]["r"] == 1.0, "round() closes it to the centre"
+
+    oval = cm.Scene()
+    oval.arc("oval", r=(120, 60), sweep=(0, 360), at=(0, 0))
+    got = oval._payload()[0]
+    assert (got["w"], got["h"]) == (240.0, 120.0), "a pair is an ellipse"
+
+
 def test_an_image_is_placed_by_a_fit_box_like_an_svg():
     """Two imports, one sizing rule (ADR 0013). `size` is a box the picture
     fits inside with its aspect kept; leaving it out draws the file at its own
