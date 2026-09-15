@@ -1853,6 +1853,81 @@ mod tests {
         assert_ne!(start, mid, "a swap must not snap at t=0");
     }
 
+    /// An SVG on disk, because `svg_art` reads a path rather than a string —
+    /// the payload carries a file name, so the cache can key on it.
+    fn svg_on_disk(name: &str, body: &str) -> String {
+        let path = std::env::temp_dir().join(format!("codimate-test-{name}.svg"));
+        std::fs::write(&path, body).expect("temp file");
+        path.to_string_lossy().into_owned()
+    }
+
+    fn svg_shape(file: &str, colour: &str, fit: (f32, f32)) -> Shape {
+        Shape {
+            item: "art".into(),
+            kind: "svg".into(),
+            x: 0.0,
+            y: 0.0,
+            w: fit.0,
+            h: fit.1,
+            text: file.into(),
+            color: colour.into(),
+            r: 1.0,
+            opacity: 1.0,
+            ..Default::default()
+        }
+    }
+
+    const TWO_SHAPES: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+        <rect x="0" y="0" width="40" height="40" fill="#ff0000"/>
+        <rect x="60" y="0" width="40" height="40" fill="#0000ff"/>
+    </svg>"##;
+
+    /// The sentinel that makes an import look like the file it came from
+    /// (ADR 0014). An empty `color` means "as authored"; anything else
+    /// flattens the drawing. If `style()` ever stopped honouring the empty
+    /// string, every import would silently go white.
+    #[test]
+    fn an_empty_colour_keeps_the_artwork_own_fills() {
+        let file = svg_on_disk("authored", TWO_SHAPES);
+
+        let as_drawn = svg_shape(&file, "", (100.0, 100.0));
+        let parts = primitives(&as_drawn, &as_drawn, &[]).expect("should expand");
+        assert_eq!(parts.len(), 2, "one primitive per path in the file");
+
+        let fills: Vec<Color> = parts.iter().map(|p| p.resolve(0.0).style.fill).collect();
+        assert!(
+            fills.iter().any(|c| c.r > 0.9 && c.b < 0.1)
+                && fills.iter().any(|c| c.b > 0.9 && c.r < 0.1),
+            "the red and the blue should both survive, got {fills:?}"
+        );
+
+        // And naming a colour overrides every path at once.
+        let flattened = svg_shape(&file, "white", (100.0, 100.0));
+        let parts = primitives(&flattened, &flattened, &[]).expect("should expand");
+        for part in &parts {
+            let fill = part.resolve(0.0).style.fill;
+            assert!(fill.r > 0.9 && fill.g > 0.9 && fill.b > 0.9, "{fill:?}");
+        }
+    }
+
+    /// `size` is a box the drawing fits inside with its aspect kept, so a wide
+    /// file in a square box does not fill the square — and `focus()` frames
+    /// what is actually drawn rather than the box that was asked for.
+    #[test]
+    fn an_import_fits_its_box_without_distorting() {
+        let file = svg_on_disk("fit", TWO_SHAPES);
+        let wide = svg_shape(&file, "", (200.0, 200.0));
+
+        let (x0, y0, x1, y1) = bounds(&wide);
+        let (w, h) = (x1 - x0, y1 - y0);
+        assert!(
+            (w - 200.0).abs() < 0.5,
+            "the long side fills the box, got {w}"
+        );
+        // The artwork is 100x40 of drawn content, so the short side must not.
+        assert!(h < w * 0.6, "aspect kept: {w} by {h}");
+    }
+
     fn curve_of(points: &[(f32, f32)], closed: bool) -> Shape {
         let flat: Vec<f32> = points.iter().flat_map(|(x, y)| [*x, *y]).collect();
         let xs: Vec<f32> = points.iter().map(|p| p.0).collect();
