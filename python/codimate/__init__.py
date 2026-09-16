@@ -48,8 +48,8 @@ encoding — happens in Rust (ADR 0008).
 from __future__ import annotations
 
 from .explain import Explanation, Rule, Timing, ease, explain
-from .layout import (Place, Slot, at, canvas, column, height, measure, measure_math,
-                     ngon, row, star, width)
+from .layout import (Axes, Place, Slot, at, axes, canvas, column, height, measure,
+                     measure_math, ngon, row, star, width)
 from .scene import Group, Handle, Scene
 from .trace import Event, Frame, Item, Trace, emit, items, trace
 
@@ -77,6 +77,8 @@ __all__ = [
     "at",
     "row",
     "column",
+    "axes",
+    "Axes",
     "ngon",
     "star",
     # putting it together

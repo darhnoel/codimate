@@ -292,6 +292,49 @@ A Slot is a *place*, not a shape. Nothing draws it, and it carries no identity:
 
 ---
 
+### Graphs
+
+```python
+cm.axes(x=(lo, hi), y=(lo, hi), at=None, size=None, within=None) -> Axes
+
+plot.at(x, y) -> (px, py)              # one data point, as pixels
+plot.line(f, steps=200, over=None)     # points along y = f(x), as pixels
+plot.ticks(axis="x", about=6)          # (n, value, label) per tick
+plot.looks(ink=None, label=None, layer=None) -> Axes
+plot.draw(scene, name="plot", about=6, grid=False) -> Axes
+```
+
+```python
+plot = cm.axes(x=(-4, 4), y=(-2, 6), size=(820, 440)).draw(scene, grid=True)
+scene.curve("f", plot.line(lambda t: t * t), w=4).fill("orange")
+scene.circle("dot", r=9, at=plot.at(t, t * t)).fill("pink")
+```
+
+An Axes is a **coordinate map, not a drawing**. It hands back pixels, so what
+you plot is a shape with a name of yours — which is what lets it tween, lets
+`focus` frame it, and lets a motion Rule be aimed at it. `draw` adds the frame,
+ticks and labels under names beginning with `name`, so two plots on one canvas
+do not collide and you can leave any of them out and draw your own.
+
+An open `curve` is *drawn* rather than filled, so its colour is `fill()` and its
+thickness is `w=`. `fill("none", edge=...)` draws nothing.
+
+**Zoom by changing the range**, not by moving the plot: emit a narrower `x=` and
+the axis, its grid and every curve interpolate to it. Ticks are named after
+their step multiple rather than their value, so one that survives a pan keeps
+its identity and slides; a zoom big enough to change the step renames them all
+and the set cross-fades.
+
+Every sample `line` takes is returned, including any off the box. Dropping them
+would be prettier and would stop the curve animating — two curves of different
+lengths do not interpolate. Use `over=(lo, hi)` to sample less.
+
+No log or date scales, no legends, no dual axes, no 3D; `plot.at()` and the
+ordinary primitives are the answer to each. See
+[ADR 0016](./adr/0016-axes-that-hand-back-pixels.md).
+
+---
+
 ### Sizing a box around text
 
 You have no canvas to interrogate, so `cm.measure` asks the engine what a

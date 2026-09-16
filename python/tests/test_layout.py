@@ -110,3 +110,93 @@ def test_measure_is_real_and_not_a_guess():
 
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
+
+
+def test_axes_map_the_corners_of_their_box():
+    cm.canvas(1280, 720)
+    plot = cm.axes(x=(-4, 4), y=(-2, 6), size=(760, 420))
+
+    assert plot.at(-4, -2) == (plot.left, plot.bottom)
+    assert plot.at(4, 6) == (plot.right, plot.top)
+    # Screen y grows downward; data y does not.
+    assert plot.at(0, 6)[1] < plot.at(0, -2)[1]
+
+    mid = plot.at(0, 2)
+    assert abs(mid[0] - (plot.left + plot.right) / 2) < 1e-9
+    assert abs(mid[1] - (plot.top + plot.bottom) / 2) < 1e-9
+
+
+def test_axes_steps_come_from_the_one_two_five_sequence():
+    cm.canvas(1280, 720)
+    for span, want in ((8, 2.0), (10, 2.0), (1, 0.2), (37, 10.0), (0.09, 0.02)):
+        plot = cm.axes(x=(0, span), y=(0, 1))
+        step = {v for _, v, _ in plot.ticks("x")}
+        gaps = sorted({round(b - a, 9)
+                       for a, b in zip(sorted(step), sorted(step)[1:])})
+        assert gaps == [want], (span, gaps, want)
+
+
+def test_a_tick_that_survives_a_pan_keeps_its_name():
+    """The reason ticks are named after the step multiple and not the value.
+
+    A name is an identity: rename a tick and it leaves and a new one enters,
+    which is a fade — on a picture that only slid sideways.
+    """
+    cm.canvas(1280, 720)
+    before = cm.axes(x=(0, 10), y=(0, 1)).ticks("x")
+    after = cm.axes(x=(1, 11), y=(0, 1)).ticks("x")
+
+    shared = {n for n, _, _ in before} & {n for n, _, _ in after}
+    assert len(shared) >= 4, "a pan of one tenth must not rename everything"
+    for n in shared:
+        kept = next(v for m, v, _ in before if m == n)
+        still = next(v for m, v, _ in after if m == n)
+        assert kept == still, "the same name must mean the same value"
+
+
+def test_a_range_that_only_drifts_does_not_renumber_its_ticks():
+    cm.canvas(1280, 720)
+    steady = cm.axes(x=(0, 10), y=(0, 1)).ticks("x")
+    for nudge in (1e-12, 1e-9, 1e-7):
+        assert cm.axes(x=(0, 10 + nudge), y=(0, 1)).ticks("x") == steady, nudge
+
+
+def test_axes_labels_never_read_as_minus_zero():
+    cm.canvas(1280, 720)
+    words = {w for _, _, w in cm.axes(x=(-1, 1), y=(0, 1)).ticks("x")}
+    assert "-0" not in words and "-0.0" not in words
+    assert "0" in words
+
+
+def test_a_plotted_line_keeps_its_point_count_off_the_page():
+    """Dropping points that fall outside would be prettier and would stop the
+    curve animating: two curves of different lengths do not interpolate."""
+    cm.canvas(1280, 720)
+    plot = cm.axes(x=(-1, 1), y=(0, 1), size=(400, 200))
+    assert len(plot.line(lambda t: t * 1000, steps=50)) == 51
+    assert len(plot.line(lambda t: 0.5, steps=50)) == 51
+
+
+def test_axes_draw_shapes_under_a_name_you_chose():
+    cm.canvas(1280, 720)
+    scene = cm.Scene()
+    plot = cm.axes(x=(0, 4), y=(0, 4), size=(400, 400)).draw(scene, "left")
+    cm.axes(x=(0, 4), y=(0, 4), size=(400, 400)).draw(scene, "right", grid=True)
+
+    # Names flatten to slash-joined strings, so a tuple key stays readable.
+    names = set(scene._shapes)
+    assert "left/x-axis" in names and "right/x-axis" in names
+    assert "left/label/x/1" in names
+    assert "left/grid/x/1" not in names, "grid is off by default"
+    assert "right/grid/x/1" in names
+    assert plot.at(2, 2) == (plot.left + 200.0, plot.top + 200.0)
+
+
+def test_axes_reject_a_range_with_no_width():
+    cm.canvas(1280, 720)
+    for bad in (dict(x=(1, 1), y=(0, 1)), dict(x=(0, 1), y=(2, 2))):
+        try:
+            cm.axes(**bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"{bad} should not be allowed")
