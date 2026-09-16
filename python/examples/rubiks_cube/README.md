@@ -72,12 +72,41 @@ on is its normal's business, not its depth's: the far corner of a face you are
 looking straight at is further off than the middle of the cube and still
 perfectly visible.
 
-**A prime move is one quarter back, not three forward.** The model only knows
+**A move turns twenty-one dots about two different middles.** The twelve on
+the circle go round the circle's centre. The other nine are the face's own, and
+they go round the face's *middle dot* — which a turn leaves exactly where it
+is, the way the middle of a face does. Swinging them about the circle's centre
+instead moved them by sixteen degrees, and two of them not at all, so the rim
+turned while its inside slid in and out.
+
+**Which of the drawing's symmetric orientations to use is decided by direction,
+not colour.** There are 48 ways to lay the drawing onto the cube, and half are
+*mirror images* — a mirror passes every structural test there is: twelve to a
+circle, two circles to a place, three places to a quarter turn. Only the
+direction of travel tells them apart, and choosing by colour resemblance, which
+cannot see a mirror, drew four of the six circles turning backwards relative to
+the cube beside them. Six of the 48 get all six faces right; `places.SCREEN`
+works out which way each layer looks to turn on the page, and that now chooses
+before colour does.
+
+The face rosette cannot be saved the same way. Every one of the 48 pairings has
+the rim and the inner eight turning the same way on exactly three faces of six,
+because the drawing's nine face-places are not a faithful 3×3 — six sit about
+32 pixels from the middle dot and two sit about 59, where a real face would be
+four and four at a ratio of 1.41. The layer structure is exact; the face
+rosette is an approximation, and this is where it shows.
+
+**A prime move is one quarter back, and a double move turns twice.** The model only knows
 clockwise, so `U'` is three applications of `U` and the state is right either
 way. The picture is not: animated as three quarters it spins most of the way
 round and drags the dots three-quarters of their circle with it. The trace
 keeps the three steps and sweeps the picture through one quarter of minus
-ninety degrees. It also cut the video from eighteen seconds to fourteen.
+ninety degrees.
+
+`X2` is the other half of that. Animated as a single 180-degree slide the dots
+cut straight across, and half way through — where the cube is at a real quarter
+turn — they were up to 67 degrees from the places the cube actually occupied.
+It is two quarters, so it is animated as two.
 
 **A shape's name is what moves, and here that is the sticker.** Naming the
 cube's polygons after facelets looked right and was the worst bug in the

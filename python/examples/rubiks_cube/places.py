@@ -134,34 +134,98 @@ def _agrees(where):
     return sum(cube.colour_of(where[i]) == graph.COLOUR[i] for i in range(54))
 
 
+def _read(at):
+    """Given a pairing, which circle is each face's layer and which way it runs.
+
+    Places are listed by growing angle and the page's y points down, so `+1`
+    means the twelve travel clockwise to the eye.
+    """
+    place_of = [0] * 54
+    for place, sticker in enumerate(at):
+        place_of[sticker] = place
+    circle, slide = {}, {}
+    for face in cube.FACES:
+        axis = [k for k in range(3) if geo.NORMAL[face][k] != 0][0]
+        want = set(BAND[(axis, geo.NORMAL[face][axis])])
+        found = next(c for c in RING if {at[i] for i in RING[c]} == want)
+        ring = RING[found]
+        after = cube.turn(cube.solved(), face)
+        step, = {(ring.index(place_of[after[at[p]]]) - ring.index(p)) % 12
+                 for p in ring}
+        circle[face], slide[face] = found, 1 if step == 3 else -1
+    return place_of, circle, slide
+
+
+def _on_screen(face):
+    """Which way this layer looks to turn on the page when it turns clockwise.
+
+    The cube is drawn from a corner, so half the faces point away and their
+    clockwise reads as anticlockwise. That is the thing the pairing has to
+    agree with, and it is why colour alone could not choose one.
+    """
+    axis = geo.NORMAL[face]
+    hub = geo.project(axis)
+    sweep = []
+    for i in geo.LAYER[face]:
+        if i // 9 == cube.FACES.index(face):
+            continue
+        mid = [sum(c[k] for c in geo.corners(i)) / 4.0 for k in range(3)]
+        a, b = geo.project(mid), geo.project(geo.spin(mid, axis, -10.0))
+        sweep.append(math.remainder(
+            math.atan2(b[1] - hub[1], b[0] - hub[0])
+            - math.atan2(a[1] - hub[1], a[0] - hub[0]), math.tau))
+    return 1 if sum(sweep) > 0 else -1
+
+
+SCREEN = {f: _on_screen(f) for f in cube.FACES}
+
+
+def _keeps_the_turn(where):
+    """How many of the six circles turn the way the cube beside them does.
+
+    Half the pairings are mirror images, and a mirror passes every structural
+    test there is — twelve to a circle, two circles to a place, three places to
+    a quarter turn. Only the direction tells them apart, so this has to choose
+    before colour does.
+    """
+    _, _, slide = _read([where[i] for i in range(54)])
+    return sum(slide[f] == SCREEN[f] for f in cube.FACES)
+
+
 _FOUND = _pairings()
-AT = max(_FOUND, key=lambda w: (_agrees(w), tuple(sorted(w.items()))))
-AT = [AT[i] for i in range(54)]          # place -> sticker
-PLACE = [0] * 54                         # sticker -> place
-for _place, _sticker in enumerate(AT):
-    PLACE[_sticker] = _place
+_BEST = max(_FOUND, key=lambda w: (_keeps_the_turn(w), _agrees(w),
+                                   tuple(sorted(w.items()))))
+assert _keeps_the_turn(_BEST) == 6, _keeps_the_turn(_BEST)
 
-# Which circle is which face's layer, and where its centre is on the page.
-CIRCLE = {}
-for _face in cube.FACES:
-    _axis = [k for k in range(3) if geo.NORMAL[_face][k] != 0][0]
-    _slot = geo.NORMAL[_face][_axis]
-    _want = set(BAND[(_axis, _slot)])
-    CIRCLE[_face] = next(c for c in RING if {AT[i] for i in RING[c]} == _want)
+AT = [_BEST[i] for i in range(54)]       # place -> sticker
+PLACE, CIRCLE, SLIDE = _read(AT)         # sticker -> place, and the two tables
 
-
-def _slide(face):
-    """Three places along, or three back — which way this face's circle runs."""
-    after = cube.turn(cube.solved(), face)
-    ring = RING[CIRCLE[face]]
-    step, = {(ring.index(PLACE[after[AT[p]]]) - ring.index(p)) % 12
-             for p in ring}
-    return 1 if step == 3 else -1
+# The dot a face turns about, and which way its other eight go round it. The
+# twelve on the circle are only two thirds of a move; the other nine sit in a
+# rosette about the face's middle sticker, which a turn leaves exactly where
+# it is.
+MIDDLE = {f: PLACE[cube.FACES.index(f) * 9 + 4] for f in cube.FACES}
 
 
-# Places are listed anticlockwise on the page, so this is which way round the
-# dots travel — the same for every sticker the turn touches, ring or not.
-SLIDE = {f: _slide(f) for f in cube.FACES}
+def _rosette(face):
+    """Which way a face's other eight go round its middle dot."""
+    base = cube.FACES.index(face) * 9
+    hub = graph.AT[MIDDLE[face]]
+    home = {s: f for f, s in enumerate(cube.turn(cube.solved(), face))}
+    ways = []
+    for sticker in range(base, base + 9):
+        if sticker == base + 4:
+            continue
+        here, there = PLACE[sticker], PLACE[home[sticker]]
+        ways.append(math.remainder(
+            math.atan2(graph.AT[there][1] - hub[1], graph.AT[there][0] - hub[0])
+            - math.atan2(graph.AT[here][1] - hub[1], graph.AT[here][0] - hub[0]),
+            math.tau))
+    assert len({w > 0 for w in ways}) == 1, (face, ways)
+    return 1 if ways[0] > 0 else -1
+
+
+SPIN = {f: _rosette(f) for f in cube.FACES}
 
 
 def centre(face):
@@ -184,13 +248,18 @@ def _checks():
         runs = [len(list(g)) for _, g in itertools.groupby(rolled)]
         assert runs == [3, 3, 3, 3], (circle, beside)
 
-    # A quarter turn slides one circle's twelve exactly three places along.
+    # A quarter turn slides one circle's twelve exactly three places along,
+    # and swings the face's other eight about its middle dot, which stays.
     for face in cube.FACES:
         after = cube.turn(cube.solved(), face)
         ring = RING[CIRCLE[face]]
         moved = {(ring.index(PLACE[after[AT[p]]]) - ring.index(p)) % 12
                  for p in ring}
         assert moved in ({3}, {9}), (face, moved)
+
+        base = cube.FACES.index(face) * 9
+        assert after[AT[MIDDLE[face]]] == base + 4, face
+        assert SLIDE[face] == SCREEN[face], face
     return True
 
 

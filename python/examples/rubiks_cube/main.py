@@ -39,9 +39,11 @@ RING, SEAM, PAPER, CORE = "#6e747d", "#0b0b0b", "#e8eef7", "#121620"
 LIGHT = (0.29, 0.83, 0.50)
 
 # Chosen so the opening frame lands as near the traced colours as a cube
-# actually can: twenty-seven of the fifty-four places, where guessing gives
-# nine. The drawing's own colouring is not a state any cube can be in.
-SCRAMBLE = "U' L B2 L2 R D' U"
+# actually can: twenty-two of the fifty-four places, where guessing gives nine.
+# The drawing's own colouring is not a state any cube can be in, and which of
+# its symmetric orientations is used is now settled by which way the circles
+# turn (`places.SCREEN`) rather than by colour, which cannot see a mirror.
+SCRAMBLE = "F D' L' D2 F2 D'"
 STEPS = 9          # samples per quarter turn
 
 # A quarter turn takes STEPS * `default` seconds, and the dots ride it. They
@@ -56,26 +58,28 @@ def solve(state):
     """Open on a mixed cube and put it back, one sampled turn at a time."""
     cm.emit("settle")
     for move in cube.reverse(SCRAMBLE).split():
-        # A prime move is one quarter turn the other way, not three this way.
-        # The model only knows clockwise, so the state still takes three steps
-        # — but the picture must not, or `U'` spins three quarters round while
-        # a hand would have gone one quarter back.
-        face, turns = move[0], {"": 1, "'": -1, "2": 2}[move[1:]]
-        state["move"], state["face"], state["turns"] = move, face, turns
-        steps = STEPS * abs(turns)
-        for step in range(1, steps + 1):
-            state["part"] = step / steps
-            cm.emit("spin")
-        for _ in range(turns % 4):
-            # The turn also carries each sticker's corner list round, which
-            # the view has to know or the reconciler spins every square in
-            # place on the way to the next scene.
-            carried = dict.fromkeys(range(54), 0)
-            for facelet in geo.LAYER[face]:
-                carried[state["where"][facelet]] = geo.SHIFT[face][facelet]
-            state["order"] = [(k + carried[sticker]) % 4
-                              for sticker, k in enumerate(state["order"])]
-            state["where"] = cube.turn(state["where"], face)
+        # A prime move is one quarter the other way, not three this way — the
+        # model only knows clockwise, so the state still takes three steps, but
+        # the picture must not. A double move is two quarters and is animated
+        # as two, because half way through one is a real cube state and the
+        # drawing has to pass through it rather than slide over it.
+        face = move[0]
+        state["move"] = move
+        for turns in {"": (1,), "'": (-1,), "2": (1, 1)}[move[1:]]:
+            state["face"], state["turns"] = face, turns
+            for step in range(1, STEPS + 1):
+                state["part"] = step / STEPS
+                cm.emit("spin")
+            for _ in range(turns % 4):
+                # The turn also carries each sticker's corner list round,
+                # which the view has to know or the reconciler spins every
+                # square in place on the way to the next scene.
+                carried = dict.fromkeys(range(54), 0)
+                for facelet in geo.LAYER[face]:
+                    carried[state["where"][facelet]] = geo.SHIFT[face][facelet]
+                state["order"] = [(k + carried[sticker]) % 4
+                                  for sticker, k in enumerate(state["order"])]
+                state["where"] = cube.turn(state["where"], face)
         state["face"], state["part"], state["turns"] = None, 0.0, 0
         cm.emit("land")
     state["move"] = ""
@@ -168,18 +172,27 @@ def view(frame):
              .fill(RING).on(layer=2, opacity=0.45)
 
     # --- the dots: one per sticker, sitting where that sticker now is ------
-    middle = places.centre(face) if face else None
     on_circle = set(places.RING[places.CIRCLE[face]]) if face else set()
+    back = 1 if turns > 0 else -1
     for sticker in range(54):
         here, there = places.PLACE[now[sticker]], places.PLACE[then[sticker]]
-        # The circle's own twelve are what the move is about, and are all sent
-        # the same way round it; the nine it also carries are passengers, take
-        # the short way, and step back so they are not read as part of the ring.
+        # A move turns twenty-one dots about two different middles. The twelve
+        # on the circle go round the circle's centre. The other nine are the
+        # face's own, and they go round the face's *middle dot* — which the
+        # turn leaves exactly where it is, the way the middle of a face does.
+        #
+        # That was the bug: swinging them about the circle's centre instead
+        # moved them by sixteen degrees, and two of them not at all, so the
+        # rim turned while its inside slid in and out.
         riding = here in on_circle
-        at = graph.AT[here] if here == there else \
-            _along(here, there, middle, part,
-                   places.SLIDE[face] * (1 if turns > 0 else -1)
-                   if riding else None)
+        if here == there:
+            at = graph.AT[here]
+        elif riding:
+            at = _along(here, there, places.centre(face), part,
+                        places.SLIDE[face] * back)
+        else:
+            at = _along(here, there, graph.AT[places.MIDDLE[face]], part,
+                        places.SPIN[face] * back)
         # All twenty-one of the turning layer come forward, the other
         # thirty-three step back — the circle's twelve and the nine on its
         # face are one move, and the drawing should say so.
