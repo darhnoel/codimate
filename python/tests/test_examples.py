@@ -153,13 +153,12 @@ def test_every_example_actually_draws_and_moves():
         # black background, so an animation of small bright text scores almost
         # nothing however much it is saying.
         #
-        # Measured against how much is *drawn*, not against the whole frame. An
-        # example with one ball on a plain background moves everything it has
-        # and still covers under 1% of the screen, which is indistinguishable
-        # from frozen if you count pixels flatly — `moving_ball` and
-        # `bouncing_ball` both score 0.94% that way, on either side of an
-        # arbitrary line. As a share of the ink the spread across the examples
-        # is 0.38 to 1.13, and a frozen video is still 0.
+        # Measured against how much is *drawn*, not against the whole frame. A
+        # sparse example moves everything it has and still covers well under 1%
+        # of the screen, which is indistinguishable from frozen if you count
+        # pixels flatly — two such examples once landed either side of an
+        # arbitrary flat threshold at 0.94%. As a share of the ink the spread
+        # across the examples is 0.38 to 1.13, and a frozen video is still 0.
         moved = [
             sum(1 for a, b in zip(x, y) if abs(a - b) > 24) / len(x)
             for x, y in zip(frames, frames[1:])

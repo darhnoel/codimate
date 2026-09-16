@@ -23,7 +23,7 @@ no Codimate imported at all.
 ## What it teaches
 
 **Both identity modes, in one picture.** This is the example where the choice
-that `bubble_sort` and `neural_net` each show separately appears side by side:
+`bubble_sort` introduces on its own appears side by side with its opposite:
 
 | | named after | because |
 |---|---|---|

@@ -41,7 +41,6 @@ select = ["E", "W", "F", "PLR0913"]
 ignore = ["E741"]
 
 [tool.ruff.lint.per-file-ignores]
-"python/examples/attention/weights.py" = ["E501"]
 
 [tool.ruff.lint.pylint]
 max-args = 5
