@@ -87,6 +87,18 @@ twelve dots slide three places along their circle.
 It is also where the drawing order had to be got right four separate times, and
 each of those is written down where it happened.
 
+## Drawing something with no library help at all
+
+**[`spacetime/`](spacetime/)** — a lattice of space deformed by a mass inside
+it, in wireframe 3D.
+
+Codimate has no camera, no depth buffer and no 3D of any kind, so this one
+writes its own projection and pays for it. It is here for what that cost: the
+lattice flickered for four attempts, and the cause turned out to be that draw
+order is resolved once per *segment* rather than per frame — so any layer that
+changes is a hard cut at a scene boundary, sixteen times a second. The fix is
+to freeze the order, which is free when nothing is filled.
+
 ## If you are coming from Manim
 
 **[`manim/`](manim/)** — five of Manim's tutorial scenes, translated.

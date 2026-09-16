@@ -327,7 +327,7 @@ with `python docs/build_site.py`.
    authored, and the one decision you have to make.
 4. [Reference](docs/reference.md) — every call and parameter, on one page.
 
-Then [`python/examples/`](python/examples/), eight worked examples with notes, and
+Then [`python/examples/`](python/examples/), nine worked examples with notes, and
 [the decisions](docs/adr/) behind the design.
 
 ```bash
