@@ -3,6 +3,10 @@
 [![PyPI](https://img.shields.io/pypi/v/codimate)](https://pypi.org/project/codimate/)
 [![Python](https://img.shields.io/pypi/pyversions/codimate)](https://pypi.org/project/codimate/)
 
+![Planets tracing helices around the Sun's path through the galaxy](docs/media/helical_solar_system.gif)
+
+*Two seconds of [`helical_solar_system/`](python/examples/helical_solar_system/)*
+
 Turn a running algorithm into an explainer video.
 
 You write your algorithm as normal Python and say what each step looks like.
@@ -323,7 +327,7 @@ with `python docs/build_site.py`.
    authored, and the one decision you have to make.
 4. [Reference](docs/reference.md) — every call and parameter, on one page.
 
-Then [`python/examples/`](python/examples/), eight worked examples with notes, and
+Then [`python/examples/`](python/examples/), seven worked examples with notes, and
 [the decisions](docs/adr/) behind the design.
 
 ```bash
