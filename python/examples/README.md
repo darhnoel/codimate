@@ -87,6 +87,18 @@ twelve dots slide three places along their circle.
 It is also where the drawing order had to be got right four separate times, and
 each of those is written down where it happened.
 
+## If you are coming from Manim
+
+**[`manim/`](manim/)** — five of Manim's tutorial scenes, translated.
+
+Not a fight Codimate wins: for two shapes and three verbs, a library built
+around shapes-and-verbs is shorter, and the README says so. It is here because
+two of them say the quiet part out loud. `DifferentRotations` — where
+`.animate` and `Rotate` do different things from calls that look alike — is
+the clearest statement of the rule this library runs on: what you put in the
+payload decides what the motion is. And `TwoTransforms` asks for a distinction
+that does not exist here, because the name *is* the identity.
+
 ## When to split
 
 **Split where the knowledge splits, not by the four pieces.**
