@@ -13,9 +13,19 @@ requires-python = ">=3.9"
 # own — so `pip install codimate` is enough on a bare machine. `typst`, which
 # only `scene.formula` needs, stays a documented prerequisite.
 dependencies = ["imageio-ffmpeg>=0.4.9"]
+# The per-version entries are not decoration: `requires-python` above is what
+# pip enforces, but PyPI's sidebar and the shields.io badge both read these
+# instead, and without them the badge reads "missing". One abi3-py39 wheel
+# serves every version listed.
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
     "Topic :: Education",
 ]
