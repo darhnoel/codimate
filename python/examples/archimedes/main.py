@@ -167,10 +167,12 @@ def create_force_arrow(scene, name, at, length, look):
             scene.line((name, "cut", k), start=(at[0] - 13, mid + k + 7),
                        end=(at[0] + 13, mid + k - 7), w=3.0) \
                  .fill("#0b0f16").on(layer=MARK_LAYER + 3)
-    # Always above the tip. Below a downward arrow is where the caption
+    # Typeset, because these are symbols rather than words: the same F_B that
+    # the law states at the end, and needing no translation in either film.
+    # Always above the tip — below a downward arrow is where the caption
     # lives, and a long weight arrow put its label straight through it.
-    scene.text((name, "word"), words, size=19,
-               at=cm.at(x=at[0] + 78, y=tip[1] - 18)) \
+    scene.formula((name, "word"), words, size=24,
+                  at=cm.at(x=at[0] + 78, y=tip[1] - 18)) \
          .fill(colour).on(layer=TEXT_LAYER)
 
 
@@ -192,11 +194,11 @@ def animate_force_balance(scene, state):
     if "up" in state["arrows"]:
         length, capped = W.arrow_length(push)
         create_force_arrow(scene, "fb", middle, length,
-                           (UP, "F_B", True, capped))
+                           (UP, r"F_B", True, capped))
     if "down" in state["arrows"]:
         length, capped = W.arrow_length(pull)
         create_force_arrow(scene, "wt", middle, length,
-                           (DOWN, "W", False, capped))
+                           (DOWN, r"W", False, capped))
     if "hand" in state["arrows"]:
         top = (OBJ_X, middle[1] - h / 2 - 8)
         scene.arrow("hand", start=(top[0], top[1] - 96), end=top,
