@@ -78,14 +78,12 @@ EN_SCENES = {
 
     "question": ("Then how can a steel ship float?",
                  "Nothing about the metal changes. Only its shape does."),
-    "bigger": ("A bigger tank",
-               "The same water, in something a hull will fit in."),
     "spreading": ("Same steel, spread out",
-                  "The block widens. Not one gram is added or taken away."),
-    "hollowing": ("Same steel, spread out",
-                  "And it is hollowed out, so most of the inside is air."),
-    "lowering": ("Same steel, spread out",
-                 "Now put the very same metal back in the water."),
+                  "It opens out where it lies. The walls thin as it widens, "
+                  "so the metal is the same metal."),
+    "rising": ("Now it can float",
+               "The outside is big enough to carry the steel, so up it "
+               "comes on its own."),
     "ships": ("Same steel, spread out",
               "The steel never changed. The outside got {spread:.0f} times "
               "bigger."),
@@ -152,21 +150,21 @@ KM = {
 
     # captions
     "hook2": "លោហៈមានម៉ាសដូចគ្នា បាតុភូតមិនដូចគ្នា",
-    "one_box": "ប្រអប់មួយ។ មាឌ V។",
-    "climbs": "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលចូលទៅ",
+    "one_box": "ប្រអប់មួយមានមាឌ V។",
+    "climbs": "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលលិចចូលទៅ",
     "weighs": "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់",
-    "same_box": "ប្រអប់ដដែល។ មាឌ V ដដែល។",
-    "less_mass": "មាឌដដែល តែមានម៉ាសតិចជាង។",
-    "full_under": "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង។",
+    "same_box": "ប្រអប់ដដែលហើយមានមាឌ V ដដែល",
+    "less_mass": "មាឌដដែល តែមានម៉ាសតិចជាងមុន",
+    "full_under": "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង",
     "shrink": "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
-              "— ដូច្នេះកម្លាំងរុញឡើងថយចុះ។",
-    "why": "មិនមែនកម្ពស់ចៃដន្យទេ៖ "
-           "ជាជម្រៅដែលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួនឯង។",
-    "not_enough": "ទោះលិចទាំងស្រុង ក៏រុញទឹកចេញមិនគ្រប់គ្រាន់។",
-    "sinks_now": "ដូច្នេះវាលិចចុះ។",
-    "bigger": "អាងធំជាង — ទឹកដដែល។",
-    "spreading": "ដែកដដែល តែពង្រីកសន្ធឹង...",
-    "hollowing": "...ហើយចោះឲ្យប្រហោង។ មិនបន្ថែម មិនបន្ថយសូម្បីមួយក្រាម។",
+              " ដូច្នេះកម្លាំងរុញឡើងថយចុះ។",
+    "why": "នេះមិនមែនជាកម្ពស់ចៃដន្យទេ៖ "
+           "វាជាជម្រៅដែលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួនឯង",
+    "not_enough": "ទោះលិចទាំងស្រុង ក៏មិនអាចរុញទឹកចេញគ្រប់គ្រាន់",
+    "sinks_now": "ដូច្នេះវាក៏លិចចុះក្រោម",
+    "bigger": "this needs to be changed",
+    "spreading": "ដែកដដែល ប៉ុន្តែយើងពង្រីកមាឌវា",
+    "hollowing": "...ហើយចោះឲ្យប្រហោង ប៉ុន្តែរក្សាម៉ាសឲ្យនៅដដែល",
     "unchanged": "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង។",
     # The unit is the one edit: it is typeset by `unit()` now, on its own
     # line under the ship, so the sentence no longer spells it out.
@@ -187,8 +185,16 @@ DRAFT = {
     "t_push": "សង្កត់ឲ្យលិច",
     "t_chart": "ម៉ាសមាឌ ធៀបនឹងទឹក",
     "s_question": "លោហៈមិនប្រែ ប្រែតែរូបរាង",
-    "s_bigger": "ទឹកដដែល តែអាងធំជាងមុន",
-    "s_lowering": "ដាក់លោហៈដដែលចូលទឹកវិញ",
+
+    # The reshape section. The four lines that used to be here were mine from
+    # the first pass, not the author's, and they described a tank that grew
+    # and a slab that balanced on the surface — neither of which happens now.
+    "t_spread": "ដែកដដែល បើកចេញទូលាយ",
+    "s_spreading": "វាបើកចេញនៅនឹងកន្លែង ជញ្ជាំងស្ដើងទៅតាមការទូលាយ "
+                   "ដូច្នេះដែកនៅដដែល",
+    "t_rising": "ឥឡូវវាអាចអណ្ដែត",
+    "s_rising": "ខាងក្រៅធំល្មមទ្រដែកបាន ដូច្នេះវាងើបឡើងដោយខ្លួនឯង",
+    "s_unchanged": "ដែកនៅដដែល តែមាឌខាងក្រៅធំជាងមុន {spread:.0f} ដង",
 }
 
 # Which line each scene shows, in which slot. The title names what the scene
@@ -224,11 +230,9 @@ KM_SCENES = {
     "sinks": (KM["steel"], KM["sinks_now"]),
 
     "question": (KM["question"], DRAFT["s_question"]),
-    "bigger": (KM["bigger"], DRAFT["s_bigger"]),
-    "spreading": (KM["spreading"], KM["spread"]),
-    "hollowing": (KM["spreading"], KM["hollowing"]),
-    "lowering": (KM["spreading"], DRAFT["s_lowering"]),
-    "ships": (KM["spreading"], KM["unchanged"]),
+    "spreading": (DRAFT["t_spread"], DRAFT["s_spreading"]),
+    "rising": (DRAFT["t_rising"], DRAFT["s_rising"]),
+    "ships": (DRAFT["t_spread"], DRAFT["s_unchanged"]),
     "average": (KM["average"], KM["density"]),
 
     "chart": (DRAFT["t_chart"], KM["chart"]),

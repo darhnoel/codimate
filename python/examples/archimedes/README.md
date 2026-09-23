@@ -66,21 +66,25 @@ scene, but only the fully sunk water box displaces V: the floating ice displaces
 0.917 V and the ship 7.85 V. It now reads the multiple off the geometry, which
 also makes it the same fact as the 91.7% on the other side of the tank.
 
-**One tank could not do both jobs.** A ship displaces its own steel, so its
-draft is `7.85 × V / hull width` and nothing else. That one identity ties every
-size together: the hull must enclose about nine times the block's area before
-steel and air average out lighter than water, the tank must be wider than the
-hull and deeper than its draft — so a tank sized for the ship is about five
-times the box in every direction, and the box is left looking lost in a column
-of water it never reaches.
+**The box looks small, and that is the price of one tank.** A ship displaces
+its own steel, so its draft is `7.85 × V / hull width` and nothing else. That
+identity ties every size together: the hull must enclose about nine times the
+block's area before steel and air average out lighter than water, and the tank
+must be wider than the hull and deeper than its draft. A tank that can hold the
+ship is therefore about four times the box in every direction, and no amount of
+tuning moves that ratio — zooming does not touch it either, because a ratio is
+a ratio.
 
-No amount of tuning moves that ratio, and zooming does not touch it either: a
-ratio is a ratio. But nothing in Archimedes cares what the water is held in. So
-there are **two pools** — a beaker the box fills to 46% of its width for the
-first eight sections, and a basin that the glass *grows into* when the ship is
-built. The growth is sampled like every other change, so it reads as the setup
-being scaled up rather than as a cut, and the block rides the floor down as it
-goes.
+Two pools were tried: a beaker the box filled, growing into a basin when the
+ship was built. It solved the ratio and cost more than it bought — **a container
+cannot inflate**, and watching the glass stretch was worse than the box looking
+small. One tank, and every motion in the film is one that could happen.
+
+**Three impossible things went with it.** The glass stretching; the sunk block
+rising off the floor with nothing to lift it; and, worst, a solid steel slab
+balanced on the waterline while it widened to nine times its own area. All
+three are gone, and the section they were in is now the most honest part of the
+film rather than the least.
 
 **The label under the arrow.** The force arrows run through the object's centre
 and so does its name, so `WATER` / `ICE` / `STEEL` sat under the shaft. A dark
@@ -93,11 +97,25 @@ tip, and for steel the tip is near the floor of the tank — so the label went
 through the caption. Labels are always above the tip now, and the arrows are
 switched off before the block drops the last stretch to the floor.
 
-**A morph inside a swap beat.** Box to hull happened in the 0.26s beat that
-changes everything else at once, and read as a glitch rather than as the
-answer. It is now four sampled stages — lift, spread, hollow, lower — and all
-of the reshaping happens in the air, because a solid slab that wide would sink
-and doing it underwater would be showing something false.
+**Spreading and hollowing are one motion, not two.** They were two, and that
+was a lie the section was telling about itself: a *solid* block cannot simply
+widen, because that multiplies the metal ninefold — the one thing the section
+claims does not happen. So `thickness` solves
+
+    w h - (w - 2t)(h - t) = V
+
+at every instant instead of once for the finished hull. The walls thin as the
+outside grows, starting from a block where they meet in the middle and there is
+no cavity at all. `_the_reshape_conserves_steel` checks all forty steps.
+
+**Nothing is told to rise.** `settles` is asked where a body with that outside
+belongs, and the answer changes from "the floor" to "floating" the moment the
+outside is big enough to carry the metal. The lift-off is a consequence. It
+also happens late — always at 86% of the final area, since that is where
+`rho_water x outside` passes `rho_steel x V` — and the equilibrium *jumps* 213
+pixels when it crosses, so the last of the opening and the rise are walked
+together rather than one after the other. `_the_body_finds_its_own_level`
+checks that it leaves the floor exactly once and never sinks back.
 
 ## Title and subtitle have different jobs
 
@@ -192,6 +210,5 @@ the algebra beside it would be two different claims to read.
 - `HULL_W`, `HULL_H`. The wall thickness re-solves to keep the steel constant,
   and the ship floats higher or lower on its own. Shrink it far enough and the
   assertions stop you before the render does.
-- `BEAKER` and `BASIN`. Every depth, waterline and bracket is computed from
-  whichever pool the scene is in, and `_the_pool_holds` runs the same
-  consistency checks against both.
+- `TANK` and `REST_LEVEL`. Every depth, waterline and bracket follows, and the
+  assertions will tell you before the render does if the ship stops fitting.

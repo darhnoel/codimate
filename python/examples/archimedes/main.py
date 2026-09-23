@@ -27,7 +27,7 @@ SAY, SCENES = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
 cm.canvas(1280, 720)
 
 # ------------------------------------------------------------ the palette
-INK, DIM, AIR = "#e8eef7", "#93a0b2", "#000000"
+INK, DIM, AIR = "#e8eef7", "#93a0b2", "#161c25"
 WATER, GLASS = "#2f7fb8", "#58697e"
 UP, DOWN, HAND = "#38d6e0", "#ff7a59", "#f2c14e"     # buoyancy, weight, push
 PLATE = "#0b1018"
@@ -36,7 +36,7 @@ SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
         "steel": SAY["steel_word"]}
 
 # ------------------------------------------------------------- the layout
-OBJ_X = 0.5 * (W.BEAKER[0] + W.BEAKER[2])       # both pools share this line
+OBJ_X = 0.5 * (W.TANK[0] + W.TANK[2])
 NOTES_X = 1116.0                 # the column the tank never reaches into
 TITLE_Y, SAY_Y = 26.0, 696.0
 TITLE_SIZE, SAY_SIZE = 30, 21
@@ -51,21 +51,10 @@ MARK_GAP = 34.0
 # Water is drawn *over* the objects, translucent, so anything below the
 # surface is tinted without any clipping — the Engine has none. The hull's
 # cavity is then drawn over the water for the same reason, in the frame's own
-# black, so the inside of the ship reads as air rather than as flood.
+# own dark, so the inside of the ship reads as the inside of something
+# rather than as a hole cut in the picture.
 BODY_LAYER, WATER_LAYER, CAVITY_LAYER = 20, 40, 50
 MARK_LAYER, TEXT_LAYER, LABEL_LAYER = 60, 80, 95
-
-
-def _toward(was, target, along):
-    """One step of the way from `was` to `target`, numbers or pools alike.
-
-    The pool is five numbers rather than one, and it has to move the same way
-    everything else does — a step at a time — or the tank would jump from
-    beaker to basin while the block slid.
-    """
-    if isinstance(target, tuple):
-        return tuple(a + (b - a) * along for a, b in zip(was, target))
-    return was + (target - was) * along
 
 
 def _fits(line, size, room=ROOM):
@@ -85,14 +74,15 @@ def _middle(state):
     return (OBJ_X, state["bottom"] - state["h"] / 2)
 
 
-def create_water_tank(scene, pool, level, mark):
+def create_water_tank(scene, level, mark):
     """Glass, water, and — when `mark` is given — how far the surface climbed.
 
     `mark` is the multiple of V that has been displaced, because "= V" was
     true only of the fully sunk water box: the ice displaces 0.917 V and the
     ship nearly eight.
     """
-    left, top, right, bottom, rest = pool
+    left, top, right, bottom = W.TANK
+    rest = W.REST_LEVEL
     for i, (a, b) in enumerate((((left, top), (left, bottom)),
                                 ((left, bottom), (right, bottom)),
                                 ((right, bottom), (right, top)))):
@@ -118,7 +108,7 @@ def create_water_tank(scene, pool, level, mark):
              .fill(DIM).on(layer=WATER_LAYER + 2, opacity=0.75)
 
     if rest - level > 2.0:
-        set_bracket(scene, "rise", (left - MARK_GAP, level, rest),
+        set_bracket(scene, "rise", (W.TANK[0] - MARK_GAP, level, rest),
                     (UP, -1), (SAY["displaced"],
                                SAY["of_v"].format(mark=mark)))
 
@@ -184,7 +174,7 @@ def animate_force_balance(scene, state):
     would be lost if the hull's outer area were weighed instead.
     """
     w, h = state["w"], state["h"]
-    _, sub = W.surface(state["bottom"], w, h, state["pool"])
+    _, sub = W.surface(state["bottom"], w, h)
     middle = _middle(state)
     rho = {"water": W.RHO_WATER, "ice": W.RHO_ICE,
            "steel": W.RHO_STEEL}[state["material"]]
@@ -230,8 +220,8 @@ def set_submerged_bracket(scene, state, level):
     hull almost in the notes column. Out here it mirrors the displaced-volume
     bracket on the left and can never cover anything.
     """
-    _, sub = W.surface(state["bottom"], state["w"], state["h"], state["pool"])
-    x = state["pool"][2] + MARK_GAP
+    _, sub = W.surface(state["bottom"], state["w"], state["h"])
+    x = W.TANK[2] + MARK_GAP
     for i, (a, b, colour, words) in enumerate((
             (level, state["bottom"], UP, SAY["under"].format(share=sub)),
             (state["bottom"] - state["h"], level, DIM,
@@ -272,14 +262,14 @@ def create_body(scene, state):
     Rounded at every corner, including the hull's, because the rounding lives
     in the outline itself — a rounded rect could not morph.
     """
-    w, h, notch = state["w"], state["h"], state["notch"]
+    w, h = state["w"], state["h"]
     middle = _middle(state)
-    scene.polygon("body", W.outline(middle, w, h, notch)) \
+    scene.polygon("body", W.outline(middle, w, h)) \
          .fill(SKIN[state["material"]], edge=INK, edge_w=2.0) \
          .on(layer=BODY_LAYER)
 
-    if notch > 2.0:
-        left, top, right, bottom = W.cavity(middle, w, h, notch)
+    left, top, right, bottom = W.cavity(middle, w, h)
+    if right - left > 2.0:
         scene.rect("hold", w=right - left, h=bottom - top,
                    at=(0.5 * (left + right), 0.5 * (top + bottom))) \
              .fill(AIR).on(layer=CAVITY_LAYER)
@@ -362,7 +352,7 @@ def create_title_card(scene, state):
         far = CARD_LEFT + CARD_W + 8
         scene.rect("card_mask", w=far - edge, h=CARD_H + 24,
                    at=(0.5 * (edge + far), CARD_Y)) \
-             .fill(AIR).on(layer=TEXT_LAYER + 6)
+             .fill("#000000").on(layer=TEXT_LAYER + 6)
 
     if state["letters"] < 1:
         return
@@ -423,7 +413,7 @@ def create_verdict_chart(scene, state):
                 scene.line(("cut", i, k),
                            start=(BAR_X + BAR_MAX - 20 + k, y - 20),
                            end=(BAR_X + BAR_MAX - 6 + k, y + 20), w=3.0) \
-                     .fill(AIR).on(layer=MARK_LAYER + 2)
+                     .fill("#000000").on(layer=MARK_LAYER + 2)
 
 
 def create_verdict_row(scene, i, bar, words):
@@ -453,8 +443,7 @@ def create_verdict_row(scene, i, bar, words):
 def view(frame):
     scene = cm.Scene()
     state = frame.state
-    pool = state["pool"]
-    level, _ = W.surface(state["bottom"], state["w"], state["h"], pool)
+    level, _ = W.surface(state["bottom"], state["w"], state["h"])
 
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
@@ -470,9 +459,9 @@ def view(frame):
     if state["stage"]:
         mark = None
         if state["rise"]:
-            mark = W.displaced(state["bottom"], state["w"], state["h"],
-                               pool) / W.BOX_AREA
-        create_water_tank(scene, pool, level, mark)
+            mark = W.displaced(state["bottom"], state["w"],
+                               state["h"]) / W.BOX_AREA
+        create_water_tank(scene, level, mark)
         create_body(scene, state)
         animate_force_balance(scene, state)
         if state["brace"]:
@@ -487,9 +476,9 @@ def view(frame):
         create_title_card(scene, state)
 
     if state["big"]:
-        # Above the subtitle, not on it. The subtitle used to be empty in this
-        # scene; now every scene has one, so the readout had to move up.
-        scene.text("big", state["big"], size=46, at=cm.at(x=640, y=632)) \
+        # In the tank's own air gap, above the waterline. Below the glass is
+        # where the subtitle lives, and inside the water it was unreadable.
+        scene.text("big", state["big"], size=44, at=cm.at(x=640, y=186)) \
              .fill(UP).on(layer=TEXT_LAYER + 5)
     if state["principle"]:
         scene.formula("law", r"F_B \;=\; \rho_{fluid}\, V_{displaced}\, g",
@@ -504,17 +493,13 @@ def view(frame):
 OPENING = {
     "title": "", "carding": True, "letters": 0, "rule": 0.0, "note": "",
     "say": "", "stage": False, "material": "steel",
-    "w": W.BOX_W, "h": W.BOX_H, "notch": 0.0,
-    "bottom": 250.0, "pool": W.BEAKER, "label": False, "arrows": (),
+    "w": W.BOX_W, "h": W.BOX_H,
+    "bottom": 250.0, "label": False, "arrows": (),
     "net": False, "brace": False, "rise": False, "compare": (),
     "steps": 0, "big": "", "principle": False, "rows": 0, "grow": 0.0,
 }
 
-# Where the ship is built: resting on the surface, not above it. Any higher
-# and the finished hull — 270px of it — reaches the title band, and the title
-# now stays on screen for every scene rather than being cleared for this one.
-HELD_UP = W.BASIN[4]
-AFLOAT = W.floating_bottom(W.SHIP_SUBMERGED, W.HULL_W, W.HULL_H, W.BASIN)
+AFLOAT = W.settles(W.RHO_STEEL, W.HULL_W, W.HULL_H)
 
 
 @cm.trace()
@@ -554,7 +539,7 @@ def story(state):
         was = {k: state[k] for k in targets}
         for i in range(1, steps + 1):
             for k, target in targets.items():
-                state[k] = _toward(was[k], target, i / steps)
+                state[k] = was[k] + (target - was[k]) * i / steps
             cm.emit(name)
 
     # 0. The name first, typed on, then underlined. Nothing else is on
@@ -568,7 +553,7 @@ def story(state):
 
     # 1. The hook. A steel block falls in and keeps going.
     beat("hook", carding=False, letters=0, rule=0.0, stage=True)
-    walk("sink", steps=32, bottom=W.floor(W.BEAKER))
+    walk("sink", steps=32, bottom=W.FLOOR)
     beat("hook2")
 
     # 2. Simplify: one box, volume V, held above the water.
@@ -576,8 +561,7 @@ def story(state):
 
     # 3. Make it a box *of water*, and lower it in.
     beat("waterbox")
-    walk("dip", steps=32,
-         bottom=W.water_level(W.BOX_AREA, W.BEAKER) + W.BOX_H)
+    walk("dip", steps=32, bottom=W.water_level(W.BOX_AREA) + W.BOX_H)
     beat("displace", rise=True)
     beat("neutral", arrows=("up", "down"))
     beat("why_neutral", scene="neutral")
@@ -595,8 +579,7 @@ def story(state):
     # 6. Let go. It rises; the push stays put until it breaks the surface.
     beat("release", arrows=("up", "down"))
     walk("rise", steps=34,
-         bottom=W.floating_bottom(W.ICE_SUBMERGED, W.BOX_W, W.BOX_H,
-                                  W.BEAKER))
+         bottom=W.settles(W.RHO_ICE, W.BOX_W, W.BOX_H))
     beat("shrink")
 
     # 7. The payoff, and only then the algebra.
@@ -613,29 +596,33 @@ def story(state):
     beat("steel", material="steel", big="", brace=False, arrows=(),
          compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
                   (SAY["steel_word"], W.RHO_STEEL, SKIN["steel"])))
-    walk("dip", steps=16, bottom=W.BEAKER[4] + W.BOX_H + 50.0)
+    walk("dip", steps=16, bottom=W.REST_LEVEL + W.BOX_H + 50.0)
     beat("steelforce", compare=(), arrows=("up", "down"))
     # The arrows go *before* it drops. Left on, a weight arrow this long
     # reaches out of the frame once the block is resting on the floor.
     beat("sinks", arrows=())
-    walk("sink", steps=24, bottom=W.floor(W.BEAKER))
+    walk("sink", steps=24, bottom=W.FLOOR)
 
-    # 9. The reveal: the same steel, spread out. Four sampled stages, and all
-    #    of the reshaping happens in the air — a solid slab that wide would
-    #    sink, so doing it in the water would be showing something false.
+    # 9. The reveal. The block never leaves the floor to be reshaped, and it
+    #    is never told to rise: `settles` is asked where a body with that
+    #    outside belongs, and the answer changes from "the floor" to
+    #    "floating" once the outside is big enough to carry the metal.
     beat("question", arrows=(), label=False)
-    # A bigger tank first. Nothing in Archimedes cares what the water is held
-    # in, and a beaker the box fills cannot also hold a hull nine times its
-    # area — so the glass grows, sampled, and the block rides the floor down.
-    beat("bigger")
-    walk("grow", steps=26, pool=W.BASIN, bottom=W.floor(W.BASIN))
-    walk("lift", steps=26, bottom=HELD_UP)
+
+    # Spreading and hollowing are one motion, not two. A solid block cannot
+    # simply widen — that would multiply the steel ninefold, which is the one
+    # thing this section says does not happen — so the walls thin as the
+    # outside grows, with `thickness` solving for constant area at every step.
     beat("spreading")
-    walk("spread", steps=26, w=W.HULL_W, h=W.HULL_H)
-    beat("hollowing")
-    walk("hollow", steps=22, notch=W.HULL_H - W.HULL_T)
-    beat("lowering")
-    walk("settle", steps=30, bottom=AFLOAT)
+    nearly = W.reshaping(W.LIFTS_AT)
+    walk("spread", steps=34, w=nearly[0], h=nearly[1])
+
+    # The last of the opening and the lift-off are one move. Left as two, the
+    # film shows a finished air-filled hull sitting at rest on the bottom of
+    # the tank — which is both a large black hole in the picture and a thing
+    # that would not stay there for an instant.
+    beat("rising")
+    walk("lifts", steps=34, w=W.HULL_W, h=W.HULL_H, bottom=AFLOAT)
     beat("ships", said={"spread": W.SPREAD},
          arrows=("up", "down"), brace=True, rise=True)
     beat("average", note=vocabulary.unit(W.SHIP_RHO)
@@ -672,11 +659,9 @@ cm.explain(
                 "release": 0.8, "rise": 0.045, "shrink": 2.8,
                 "stop": 2.2, "why": 2.6, "derive": 1.7, "percent": 3.4,
                 "steel": 2.6, "steelforce": 3.0, "sinks": 1.8,
-                "question": 2.4, "bigger": 1.6, "grow": 0.05,
-                "lift": 0.045,
-                "spreading": 1.4, "spread": 0.055,
-                "hollowing": 1.6, "hollow": 0.055,
-                "lowering": 1.6, "settle": 0.05,
+                "question": 2.6,
+                "spreading": 1.6, "spread": 0.05,
+                "rising": 1.4, "lifts": 0.055,
                 "ships": 3.0, "average": 3.2,
                 "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0},
