@@ -327,30 +327,51 @@ def clusters(line):
 
 
 CARD_PIECES = clusters(CARD)
+CARD_W, CARD_H = cm.measure(CARD, size=CARD_SIZE)
+CARD_LEFT = 640.0 - CARD_W / 2
+
+# Where the reveal stops after each cluster. Measured once, from the *whole*
+# title each time, so the mask edge always lands on a boundary the shaper
+# agrees with rather than part way through a glyph.
+CARD_STOPS = [0.0] + [cm.measure("".join(CARD_PIECES[:i + 1]), size=CARD_SIZE)[0]
+                      for i in range(len(CARD_PIECES))]
 
 
 def create_title_card(scene, state):
-    """The name, typed on a cluster at a time, then a rule drawn under it.
+    """The name, uncovered a cluster at a time, then a rule drawn under it.
 
-    One growing shape rather than one shape per character. Measuring each
-    character and placing it would drop the shaping *between* clusters, and
-    for a script with ligatures that is not the same text — so the whole
-    prefix is laid out by the engine and only its left edge is pinned.
+    The text is drawn whole and never moves. An earlier version grew the
+    string itself, which meant moving the shape left every step to keep its
+    left edge still — so the title crept sideways as it typed. Here a plate in
+    the frame's own black covers what has not been reached yet and slides off
+    to the right, which is the same reading and no motion in the words.
+
+    It also means the reveal needs no per-character layout at all: the title is
+    laid out once, by the engine, exactly as it will finally appear.
+
+    The mask arrives one scene *before* the words. Both fade in when they
+    enter, and a half-faded plate does not hide a half-faded title — so the
+    whole name ghosted through on the opening frame. Letting the plate fade up
+    alone against black costs nothing to look at and is opaque by the time
+    there is anything behind it.
     """
-    wide, _ = cm.measure(CARD, size=CARD_SIZE)
-    left = 640.0 - wide / 2
-    shown = "".join(CARD_PIECES[:state["letters"]])
-    if shown.strip():
-        so_far, _ = cm.measure(shown, size=CARD_SIZE)
-        scene.text("card", shown, size=CARD_SIZE,
-                   at=cm.at(x=left + so_far / 2, y=CARD_Y)) \
-             .fill(INK).on(layer=TEXT_LAYER + 5)
+    edge = CARD_LEFT + CARD_STOPS[min(state["letters"], len(CARD_PIECES))]
+    if edge < CARD_LEFT + CARD_W:
+        far = CARD_LEFT + CARD_W + 8
+        scene.rect("card_mask", w=far - edge, h=CARD_H + 24,
+                   at=(0.5 * (edge + far), CARD_Y)) \
+             .fill(AIR).on(layer=TEXT_LAYER + 6)
 
-    # Out from the middle, so it reads as being drawn rather than appearing.
-    half = 0.5 * wide * state["rule"]
-    if half > 1.0:
-        scene.line("card_rule", start=(640 - half, CARD_Y + 48),
-                   end=(640 + half, CARD_Y + 48), w=2.5) \
+    if state["letters"] < 1:
+        return
+    scene.text("card", CARD, size=CARD_SIZE, at=cm.at(x=640, y=CARD_Y)) \
+         .fill(INK).on(layer=TEXT_LAYER + 5)
+
+    # Left to right, under the words, the way the pen went.
+    run = CARD_W * state["rule"]
+    if run > 1.0:
+        scene.line("card_rule", start=(CARD_LEFT, CARD_Y + 48),
+                   end=(CARD_LEFT + run, CARD_Y + 48), w=2.5) \
              .fill(UP).on(layer=TEXT_LAYER + 5, opacity=0.85)
 
 
@@ -460,11 +481,13 @@ def view(frame):
     if state["steps"]:
         create_equation_step(scene, state)
 
-    if state["letters"]:
+    if state["carding"]:
         create_title_card(scene, state)
 
     if state["big"]:
-        scene.text("big", state["big"], size=46, at=cm.at(x=640, y=686)) \
+        # Above the subtitle, not on it. The subtitle used to be empty in this
+        # scene; now every scene has one, so the readout had to move up.
+        scene.text("big", state["big"], size=46, at=cm.at(x=640, y=632)) \
              .fill(UP).on(layer=TEXT_LAYER + 5)
     if state["principle"]:
         scene.formula("law", r"F_B \;=\; \rho_{fluid}\, V_{displaced}\, g",
@@ -477,9 +500,7 @@ def view(frame):
 
 
 OPENING = {
-    # The film opens with the first cluster already on screen: the trace's
-    # first emit is a hold, so anything that starts at zero starts as black.
-    "title": "", "letters": 1, "rule": 0.0, "note": "",
+    "title": "", "carding": True, "letters": 0, "rule": 0.0, "note": "",
     "say": "", "stage": False, "material": "steel",
     "w": W.BOX_W, "h": W.BOX_H, "notch": 0.0,
     "bottom": 250.0, "pool": W.BEAKER, "label": False, "arrows": (),
@@ -513,7 +534,7 @@ def story(state):
         jobs apart — a beat cannot quietly acquire a sentence for a title, or
         a title with nothing said underneath it.
         """
-        title, say = SCENES[name]
+        title, say = SCENES[change.pop("scene", name)]
         state.update(title=title.format(**change.pop("says", {})),
                      say=say.format(**change.pop("said", {})))
         state.update(change)
@@ -537,14 +558,14 @@ def story(state):
     # 0. The name first, typed on, then underlined. Nothing else is on
     #    screen, so the film opens on it rather than fading up to it.
     cm.emit("card")
-    for i in range(2, len(CARD_PIECES) + 1):
+    for i in range(1, len(CARD_PIECES) + 1):
         state["letters"] = i
         cm.emit("type")
     walk("underline", steps=16, rule=1.0)
     cm.emit("held")
 
     # 1. The hook. A steel block falls in and keeps going.
-    beat("hook", letters=0, rule=0.0, stage=True)
+    beat("hook", carding=False, letters=0, rule=0.0, stage=True)
     walk("sink", steps=32, bottom=W.floor(W.BEAKER))
     beat("hook2")
 
@@ -557,7 +578,7 @@ def story(state):
          bottom=W.water_level(W.BOX_AREA, W.BEAKER) + W.BOX_H)
     beat("displace", rise=True)
     beat("neutral", arrows=("up", "down"))
-    beat("because")
+    beat("why_neutral", scene="neutral")
 
     # 4. Same box, different stuff.
     beat("ice", material="ice", arrows=(),
@@ -640,10 +661,10 @@ cm.explain(
     timing=cm.Timing(
         default=0.1,
         events={"swap": 0.26,
-                "card": 0.3, "type": 0.06, "underline": 0.03, "held": 1.7,
+                "card": 0.25, "type": 0.06, "underline": 0.028, "held": 1.7,
                 "hook": 2.0, "sink": 0.05, "hook2": 2.0,
                 "simpler": 2.4, "waterbox": 0.8, "dip": 0.05,
-                "displace": 2.4, "neutral": 2.6, "because": 3.0,
+                "displace": 2.4, "neutral": 2.6, "why_neutral": 3.0,
                 "ice": 2.8, "lighter": 2.4,
                 "push": 3.0, "more": 2.8,
                 "release": 0.8, "rise": 0.045, "shrink": 2.8,
@@ -657,7 +678,9 @@ cm.explain(
                 "ships": 3.0, "average": 3.2,
                 "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0},
-        opening=0.9, final_hold=1.8),
+        # The film opens on a masked title, which is a black frame — so the
+        # opening hold is short. A second of it would read as a stall.
+        opening=0.25, final_hold=1.8),
 ).render(SAY["out"], fps=60, scale=1.5)
 
 print(f"wrote {SAY['out']}")

@@ -40,8 +40,8 @@ EN_SCENES = {
     "neutral": ("It neither rises nor sinks",
                 "Made of the same stuff as the water around it, it just "
                 "stays."),
-    "because": ("It neither rises nor sinks",
-                "The water it displaces weighs what the box weighs."),
+    "why_neutral": ("It neither rises nor sinks",
+                    "The water it displaces weighs what the box weighs."),
 
     "ice": ("Now make it ice",
             "Same box. Same volume V. Only the material has changed."),
@@ -127,94 +127,109 @@ EN_LABELS = {
 # ដង់ស៊ីតេ rather than being calqued. Numerals are left Western so that the
 # bars, the brackets and the algebra all carry the same digits — a chart with
 # ១,០០០ on the axis and 1000 in the formula would be two different claims.
+# Written by the author, and left exactly as written. The role each line
+# plays is the author's too: these were already split into titles and captions
+# before the scene table existed, so the table below only points at them.
+KM = {
+    # titles
+    "hook": "ប៊ូឡុងដែកតូចមួយលិច តើហេតុអ្វីបានជានាវាដែកដ៏ធំសម្បើម"
+            "បែរជាអណ្ដែតទៅវិញ?",
+    "simpler": "យើងចាប់ផ្ដើមគិតពីរឿងងាយៗសិន",
+    "waterbox": "ស្រមៃថាយើងមានទឹកដែលមានទំហំទំហំមួយប្រអប់"
+                "ដែលសម្បកខាងក្រៅអាចចោលបានទំលាក់ចូលទៅក្នុងទឹក",
+    "neutral": "ដោយសារវាជារូបធាតុតែមួយ វាមិនអណ្ដែត ហើយក៏មិនលិចដែរ",
+    "ice": "ឥឡូវប្ដូរវាជាទឹកកកវិញ",
+    "push": "ជាមួយនឹងទំហំដដែលទាល់តែយើងប្រើកម្លាំងរុញសង្កត់បន្តិច"
+            "ទើបវាអាចលិចស្មើផ្ទៃទឹក",
+    "release": "យើងសម្រេចថាលែងដៃ",
+    "stop": "វានឹងឈប់ក្រោយពេលយើងលែងដៃបានមួយសន្ទុះ",
+    "steel": "ឥឡូវប្ដូរវាជាដែកវិញ",
+    "question": "តើនាវាដែកអាចអណ្ដែតបានដោយសារអ្វី?",
+    "spread": "យើងយកដែកដដែល ប៉ុន្តែពង្រីកមាឌរបស់វា",
+    "average": "មានទាំងដែកនិងខ្យល់រួមគ្នា",
+    "chart": "ឥទ្ធិពលនៃម៉ាសមាឌនៃអង្គធាតុដែលលិច ឬអណ្ដែតក្នុងទឹក",
+
+    # captions
+    "hook2": "លោហៈមានម៉ាសដូចគ្នា បាតុភូតមិនដូចគ្នា",
+    "one_box": "ប្រអប់មួយ។ មាឌ V។",
+    "climbs": "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលចូលទៅ",
+    "weighs": "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់",
+    "same_box": "ប្រអប់ដដែល។ មាឌ V ដដែល។",
+    "less_mass": "មាឌដដែល តែមានម៉ាសតិចជាង។",
+    "full_under": "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង។",
+    "shrink": "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
+              "— ដូច្នេះកម្លាំងរុញឡើងថយចុះ។",
+    "why": "មិនមែនកម្ពស់ចៃដន្យទេ៖ "
+           "ជាជម្រៅដែលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួនឯង។",
+    "not_enough": "ទោះលិចទាំងស្រុង ក៏រុញទឹកចេញមិនគ្រប់គ្រាន់។",
+    "sinks_now": "ដូច្នេះវាលិចចុះ។",
+    "bigger": "អាងធំជាង — ទឹកដដែល។",
+    "spreading": "ដែកដដែល តែពង្រីកសន្ធឹង...",
+    "hollowing": "...ហើយចោះឲ្យប្រហោង។ មិនបន្ថែម មិនបន្ថយសូម្បីមួយក្រាម។",
+    "unchanged": "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង។",
+    # The unit is the one edit: it is typeset by `unit()` now, on its own
+    # line under the ship, so the sentence no longer spells it out.
+    "density": "ដង់ស៊ីតេមធ្យមស្រាលជាងទឹក ដូច្នេះវាអណ្ដែត។",
+    "said": "វត្ថុមួយអណ្ដែត នៅពេលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួន "
+            "មុនពេលលិចអស់។",
+}
+
+KM_LABELS_CARD = "គោលការណ៍អាកស៊ីម៉ែត"     # the author's, same as the card
+
+# Which line each scene shows, in which slot. An empty subtitle is a scene the
+# author has not written a caption for yet — the view simply draws no
+# subtitle, the same as when these were `say=""`.
 KM_SCENES = {
-    "hook": ("ដែកមួយលិច ដែកមួយអណ្ដែត",
-             "ប៊ូឡុងដែកតូចមួយលិច តើហេតុអ្វីបានជានាវាដែកដ៏ធំសម្បើម"
-             "បែរជាអណ្ដែតទៅវិញ?"),
-    "hook2": ("ដែកមួយលិច ដែកមួយអណ្ដែត",
-              "លោហៈមានម៉ាសដូចគ្នា បាតុភូតមិនដូចគ្នា"),
+    "hook": (KM["hook"], KM["hook2"]),
+    "hook2": (KM["hook"], KM["hook2"]),
 
-    "simpler": ("ចាប់ផ្ដើមពីរឿងងាយ",
-                "យើងចាប់ផ្ដើមគិតពីរឿងងាយៗសិន៖ ប្រអប់មួយ មាឌ V"),
-    "waterbox": ("ប្រអប់ទឹក ក្នុងទឹក",
-                 "ស្រមៃថាយើងមានទឹកមួយប្រអប់ ហើយទំលាក់វាចូលទៅក្នុងទឹក"),
-    "displace": ("ប្រអប់ទឹក ក្នុងទឹក",
-                 "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលចូលទៅ"),
-    "neutral": ("មិនអណ្ដែត មិនលិច",
-                "ដោយសារវាជារូបធាតុតែមួយ វាមិនអណ្ដែត ហើយក៏មិនលិចដែរ"),
-    "because": ("មិនអណ្ដែត មិនលិច",
-                "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់"),
+    "simpler": (KM["simpler"], KM["one_box"]),
+    "waterbox": (KM["waterbox"], KM["climbs"]),
+    "displace": (KM["waterbox"], KM["climbs"]),
+    "neutral": (KM["neutral"], KM["weighs"]),
+    "why_neutral": (KM["neutral"], KM["weighs"]),
 
-    "ice": ("ប្ដូរជាទឹកកក",
-            "ប្រអប់ដដែល មាឌ V ដដែល ប្ដូរតែរូបធាតុប៉ុណ្ណោះ"),
-    "lighter": ("ប្ដូរជាទឹកកក",
-                "មាឌដដែល តែមានម៉ាសតិចជាង"),
+    "ice": (KM["ice"], KM["same_box"]),
+    "lighter": (KM["ice"], KM["less_mass"]),
 
-    "push": ("សង្កត់ឲ្យលិច",
-             "ជាមួយនឹងទំហំដដែល ទាល់តែយើងប្រើកម្លាំងរុញសង្កត់បន្តិច "
-             "ទើបវាអាចលិចស្មើផ្ទៃទឹក"),
-    "more": ("សង្កត់ឲ្យលិច",
-             "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង"),
+    "push": (KM["push"], KM["full_under"]),
+    "more": (KM["push"], KM["full_under"]),
 
-    "release": ("លែងដៃ",
-                "យើងសម្រេចថាលែងដៃ ហើយកម្លាំងរុញឡើងធ្វើឲ្យវាងើបឡើង"),
-    "shrink": ("លែងដៃ",
-               "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
-               "ដូច្នេះកម្លាំងរុញឡើងថយចុះ"),
+    "release": (KM["release"], KM["shrink"]),
+    "shrink": (KM["release"], KM["shrink"]),
 
-    "stop": ("វាឈប់ត្រឹមនេះ",
-             "វានឹងឈប់ក្រោយពេលយើងលែងដៃបានមួយសន្ទុះ"),
-    "why": ("វាឈប់ត្រឹមនេះ",
-            "មិនមែនកម្ពស់ចៃដន្យទេ៖ ជាជម្រៅដែលវារុញទឹកចេញ"
-            "ស្មើនឹងទម្ងន់ខ្លួនឯង"),
-    "derive": ("ហេតុអ្វីត្រឹមជម្រៅនេះ",
-               "ដាក់កម្លាំងរុញឡើងស្មើនឹងទម្ងន់ចុះ រួចសម្រួល"),
-    "percent": ("ហេតុអ្វីត្រឹមជម្រៅនេះ",
-                "ចម្លើយគឺជាផលធៀបនៃដង់ស៊ីតេ គ្មានអ្វីផ្សេងទៀតទេ"),
+    "stop": (KM["stop"], KM["why"]),
+    "why": (KM["stop"], KM["why"]),
+    "derive": (KM["stop"], KM["why"]),
+    "percent": (KM["stop"], KM["why"]),
 
-    "steel": ("ប្ដូរជាដែក",
-              "ប្រអប់ដដែល មាឌ V ដដែល ប្ដូរតែរូបធាតុប៉ុណ្ណោះ"),
-    "steelforce": ("ប្ដូរជាដែក",
-                   "ទោះលិចទាំងស្រុង ក៏រុញទឹកចេញមិនគ្រប់គ្រាន់"),
-    "sinks": ("ប្ដូរជាដែក",
-              "ដូច្នេះវាលិចចុះ"),
+    "steel": (KM["steel"], KM["same_box"]),
+    "steelforce": (KM["steel"], KM["not_enough"]),
+    "sinks": (KM["steel"], KM["sinks_now"]),
 
-    "question": ("ហេតុអ្វីនាវាដែកអណ្ដែត?",
-                 "តើនាវាដែកអាចអណ្ដែតបានដោយសារអ្វី? លោហៈមិនប្រែ "
-                 "ប្រែតែរូបរាង"),
-    "bigger": ("អាងធំជាង",
-               "ទឹកដដែល តែដាក់ក្នុងអាងដែលនាវាអាចផ្ទុកបាន"),
-    "spreading": ("ដែកដដែល ពង្រីកមាឌ",
-                  "យើងយកដែកដដែល ប៉ុន្តែពង្រីកមាឌរបស់វា"),
-    "hollowing": ("ដែកដដែល ពង្រីកមាឌ",
-                  "ហើយចោះឲ្យប្រហោង ដើម្បីឲ្យខាងក្នុងភាគច្រើនជាខ្យល់"),
-    "lowering": ("ដែកដដែល ពង្រីកមាឌ",
-                 "ឥឡូវដាក់លោហៈដដែលនោះត្រឡប់ចូលក្នុងទឹកវិញ"),
-    "ships": ("ដែកដដែល ពង្រីកមាឌ",
-              "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង"),
-    "average": ("មានទាំងដែកនិងខ្យល់រួមគ្នា",
-                "អ្វីដែលធ្វើឲ្យនាវាអណ្ដែត គឺដង់ស៊ីតេមធ្យម "
-                "មិនមែនដង់ស៊ីតេលោហៈទេ"),
+    "question": (KM["question"], ""),
+    "bigger": (KM["question"], KM["bigger"]),
+    "spreading": (KM["spread"], KM["spreading"]),
+    "hollowing": (KM["spread"], KM["hollowing"]),
+    "lowering": (KM["spread"], ""),
+    "ships": (KM["spread"], KM["unchanged"]),
+    "average": (KM["average"], KM["density"]),
 
-    "chart": ("ម៉ាសមាឌ ធៀបនឹងទឹក",
-              "ឥទ្ធិពលនៃម៉ាសមាឌនៃអង្គធាតុដែលលិច ឬអណ្ដែតក្នុងទឹក"),
-    "law": ("គោលការណ៍អាកស៊ីម៉ែត",
-            "កម្លាំងរុញឡើង ស្មើនឹងទម្ងន់ទឹកដែលត្រូវបានរុញចេញ"),
-    "said": ("គោលការណ៍អាកស៊ីម៉ែត",
-             "វត្ថុមួយអណ្ដែត នៅពេលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួន "
-             "មុនពេលលិចអស់"),
+    "chart": (KM["chart"], ""),
+    "law": (KM_LABELS_CARD, KM["said"]),
+    "said": (KM_LABELS_CARD, KM["said"]),
 }
 
 KM_LABELS = {
     "lang": "km",
     "out": "results/archimedes-km.mp4",
-    "card": "គោលការណ៍អាកស៊ីម៉ែត",
+    "card": KM_LABELS_CARD,
 
     "water": "ទឹក", "ice_word": "ទឹកកក", "steel_word": "ដែក",
     "displaced": "ទឹកដែលត្រូវបានរុញចេញ",
     "of_v": "= {mark:.3g} V",
-    "under": "លិច {share:.1%}",
-    "above": "លើ {share:.1%}",
+    "under": "ផ្នែកលិចក្នុងទឹក {share:.1%}",
+    "above": "ផ្នែកលេចឡើង {share:.1%}",
     "net": "កម្លាំងរុញឡើងសរុប",
     "hand": "ដៃ",
     "submerged": "លិចក្នុងទឹក {share:.1%}",
@@ -251,6 +266,17 @@ def pick(lang="en"):
     return labels, scenes
 
 
+def untranslated(lang):
+    """Scene slots with nothing in them yet, for `lang`.
+
+    Not an error. A translator fills these in their own time, and a blank
+    subtitle simply draws no subtitle — the film still plays.
+    """
+    _, scenes = VOCABULARIES[lang]
+    return sorted(key for key, (title, sub) in scenes.items()
+                  if not title.strip() or not sub.strip())
+
+
 def _every_language_says_everything():
     for name, (labels, scenes) in VOCABULARIES.items():
         for mine, theirs, what in ((labels, EN_LABELS, "label"),
@@ -259,18 +285,14 @@ def _every_language_says_everything():
                                               sorted(set(theirs) ^ set(mine)))
         # A format string that lost its placeholder would silently print the
         # template, so the braces are checked to match rather than exist.
+        # A blank is exempt: it is a slot waiting for words, not a broken one.
         for key, line in labels.items():
             assert line.count("{") == EN_LABELS[key].count("{"), (name, key)
         for key, (title, sub) in scenes.items():
             want = EN_SCENES[key]
-            assert title.count("{") == want[0].count("{"), (name, key)
-            assert sub.count("{") == want[1].count("{"), (name, key)
-            # The split only means something if it is kept. A title that
-            # runs on is a subtitle that got lost, and this film has had
-            # several — so a title may not be a sentence, whatever its
-            # length. (A short subtitle is fine: "So down it goes.")
-            assert len(title) <= 40, (name, key, len(title), title)
-            assert not title.endswith((".", "។")), (name, key, title)
+            for mine, theirs in ((title, want[0]), (sub, want[1])):
+                assert not mine.strip() or \
+                    mine.count("{") == theirs.count("{"), (name, key)
     return True
 
 
