@@ -99,6 +99,36 @@ answer. It is now four sampled stages — lift, spread, hollow, lower — and al
 of the reshaping happens in the air, because a solid slab that wide would sink
 and doing it underwater would be showing something false.
 
+## Title and subtitle have different jobs
+
+Every scene has both, and neither does the other's work. The **title** names
+what the scene is *for* — a few words, holding still while the scene plays.
+The **subtitle** describes what is happening in front of you, and changes as it
+happens. A sentence in the title slot is a subtitle that got lost.
+
+That is enforced rather than remembered: `beat()` takes the scene's *name* and
+reads both lines out of the vocabulary, so a beat cannot quietly acquire a
+sentence for a title or a title with nothing said under it, and `vocabulary.py`
+refuses a title over 40 characters or one that ends in a full stop.
+
+Both lines are shrunk to fit at draw time rather than trusted to a size chosen
+in advance, because `text` has no newlines to wrap at — and, without a
+dictionary, nowhere safe to break a script that puts no spaces between its
+words.
+
+## Units are mathematics, not words
+
+`kg/m³` is typeset with `scene.formula` everywhere it appears — the swatches,
+the chart axis, the ship's average density. Spelt out it has to be abbreviated
+differently in every language and the exponent stops being an exponent:
+`គ.ក./ម៉.គូប` says the same thing as `kg/m3` only to someone who already knows
+which it is. Typeset, it is the same symbol in both films.
+
+The one place this costs something is layout. A formula is typeset by Typst
+when the video is built, so there is nothing to `cm.measure` — the chart's axis
+label puts the word on one side of the water line and the quantity on the
+other rather than trying to set them end to end.
+
 ## Why two beats per section
 
 A shape entering or leaving a Scene fades, and the fade takes the **whole**
@@ -115,7 +145,7 @@ object would slide while the water it displaces jumped.
 | file | what it knows |
 | --- | --- |
 | `world.py` | densities, depths, the hull solve, the arrow scale. No Codimate; checks itself. |
-| `vocabulary.py` | every word the film says, in English and Khmer. No Codimate; checks itself. |
+| `vocabulary.py` | every scene's title and subtitle, in English and Khmer, and the unit. No Codimate; checks itself. |
 | `main.py` | the trace and the view. |
 
 ## The Khmer one
@@ -128,11 +158,11 @@ a render, as a caption printing its own template.
 
 Two things are worth knowing if you add a third language.
 
-**Nothing in the view needed changing.** `cm.measure` goes through the engine's
-real fonts including fallback, so every label plate, bracket and chart row
-sizes itself around Khmer exactly as it does around ASCII. The one layout
-number that belongs to the language rather than the design is the caption size,
-because Khmer sentences run longer — so it lives in the vocabulary.
+**Almost nothing in the view needed changing.** `cm.measure` goes through the
+engine's real fonts including fallback, so every label plate, bracket and chart
+row sizes itself around Khmer exactly as it does around ASCII. Khmer sentences
+do run much longer, but that is handled by shrinking a line to fit at draw time
+rather than by giving each language its own sizes to keep in step.
 
 **The title card had to learn what a character is.** It types on, and typing
 by code point tears Khmer apart: a vowel sign is its own code point, and COENG

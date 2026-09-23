@@ -22,7 +22,7 @@ import world as W
 # `python main.py km` renders the Khmer one. The physics, the geometry and
 # every layout decision are shared — only the vocabulary forks, so a fix to
 # the picture cannot land in one language and not the other.
-SAY = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
+SAY, SCENES = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
 
 cm.canvas(1280, 720)
 
@@ -38,7 +38,9 @@ SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
 # ------------------------------------------------------------- the layout
 OBJ_X = 0.5 * (W.BEAKER[0] + W.BEAKER[2])       # both pools share this line
 NOTES_X = 1116.0                 # the column the tank never reaches into
-TITLE_Y, SAY_Y = 44.0, 694.0
+TITLE_Y, SAY_Y = 26.0, 696.0
+TITLE_SIZE, SAY_SIZE = 30, 21
+ROOM = 1150.0                    # the widest any line of prose may be
 
 # Both marks live outside the glass: the displaced volume down the left wall,
 # how much of the object is under down the right. Nothing is drawn over the
@@ -64,6 +66,19 @@ def _toward(was, target, along):
     if isinstance(target, tuple):
         return tuple(a + (b - a) * along for a, b in zip(was, target))
     return was + (target - was) * along
+
+
+def _fits(line, size, room=ROOM):
+    """The largest size at or below `size` that keeps `line` inside `room`.
+
+    Khmer says the same thing in noticeably more glyphs, and `text` has no
+    newlines to wrap at — nor, without a dictionary, anywhere safe to break a
+    script that does not put spaces between its words. So the line is shrunk
+    instead, measured with the real fonts rather than estimated.
+    """
+    while size > 13 and cm.measure(line, size=size)[0] > room:
+        size -= 1
+    return size
 
 
 def _middle(state):
@@ -232,8 +247,8 @@ def create_density_comparison(scene, state):
         scene.text(("cmp", i, "name"), words, size=19,
                    at=cm.at(x=NOTES_X + 66, y=y - 16)).fill(INK) \
              .on(layer=TEXT_LAYER)
-        scene.text(("cmp", i, "rho"), SAY["rho"].format(rho=rho), size=19,
-                   at=cm.at(x=NOTES_X + 66, y=y + 14)).fill(colour) \
+        scene.formula(("cmp", i, "rho"), vocabulary.unit(rho), size=20,
+                      at=cm.at(x=NOTES_X + 66, y=y + 14)).fill(colour) \
              .on(layer=TEXT_LAYER)
 
 
@@ -363,8 +378,14 @@ def create_verdict_chart(scene, state):
     deep = top + step * (len(VERDICTS) - 1) + 40
     scene.line("mark", start=(line, top - 46), end=(line, deep), w=2.0) \
          .fill(WATER).on(layer=MARK_LAYER, opacity=0.9)
-    scene.text("mark_word", SAY["water_mark"], size=18,
-               at=cm.at(x=line + 104, y=top - 62)).fill(WATER) \
+    # The word to the left of the line, the quantity to the right. Laying
+    # them out end to end would need the formula's width, and a formula is
+    # typeset by Typst at build time — there is nothing here to measure.
+    scene.text("mark_word", SAY["water_name"], size=18,
+               at=cm.at(x=line - 62, y=top - 62)).fill(WATER) \
+         .on(layer=TEXT_LAYER)
+    scene.formula("mark_rho", vocabulary.unit(W.RHO_WATER), size=19,
+                  at=cm.at(x=line + 92, y=top - 62)).fill(WATER) \
          .on(layer=TEXT_LAYER)
 
     for i, (words, rho, colour, verdict) in enumerate(VERDICTS[:state["rows"]]):
@@ -412,11 +433,16 @@ def view(frame):
     pool = state["pool"]
     level, _ = W.surface(state["bottom"], state["w"], state["h"], pool)
 
-    scene.text("title", state["title"], size=32, at=cm.at(x=640, top=TITLE_Y)) \
-         .fill(INK).on(layer=TEXT_LAYER)
+    scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
+               at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
     if state["say"]:
-        scene.text("say", state["say"], size=SAY["say_size"],
-                   at=cm.at(x=640, bottom=SAY_Y)).fill(DIM).on(layer=TEXT_LAYER)
+        scene.text("say", state["say"], size=_fits(state["say"], SAY_SIZE),
+                   at=cm.at(x=640, bottom=SAY_Y)).fill(DIM) \
+             .on(layer=TEXT_LAYER)
+    if state["note"]:
+        scene.formula("note", state["note"], size=27,
+                      at=cm.at(x=640, y=622)).fill(INK) \
+             .on(layer=TEXT_LAYER)
 
     if state["stage"]:
         mark = None
@@ -453,7 +479,7 @@ def view(frame):
 OPENING = {
     # The film opens with the first cluster already on screen: the trace's
     # first emit is a hold, so anything that starts at zero starts as black.
-    "title": "", "letters": 1, "rule": 0.0,
+    "title": "", "letters": 1, "rule": 0.0, "note": "",
     "say": "", "stage": False, "material": "steel",
     "w": W.BOX_W, "h": W.BOX_H, "notch": 0.0,
     "bottom": 250.0, "pool": W.BEAKER, "label": False, "arrows": (),
@@ -461,8 +487,10 @@ OPENING = {
     "steps": 0, "big": "", "principle": False, "rows": 0, "grow": 0.0,
 }
 
-# Clear of the water, where the ship is built, and where it ends up.
-HELD_UP = W.BASIN[4] - 8.0
+# Where the ship is built: resting on the surface, not above it. Any higher
+# and the finished hull — 270px of it — reaches the title band, and the title
+# now stays on screen for every scene rather than being cleared for this one.
+HELD_UP = W.BASIN[4]
 AFLOAT = W.floating_bottom(W.SHIP_SUBMERGED, W.HULL_W, W.HULL_H, W.BASIN)
 
 
@@ -478,6 +506,16 @@ def story(state):
     """
 
     def beat(name, **change):
+        """One section: the picture changes, then it holds.
+
+        The name is the scene's name, so the title and the subtitle come from
+        the vocabulary rather than from the call. That is what keeps the two
+        jobs apart — a beat cannot quietly acquire a sentence for a title, or
+        a title with nothing said underneath it.
+        """
+        title, say = SCENES[name]
+        state.update(title=title.format(**change.pop("says", {})),
+                     say=say.format(**change.pop("said", {})))
         state.update(change)
         cm.emit("swap")
         cm.emit(name)
@@ -506,98 +544,91 @@ def story(state):
     cm.emit("held")
 
     # 1. The hook. A steel block falls in and keeps going.
-    beat("hook", letters=0, rule=0.0, stage=True,
-         title=SAY["hook"])
+    beat("hook", letters=0, rule=0.0, stage=True)
     walk("sink", steps=32, bottom=W.floor(W.BEAKER))
-    beat("hook2", say=SAY["hook2"])
+    beat("hook2")
 
     # 2. Simplify: one box, volume V, held above the water.
-    beat("simpler", title=SAY["simpler"], say=SAY["one_box"],
-         material="water", label=True, bottom=250.0)
+    beat("simpler", material="water", label=True, bottom=250.0)
 
     # 3. Make it a box *of water*, and lower it in.
-    beat("waterbox", title=SAY["waterbox"], say="")
+    beat("waterbox")
     walk("dip", steps=32,
          bottom=W.water_level(W.BOX_AREA, W.BEAKER) + W.BOX_H)
-    beat("displace", say=SAY["climbs"], rise=True)
-    beat("neutral", title=SAY["neutral"], say=SAY["weighs"],
-         arrows=("up", "down"))
+    beat("displace", rise=True)
+    beat("neutral", arrows=("up", "down"))
+    beat("because")
 
     # 4. Same box, different stuff.
-    beat("ice", title=SAY["ice"], say=SAY["same_box"],
-         material="ice", arrows=(),
+    beat("ice", material="ice", arrows=(),
          compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
                   (SAY["ice_name"], W.RHO_ICE, SKIN["ice"])))
-    beat("lighter", say=SAY["less_mass"])
+    beat("lighter")
 
     # 5. Hold it under, and look at the two forces.
-    beat("push", title=SAY["push"], say="", compare=(),
-         arrows=("up", "down", "hand"), net=True)
-    beat("more", say=SAY["full_under"])
+    beat("push", compare=(), arrows=("up", "down", "hand"), net=True)
+    beat("more")
 
     # 6. Let go. It rises; the push stays put until it breaks the surface.
-    beat("release", title=SAY["release"], say="", arrows=("up", "down"))
+    beat("release", arrows=("up", "down"))
     walk("rise", steps=34,
          bottom=W.floating_bottom(W.ICE_SUBMERGED, W.BOX_W, W.BOX_H,
                                   W.BEAKER))
-    beat("shrink", say=SAY["shrink"])
+    beat("shrink")
 
     # 7. The payoff, and only then the algebra.
-    beat("stop", title=SAY["stop"], say="", net=False, brace=True)
-    beat("why", say=SAY["why"])
+    beat("stop", net=False, brace=True)
+    beat("why")
     # The brace comes off while the algebra is on screen: both want the right
     # hand side of the frame, and neither needs the other to be readable.
     for n in (1, 2, 3, 4):
-        beat("derive", steps=n, say="", brace=False)
-    beat("percent", steps=0, say="", brace=True,
+        beat("derive", steps=n, brace=False)
+    beat("percent", steps=0, brace=True,
          big=SAY["submerged"].format(share=W.ICE_SUBMERGED))
 
     # 8. Steel, in exactly the same box.
-    beat("steel", title=SAY["steel"], say=SAY["same_box"],
-         material="steel", big="", brace=False, arrows=(),
+    beat("steel", material="steel", big="", brace=False, arrows=(),
          compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
                   (SAY["steel_word"], W.RHO_STEEL, SKIN["steel"])))
     walk("dip", steps=16, bottom=W.BEAKER[4] + W.BOX_H + 50.0)
-    beat("steelforce", say=SAY["not_enough"], compare=(),
-         arrows=("up", "down"))
+    beat("steelforce", compare=(), arrows=("up", "down"))
     # The arrows go *before* it drops. Left on, a weight arrow this long
     # reaches out of the frame once the block is resting on the floor.
-    beat("sinks", say=SAY["sinks_now"], arrows=())
+    beat("sinks", arrows=())
     walk("sink", steps=24, bottom=W.floor(W.BEAKER))
 
     # 9. The reveal: the same steel, spread out. Four sampled stages, and all
     #    of the reshaping happens in the air — a solid slab that wide would
     #    sink, so doing it in the water would be showing something false.
-    beat("question", title=SAY["question"], say="",
-         arrows=(), label=False)
+    beat("question", arrows=(), label=False)
     # A bigger tank first. Nothing in Archimedes cares what the water is held
     # in, and a beaker the box fills cannot also hold a hull nine times its
     # area — so the glass grows, sampled, and the block rides the floor down.
-    beat("bigger", say=SAY["bigger"])
+    beat("bigger")
     walk("grow", steps=26, pool=W.BASIN, bottom=W.floor(W.BASIN))
     walk("lift", steps=26, bottom=HELD_UP)
-    beat("spreadsay", title="", say=SAY["spreading"])
+    beat("spreading")
     walk("spread", steps=26, w=W.HULL_W, h=W.HULL_H)
-    beat("hollowsay", say=SAY["hollowing"])
+    beat("hollowing")
     walk("hollow", steps=22, notch=W.HULL_H - W.HULL_T)
-    beat("lowersay", title=SAY["spread"], say="")
+    beat("lowering")
     walk("settle", steps=30, bottom=AFLOAT)
-    beat("ships", say=SAY["unchanged"].format(spread=W.SPREAD),
+    beat("ships", said={"spread": W.SPREAD},
          arrows=("up", "down"), brace=True, rise=True)
-    beat("average", title=SAY["average"],
-         say=SAY["density"].format(rho=W.SHIP_RHO))
+    beat("average", note=vocabulary.unit(W.SHIP_RHO)
+         + r"\;<\;" + vocabulary.unit(W.RHO_WATER))
 
     # 10. Four cases, on one scale, a bar at a time. Each row grows from
     #     nothing so the eye follows it to whichever side of 1,000 it lands
     #     on — which is the whole verdict.
-    beat("chart", title=SAY["chart"], say="",
-         stage=False, brace=False, arrows=(), rise=False)
+    beat("chart", note="", stage=False, brace=False, arrows=(),
+         rise=False)
     for i in range(len(VERDICTS)):
         state.update(rows=i + 1, grow=0.0)
         walk("draw", steps=14, grow=1.0)
         cm.emit("read")
-    beat("law", title="", rows=0, principle=True)
-    beat("said", say=SAY["said"])
+    beat("law", rows=0, principle=True)
+    beat("said")
 
 
 cm.explain(
@@ -612,7 +643,7 @@ cm.explain(
                 "card": 0.3, "type": 0.06, "underline": 0.03, "held": 1.7,
                 "hook": 2.0, "sink": 0.05, "hook2": 2.0,
                 "simpler": 2.4, "waterbox": 0.8, "dip": 0.05,
-                "displace": 2.4, "neutral": 3.0,
+                "displace": 2.4, "neutral": 2.6, "because": 3.0,
                 "ice": 2.8, "lighter": 2.4,
                 "push": 3.0, "more": 2.8,
                 "release": 0.8, "rise": 0.045, "shrink": 2.8,
@@ -620,9 +651,9 @@ cm.explain(
                 "steel": 2.6, "steelforce": 3.0, "sinks": 1.8,
                 "question": 2.4, "bigger": 1.6, "grow": 0.05,
                 "lift": 0.045,
-                "spreadsay": 0.9, "spread": 0.055,
-                "hollowsay": 1.0, "hollow": 0.055,
-                "lowersay": 1.2, "settle": 0.05,
+                "spreading": 1.4, "spread": 0.055,
+                "hollowing": 1.6, "hollow": 0.055,
+                "lowering": 1.6, "settle": 0.05,
                 "ships": 3.0, "average": 3.2,
                 "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0},

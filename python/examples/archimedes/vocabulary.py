@@ -5,57 +5,108 @@ the words are the only thing that forks. Keeping them in one file rather than
 copying the example means a fix to the *picture* cannot land in one language
 and not the other.
 
+**Every scene is a title and a subtitle, and they have different jobs.** The
+title names what the scene is *for*, in a few words, and holds still while the
+scene plays. The subtitle describes what is happening in front of you, and
+changes as it happens. A sentence in the title slot is a subtitle that got
+lost; a two-word subtitle is usually a title that did.
+
+Units are never words. `kg/m^3` is typeset as mathematics wherever it appears,
+so the exponent is an exponent in both languages rather than an abbreviation
+that has to be spelt differently in each.
+
 Khmer needs no special handling in the view: `cm.measure` goes through the
 engine's real fonts including fallback, so a label plate sized from it fits
-Khmer as readily as ASCII. What Khmer does need is room — its sentences run
-longer, so the caption size is part of the vocabulary rather than the layout.
+Khmer as readily as ASCII. What Khmer *does* need is room — its sentences run
+much longer — so titles and subtitles are shrunk to fit at draw time rather
+than being trusted to a size chosen here.
 """
 
-ENGLISH = {
+# ------------------------------------------------------------------ English
+
+EN_SCENES = {
+    # key             title (what the scene is for)   subtitle (what happens)
+    "hook": ("Two answers from one metal",
+             "A steel bolt sinks. A steel ship floats. Why?"),
+    "hook2": ("Two answers from one metal",
+              "Same metal. Opposite answers."),
+
+    "simpler": ("Start simpler",
+                "One box, of volume V, held above the water."),
+    "waterbox": ("A box of water, in water",
+                 "Lower it in, and watch the surface rather than the box."),
+    "displace": ("A box of water, in water",
+                 "The water climbs by exactly the volume that went in."),
+    "neutral": ("It neither rises nor sinks",
+                "Made of the same stuff as the water around it, it just "
+                "stays."),
+    "because": ("It neither rises nor sinks",
+                "The water it displaces weighs what the box weighs."),
+
+    "ice": ("Now make it ice",
+            "Same box. Same volume V. Only the material has changed."),
+    "lighter": ("Now make it ice",
+                "Same volume, less mass."),
+
+    "push": ("Hold it under",
+             "It takes a hand to keep it level with the surface."),
+    "more": ("Hold it under",
+             "Full volume displaced, but less weight to carry."),
+
+    "release": ("Let go",
+                "With nothing holding it, the push up wins and it rises."),
+    "shrink": ("Let go",
+               "As it leaves the water it displaces less, so the push up "
+               "falls."),
+
+    "stop": ("It stops here",
+             "It settles, and then it stays exactly there."),
+    "why": ("It stops here",
+            "Not a random height: the depth where it displaces its own "
+            "weight."),
+    "derive": ("Why that depth and no other",
+               "Set the push up equal to the weight down, and cancel."),
+    "percent": ("Why that depth and no other",
+                "The answer is a ratio of densities, and nothing else."),
+
+    "steel": ("Now make it steel",
+              "Same box. Same volume V. Only the material has changed."),
+    "steelforce": ("Now make it steel",
+                   "Even fully under, it cannot displace enough."),
+    "sinks": ("Now make it steel",
+              "So down it goes."),
+
+    "question": ("Then how can a steel ship float?",
+                 "Nothing about the metal changes. Only its shape does."),
+    "bigger": ("A bigger tank",
+               "The same water, in something a hull will fit in."),
+    "spreading": ("Same steel, spread out",
+                  "The block widens. Not one gram is added or taken away."),
+    "hollowing": ("Same steel, spread out",
+                  "And it is hollowed out, so most of the inside is air."),
+    "lowering": ("Same steel, spread out",
+                 "Now put the very same metal back in the water."),
+    "ships": ("Same steel, spread out",
+              "The steel never changed. The outside got {spread:.0f} times "
+              "bigger."),
+    "average": ("Steel and air together",
+                "What floats a ship is its average density, not the metal's."),
+
+    "chart": ("Denser than water, or not",
+              "Four cases, on one scale, against the only number that "
+              "decides."),
+    "law": ("Archimedes' Principle",
+            "The push up is the weight of the fluid pushed aside."),
+    "said": ("Archimedes' Principle",
+             "A thing floats when it can displace its own weight before it "
+             "is all the way under."),
+}
+
+EN_LABELS = {
     "lang": "en",
     "out": "results/archimedes.mp4",
-    "say_size": 21,
     "card": "Archimedes' Principle",
 
-    # titles
-    "hook": "A steel bolt sinks. A steel ship floats. Why?",
-    "simpler": "Start simpler",
-    "waterbox": "A box of water, in water",
-    "neutral": "It neither rises nor sinks",
-    "ice": "Now make it ice",
-    "push": "Hold it under",
-    "release": "Let go",
-    "stop": "It stops here",
-    "steel": "Now make it steel",
-    "question": "Then how can a steel ship float?",
-    "spread": "Same steel, spread out",
-    "average": "Steel and air together",
-    "chart": "Denser than water, or not",
-
-    # captions
-    "hook2": "Same metal. Opposite answers.",
-    "one_box": "One box. Volume V.",
-    "climbs": "The water climbs by exactly the volume that went in.",
-    "weighs": "The water it displaces weighs what the box weighs.",
-    "same_box": "Same box. Same volume V.",
-    "less_mass": "Same volume, less mass.",
-    "full_under": "Full volume displaced, but less weight to carry.",
-    "shrink": "As it leaves the water, it displaces less — "
-              "so the push up falls.",
-    "why": "Not a random height: the depth where it displaces its own weight.",
-    "not_enough": "Even fully under, it cannot displace enough.",
-    "sinks_now": "So down it goes.",
-    "bigger": "A bigger tank — the same water.",
-    "spreading": "The same steel, spread out...",
-    "hollowing": "...and hollowed out. Not one gram more or less.",
-    "unchanged": "The steel never changed. The outside got {spread:.0f} "
-                 "times bigger.",
-    "density": "Average density {rho:,.0f} kg/m3 — lighter than water, "
-               "so it floats.",
-    "said": "A thing floats when it can displace its own weight "
-            "before it is all the way under.",
-
-    # labels on the picture
     "water": "WATER", "ice_word": "ICE", "steel_word": "STEEL",
     "displaced": "water displaced",
     "of_v": "= {mark:.3g} V",
@@ -64,83 +115,131 @@ ENGLISH = {
     "net": "net push up",
     "hand": "hand",
     "submerged": "{share:.1%} SUBMERGED",
-    "rho": "{rho:,.0f} kg/m3",
 
-    # the closing chart
     "water_name": "water", "ice_name": "ice",
     "ship_name": "steel ship", "block_name": "steel block",
     "floats": "floats", "even": "neutral", "sinks": "sinks",
-    "water_mark": "water  1,000 kg/m3",
 }
 
-# Khmer. Science vocabulary in Cambodia largely follows French, so Archimède
-# becomes អាស៊ីម៉ែត and "density" stays ដង់ស៊ីតេ rather than being calqued.
-# Numerals are left Western so that the bars, the brackets and the algebra all
-# carry the same digits — a chart with ១,០០០ on the axis and 1000 in the
-# formula would be two different claims to read.
-KHMER = {
+# -------------------------------------------------------------------- Khmer
+
+# Science vocabulary in Cambodia largely follows French, so "density" stays
+# ដង់ស៊ីតេ rather than being calqued. Numerals are left Western so that the
+# bars, the brackets and the algebra all carry the same digits — a chart with
+# ១,០០០ on the axis and 1000 in the formula would be two different claims.
+KM_SCENES = {
+    "hook": ("ដែកមួយលិច ដែកមួយអណ្ដែត",
+             "ប៊ូឡុងដែកតូចមួយលិច តើហេតុអ្វីបានជានាវាដែកដ៏ធំសម្បើម"
+             "បែរជាអណ្ដែតទៅវិញ?"),
+    "hook2": ("ដែកមួយលិច ដែកមួយអណ្ដែត",
+              "លោហៈមានម៉ាសដូចគ្នា បាតុភូតមិនដូចគ្នា"),
+
+    "simpler": ("ចាប់ផ្ដើមពីរឿងងាយ",
+                "យើងចាប់ផ្ដើមគិតពីរឿងងាយៗសិន៖ ប្រអប់មួយ មាឌ V"),
+    "waterbox": ("ប្រអប់ទឹក ក្នុងទឹក",
+                 "ស្រមៃថាយើងមានទឹកមួយប្រអប់ ហើយទំលាក់វាចូលទៅក្នុងទឹក"),
+    "displace": ("ប្រអប់ទឹក ក្នុងទឹក",
+                 "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលចូលទៅ"),
+    "neutral": ("មិនអណ្ដែត មិនលិច",
+                "ដោយសារវាជារូបធាតុតែមួយ វាមិនអណ្ដែត ហើយក៏មិនលិចដែរ"),
+    "because": ("មិនអណ្ដែត មិនលិច",
+                "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់"),
+
+    "ice": ("ប្ដូរជាទឹកកក",
+            "ប្រអប់ដដែល មាឌ V ដដែល ប្ដូរតែរូបធាតុប៉ុណ្ណោះ"),
+    "lighter": ("ប្ដូរជាទឹកកក",
+                "មាឌដដែល តែមានម៉ាសតិចជាង"),
+
+    "push": ("សង្កត់ឲ្យលិច",
+             "ជាមួយនឹងទំហំដដែល ទាល់តែយើងប្រើកម្លាំងរុញសង្កត់បន្តិច "
+             "ទើបវាអាចលិចស្មើផ្ទៃទឹក"),
+    "more": ("សង្កត់ឲ្យលិច",
+             "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង"),
+
+    "release": ("លែងដៃ",
+                "យើងសម្រេចថាលែងដៃ ហើយកម្លាំងរុញឡើងធ្វើឲ្យវាងើបឡើង"),
+    "shrink": ("លែងដៃ",
+               "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
+               "ដូច្នេះកម្លាំងរុញឡើងថយចុះ"),
+
+    "stop": ("វាឈប់ត្រឹមនេះ",
+             "វានឹងឈប់ក្រោយពេលយើងលែងដៃបានមួយសន្ទុះ"),
+    "why": ("វាឈប់ត្រឹមនេះ",
+            "មិនមែនកម្ពស់ចៃដន្យទេ៖ ជាជម្រៅដែលវារុញទឹកចេញ"
+            "ស្មើនឹងទម្ងន់ខ្លួនឯង"),
+    "derive": ("ហេតុអ្វីត្រឹមជម្រៅនេះ",
+               "ដាក់កម្លាំងរុញឡើងស្មើនឹងទម្ងន់ចុះ រួចសម្រួល"),
+    "percent": ("ហេតុអ្វីត្រឹមជម្រៅនេះ",
+                "ចម្លើយគឺជាផលធៀបនៃដង់ស៊ីតេ គ្មានអ្វីផ្សេងទៀតទេ"),
+
+    "steel": ("ប្ដូរជាដែក",
+              "ប្រអប់ដដែល មាឌ V ដដែល ប្ដូរតែរូបធាតុប៉ុណ្ណោះ"),
+    "steelforce": ("ប្ដូរជាដែក",
+                   "ទោះលិចទាំងស្រុង ក៏រុញទឹកចេញមិនគ្រប់គ្រាន់"),
+    "sinks": ("ប្ដូរជាដែក",
+              "ដូច្នេះវាលិចចុះ"),
+
+    "question": ("ហេតុអ្វីនាវាដែកអណ្ដែត?",
+                 "តើនាវាដែកអាចអណ្ដែតបានដោយសារអ្វី? លោហៈមិនប្រែ "
+                 "ប្រែតែរូបរាង"),
+    "bigger": ("អាងធំជាង",
+               "ទឹកដដែល តែដាក់ក្នុងអាងដែលនាវាអាចផ្ទុកបាន"),
+    "spreading": ("ដែកដដែល ពង្រីកមាឌ",
+                  "យើងយកដែកដដែល ប៉ុន្តែពង្រីកមាឌរបស់វា"),
+    "hollowing": ("ដែកដដែល ពង្រីកមាឌ",
+                  "ហើយចោះឲ្យប្រហោង ដើម្បីឲ្យខាងក្នុងភាគច្រើនជាខ្យល់"),
+    "lowering": ("ដែកដដែល ពង្រីកមាឌ",
+                 "ឥឡូវដាក់លោហៈដដែលនោះត្រឡប់ចូលក្នុងទឹកវិញ"),
+    "ships": ("ដែកដដែល ពង្រីកមាឌ",
+              "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង"),
+    "average": ("មានទាំងដែកនិងខ្យល់រួមគ្នា",
+                "អ្វីដែលធ្វើឲ្យនាវាអណ្ដែត គឺដង់ស៊ីតេមធ្យម "
+                "មិនមែនដង់ស៊ីតេលោហៈទេ"),
+
+    "chart": ("ម៉ាសមាឌ ធៀបនឹងទឹក",
+              "ឥទ្ធិពលនៃម៉ាសមាឌនៃអង្គធាតុដែលលិច ឬអណ្ដែតក្នុងទឹក"),
+    "law": ("គោលការណ៍អាកស៊ីម៉ែត",
+            "កម្លាំងរុញឡើង ស្មើនឹងទម្ងន់ទឹកដែលត្រូវបានរុញចេញ"),
+    "said": ("គោលការណ៍អាកស៊ីម៉ែត",
+             "វត្ថុមួយអណ្ដែត នៅពេលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួន "
+             "មុនពេលលិចអស់"),
+}
+
+KM_LABELS = {
     "lang": "km",
     "out": "results/archimedes-km.mp4",
-    "say_size": 20,
-    "card": "គោលការណ៍អាស៊ីម៉ែត",
-
-    "hook": "ប៊ូឡុងដែកលិច។ នាវាដែកអណ្ដែត។ ហេតុអ្វី?",
-    "simpler": "ចាប់ផ្ដើមពីរឿងងាយ",
-    "waterbox": "ប្រអប់ទឹក ក្នុងទឹក",
-    "neutral": "វាមិនអណ្ដែត មិនលិច",
-    "ice": "ឥឡូវប្ដូរជាទឹកកក",
-    "push": "សង្កត់វាឲ្យលិចក្នុងទឹក",
-    "release": "លែងដៃ",
-    "stop": "វាឈប់ត្រឹមនេះ",
-    "steel": "ឥឡូវប្ដូរជាដែក",
-    "question": "ចុះហេតុអ្វីនាវាដែកអាចអណ្ដែតបាន?",
-    "spread": "ដែកដដែល ពង្រីកសន្ធឹង",
-    "average": "ដែកនិងខ្យល់រួមគ្នា",
-    "chart": "ក្រាស់ជាងទឹក ឬអត់",
-
-    "hook2": "លោហៈដដែល។ ចម្លើយផ្ទុយគ្នា។",
-    "one_box": "ប្រអប់មួយ។ មាឌ V។",
-    "climbs": "ទឹកឡើងខ្ពស់ស្មើនឹងមាឌដែលចូលទៅ។",
-    "weighs": "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់។",
-    "same_box": "ប្រអប់ដដែល។ មាឌ V ដដែល។",
-    "less_mass": "មាឌដដែល តែម៉ាសតិចជាង។",
-    "full_under": "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង។",
-    "shrink": "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
-              "— ដូច្នេះកម្លាំងរុញឡើងថយចុះ។",
-    "why": "មិនមែនកម្ពស់ចៃដន្យទេ៖ "
-           "ជាជម្រៅដែលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួនឯង។",
-    "not_enough": "ទោះលិចទាំងស្រុង ក៏រុញទឹកចេញមិនគ្រប់គ្រាន់។",
-    "sinks_now": "ដូច្នេះវាលិចចុះ។",
-    "bigger": "អាងធំជាង — ទឹកដដែល។",
-    "spreading": "ដែកដដែល តែពង្រីកសន្ធឹង...",
-    "hollowing": "...ហើយចោះឲ្យប្រហោង។ មិនបន្ថែម មិនបន្ថយសូម្បីមួយក្រាម។",
-    "unchanged": "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង។",
-    "density": "ដង់ស៊ីតេមធ្យម {rho:,.0f} គ.ក./ម៉.គូប "
-               "— ស្រាលជាងទឹក ដូច្នេះវាអណ្ដែត។",
-    "said": "វត្ថុមួយអណ្ដែត នៅពេលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួន "
-            "មុនពេលលិចអស់។",
+    "card": "គោលការណ៍អាកស៊ីម៉ែត",
 
     "water": "ទឹក", "ice_word": "ទឹកកក", "steel_word": "ដែក",
-    "displaced": "ទឹកដែលរុញចេញ",
+    "displaced": "ទឹកដែលត្រូវបានរុញចេញ",
     "of_v": "= {mark:.3g} V",
     "under": "លិច {share:.1%}",
     "above": "លើ {share:.1%}",
-    "net": "កម្លាំងរុញឡើងសុទ្ធ",
+    "net": "កម្លាំងរុញឡើងសរុប",
     "hand": "ដៃ",
     "submerged": "លិចក្នុងទឹក {share:.1%}",
-    "rho": "{rho:,.0f} គ.ក./ម៉.គូប",
 
     "water_name": "ទឹក", "ice_name": "ទឹកកក",
     "ship_name": "នាវាដែក", "block_name": "ដុំដែក",
     "floats": "អណ្ដែត", "even": "ស្មើ", "sinks": "លិច",
-    "water_mark": "ទឹក  1,000 គ.ក./ម៉.គូប",
 }
 
-VOCABULARIES = {"en": ENGLISH, "km": KHMER}
+VOCABULARIES = {"en": (EN_LABELS, EN_SCENES), "km": (KM_LABELS, KM_SCENES)}
+
+
+def unit(value):
+    r"""A density, as mathematics: `821\,\mathrm{kg/m^3}`.
+
+    Not as words. Spelt out, the unit has to be abbreviated differently in
+    every language and the exponent stops being an exponent — គ.ក./ម៉.គូប says
+    the same thing as kg/m3 only to someone who already knows which it is.
+    Typeset, it is the same symbol everywhere, and the 3 is where it belongs.
+    """
+    return rf"{value:,.0f}".replace(",", "{,}") + r"\,\mathrm{kg/m^3}"
 
 
 def pick(lang="en"):
-    """The vocabulary for `lang`, checked against English for holes.
+    """The words for `lang`, checked against English for holes.
 
     A missing key would not fail until the beat that needed it, minutes into a
     render — so the languages are compared here instead, where it costs
@@ -148,20 +247,30 @@ def pick(lang="en"):
     """
     if lang not in VOCABULARIES:
         raise SystemExit(f"no words for {lang!r}; have {sorted(VOCABULARIES)}")
-    return VOCABULARIES[lang]
+    labels, scenes = VOCABULARIES[lang]
+    return labels, scenes
 
 
 def _every_language_says_everything():
-    for name, words in VOCABULARIES.items():
-        missing = set(ENGLISH) - set(words)
-        assert not missing, (name, sorted(missing))
-        extra = set(words) - set(ENGLISH)
-        assert not extra, (name, sorted(extra))
+    for name, (labels, scenes) in VOCABULARIES.items():
+        for mine, theirs, what in ((labels, EN_LABELS, "label"),
+                                   (scenes, EN_SCENES, "scene")):
+            assert set(mine) == set(theirs), (name, what,
+                                              sorted(set(theirs) ^ set(mine)))
         # A format string that lost its placeholder would silently print the
         # template, so the braces are checked to match rather than exist.
-        for key, line in words.items():
-            if isinstance(line, str):
-                assert line.count("{") == ENGLISH[key].count("{"), (name, key)
+        for key, line in labels.items():
+            assert line.count("{") == EN_LABELS[key].count("{"), (name, key)
+        for key, (title, sub) in scenes.items():
+            want = EN_SCENES[key]
+            assert title.count("{") == want[0].count("{"), (name, key)
+            assert sub.count("{") == want[1].count("{"), (name, key)
+            # The split only means something if it is kept. A title that
+            # runs on is a subtitle that got lost, and this film has had
+            # several — so a title may not be a sentence, whatever its
+            # length. (A short subtitle is fine: "So down it goes.")
+            assert len(title) <= 40, (name, key, len(title), title)
+            assert not title.endswith((".", "។")), (name, key, title)
     return True
 
 
