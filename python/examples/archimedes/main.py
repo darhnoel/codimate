@@ -31,6 +31,10 @@ INK, DIM, AIR = "#e8eef7", "#93a0b2", "#161c25"
 WATER, GLASS = "#2f7fb8", "#58697e"
 UP, DOWN, HAND = "#38d6e0", "#ff7a59", "#f2c14e"     # buoyancy, weight, push
 PLATE = "#0b1018"
+# The subtitle's plate, taken from the attention example: sized to the line it
+# holds rather than a bar of fixed width, so the narration has a place of its
+# own instead of looking like chrome.
+CAPTION_BG = "#141a26"
 SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "iron": "#96a2b0"}
 RHO = {"water": W.RHO_WATER, "ice": W.RHO_ICE, "iron": W.RHO_IRON}
 SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
@@ -39,8 +43,9 @@ SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
 # ------------------------------------------------------------- the layout
 OBJ_X = 0.5 * (W.TANK[0] + W.TANK[2])
 NOTES_X = 1116.0                 # the column the tank never reaches into
-TITLE_Y, SAY_Y = 26.0, 696.0
-TITLE_SIZE, SAY_SIZE = 30, 21
+TITLE_Y, SAY_Y = 26.0, 662.0
+TITLE_SIZE, SAY_SIZE = 30, 26
+LABEL_SIZE, BODY_SIZE = 22, 26   # the marks outside the glass, and the body's
 ROOM = 1150.0                    # the widest any line of prose may be
 
 # Both marks live outside the glass: the displaced volume down the left wall,
@@ -130,11 +135,12 @@ def set_bracket(scene, name, span, look, words):
 
     middle = 0.5 * (top + bottom)
     for k, line in enumerate(words):
-        wide, high = cm.measure(line, size=18)
+        wide, high = cm.measure(line, size=LABEL_SIZE)
         spot = (x + side * (26 + wide / 2), middle - 13 + 26 * k)
         scene.rect((name, "plate", k), w=wide + 16, h=high + 8, at=spot) \
              .fill(PLATE).round(4).on(layer=LABEL_LAYER - 1, opacity=0.92)
-        scene.text((name, "word", k), line, size=18, at=spot).fill(colour) \
+        scene.text((name, "word", k), line, size=LABEL_SIZE, at=spot) \
+             .fill(colour) \
              .on(layer=LABEL_LAYER)
 
 
@@ -162,7 +168,7 @@ def create_force_arrow(scene, name, at, length, look):
     # the law states at the end, and needing no translation in either film.
     # Always above the tip — below a downward arrow is where the caption
     # lives, and a long weight arrow put its label straight through it.
-    scene.formula((name, "word"), words, size=24,
+    scene.formula((name, "word"), words, size=30,
                   at=cm.at(x=at[0] + 78, y=tip[1] - 18)) \
          .fill(colour).on(layer=TEXT_LAYER)
 
@@ -197,7 +203,7 @@ def animate_force_balance(scene, state):
         scene.arrow("hand", start=(top[0], top[1] - 96), end=top,
                     w=7.0, head=19.0).fill(HAND).on(layer=MARK_LAYER + 2)
         # Left of the shaft: the buoyancy label already has the right side.
-        scene.text(("hand", "word"), SAY["hand"], size=19,
+        scene.text(("hand", "word"), SAY["hand"], size=23,
                    at=cm.at(x=top[0] - 78, y=top[1] - 96)).fill(HAND) \
              .on(layer=TEXT_LAYER)
 
@@ -211,7 +217,7 @@ def animate_force_balance(scene, state):
             a, b = middle[1] - up_px, middle[1] - down_px
             scene.line("net", start=(x, a), end=(x, b), w=3.0).fill(UP) \
                  .on(layer=MARK_LAYER + 2)
-            scene.text(("net", "word"), SAY["net"], size=17,
+            scene.text(("net", "word"), SAY["net"], size=21,
                        at=cm.at(x=x - 66, y=0.5 * (a + b))).fill(UP) \
                  .on(layer=TEXT_LAYER)
 
@@ -239,10 +245,10 @@ def create_density_comparison(scene, state):
         y = 236.0 + 128.0 * i
         scene.rect(("cmp", i), w=92, h=72, at=(NOTES_X - 74, y)) \
              .fill(colour).round(6).on(layer=MARK_LAYER)
-        scene.text(("cmp", i, "name"), words, size=19,
+        scene.text(("cmp", i, "name"), words, size=23,
                    at=cm.at(x=NOTES_X + 66, y=y - 16)).fill(INK) \
              .on(layer=TEXT_LAYER)
-        scene.formula(("cmp", i, "rho"), vocabulary.unit(rho), size=20,
+        scene.formula(("cmp", i, "rho"), vocabulary.unit(rho), size=24,
                       at=cm.at(x=NOTES_X + 66, y=y + 14)).fill(colour) \
              .on(layer=TEXT_LAYER)
 
@@ -254,7 +260,7 @@ def create_equation_step(scene, state):
              r"\frac{V_{sub}}{V_{ice}} \;=\; \frac{\rho_i}{\rho_w}",
              r"=\; \frac{917}{1000} \;=\; 0.917")
     for i in range(state["steps"]):
-        scene.formula(("step", i), lines[i], size=24,
+        scene.formula(("step", i), lines[i], size=28,
                       at=cm.at(x=NOTES_X, y=232.0 + 74.0 * i)).fill(INK) \
              .on(layer=TEXT_LAYER)
 
@@ -281,10 +287,10 @@ def create_body(scene, state):
     # Above everything, on a plate. The force arrows run up and down this same
     # centre line, so without both the label is drawn straight through.
     words = SAYS[state["material"]]
-    wide, high = cm.measure(words, size=20)
+    wide, high = cm.measure(words, size=BODY_SIZE)
     scene.rect("body_plate", w=wide + 22, h=high + 10, at=middle) \
          .fill(PLATE).round(5).on(layer=LABEL_LAYER - 1, opacity=0.92)
-    scene.text("body_word", words, size=20, at=middle).fill(INK) \
+    scene.text("body_word", words, size=BODY_SIZE, at=middle).fill(INK) \
          .on(layer=LABEL_LAYER)
 
 
@@ -396,10 +402,10 @@ def create_verdict_chart(scene, state):
     # The word to the left of the line, the quantity to the right. Laying
     # them out end to end would need the formula's width, and a formula is
     # typeset by Typst at build time — there is nothing here to measure.
-    scene.text("mark_word", SAY["water_name"], size=18,
+    scene.text("mark_word", SAY["water_name"], size=21,
                at=cm.at(x=line - 62, y=top - 62)).fill(WATER) \
          .on(layer=TEXT_LAYER)
-    scene.formula("mark_rho", vocabulary.unit(W.RHO_WATER), size=19,
+    scene.formula("mark_rho", vocabulary.unit(W.RHO_WATER), size=23,
                   at=cm.at(x=line + 92, y=top - 62)).fill(WATER) \
          .on(layer=TEXT_LAYER)
 
@@ -427,17 +433,17 @@ def create_verdict_row(scene, i, bar, words):
          .on(layer=MARK_LAYER - 1, opacity=0.9)
     # `cm.at` centres, and these want their right edges lined up against the
     # bars — so the width is measured and half of it taken off.
-    wide, _ = cm.measure(name, size=21)
-    scene.text(("bar", i, "name"), name, size=21,
+    wide, _ = cm.measure(name, size=24)
+    scene.text(("bar", i, "name"), name, size=24,
                at=cm.at(x=BAR_X - 26 - wide / 2, y=y)).fill(INK) \
          .on(layer=TEXT_LAYER)
     # Clear of the water line, whatever the bar does: three of the four end
     # within a few pixels of it, and a value sitting on the line is unreadable.
     line = BAR_X + W.RHO_WATER * BAR_PER
-    scene.text(("bar", i, "rho"), rho, size=20,
+    scene.text(("bar", i, "rho"), rho, size=23,
                at=cm.at(x=max(BAR_X + min(length, BAR_MAX) + 54, line + 58),
                         y=y)).fill(colour).on(layer=TEXT_LAYER)
-    scene.text(("bar", i, "says"), verdict, size=21,
+    scene.text(("bar", i, "says"), verdict, size=24,
                at=cm.at(x=996, y=y)).fill(VERDICT_INK[verdict]) \
          .on(layer=TEXT_LAYER)
 
@@ -450,12 +456,20 @@ def view(frame):
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
     if state["say"]:
-        scene.text("say", state["say"], size=_fits(state["say"], SAY_SIZE),
-                   at=cm.at(x=640, bottom=SAY_Y)).fill(DIM) \
-             .on(layer=TEXT_LAYER)
+        size = _fits(state["say"], SAY_SIZE)
+        wide, _ = cm.measure(state["say"], size=size)
+        # Both keyed by the line itself, so a caption *arrives* rather than
+        # one shape swapping its contents. Keyed by place instead, the plate
+        # tweens to its new width while the words change instantly, and for a
+        # quarter of a second the line hangs off both ends of its own plate.
+        scene.rect(("say_plate", state["say"]), w=wide + 52, h=size + 30,
+                   at=(640, SAY_Y)).fill(CAPTION_BG).round(15) \
+             .on(layer=TEXT_LAYER - 1)
+        scene.text(("say", state["say"]), state["say"], size=size,
+                   at=cm.at(x=640, y=SAY_Y)).fill(INK).on(layer=TEXT_LAYER)
     if state["note"]:
-        scene.formula("note", state["note"], size=27,
-                      at=cm.at(x=640, y=622)).fill(INK) \
+        scene.formula("note", state["note"], size=31,
+                      at=cm.at(x=640, y=598)).fill(INK) \
              .on(layer=TEXT_LAYER)
 
     if state["stage"]:
