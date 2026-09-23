@@ -19,9 +19,10 @@ __pycache__/
 # API keys for authoring-time tools (Kiri TTS). Never committed.
 .env
 
-# Narration for the retired `attention` example: 15MB of audio from a paid API,
-# kept only so it need not be bought again. Not ours to publish.
+# Narration: audio from a paid API, kept only so it need not be bought again.
+# Not ours to publish. `narrate.py` rebuilds it from the captions and a key.
 python/examples/attention/audio/
+python/examples/archimedes/audio/
 
 # Examples kept local. `fourier_einstein` traces a copyrighted engraving it
 # reads at build time, so the input is not ours to redistribute even though

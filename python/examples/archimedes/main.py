@@ -12,8 +12,10 @@ float, how far the water rises, and how long every arrow is, from three real
 densities; this file only says where to look and when.
 """
 
+import json
 import re
 import sys
+from pathlib import Path
 
 import codimate as cm
 
@@ -26,6 +28,24 @@ import world as W
 SAY, SCENES = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
 
 cm.canvas(1280, 720)
+
+# ------------------------------------------------------------ the narration
+#
+# If the captions have been spoken (`narrate.py`), the film paces itself off
+# the recordings rather than off a guess at reading speed, and writes out when
+# each one should start. Without them it runs silent at the reading rate — the
+# voice is an addition to the film, never a thing it depends on.
+AUDIO = Path(__file__).resolve().parent / "audio"
+TAIL = 0.5                       # a moment after the voice stops, before the cut
+
+_spoken = AUDIO / "narration.json"
+VOICE = ({entry["text"]: entry for entry in
+          json.loads(_spoken.read_text())} if _spoken.exists() else {})
+CUES = []                        # one per line spoken: its file and its start
+
+# `OPENING` is already the film's first state, so these are named for what
+# they are: the pause before anything, the fallback beat, and the last hold.
+LEAD, DEFAULT, FINAL = 0.25, 0.1, 1.8
 
 # ------------------------------------------------------------ the palette
 INK, DIM, AIR = "#e8eef7", "#93a0b2", "#161c25"
@@ -672,6 +692,17 @@ def story(state):
     """
 
     spoken = [""]                  # the line the caption is already showing
+    clock = [LEAD]                 # where we are in the finished film
+
+    def tick(name):
+        """Emit, and keep the running time — which is what a cue is.
+
+        Every emit goes through here, so the offsets handed to `mix.py` are
+        walked from the same events the renderer walks rather than worked out
+        a second time and allowed to drift.
+        """
+        cm.emit(name)
+        clock[0] += HOLDS.get(name, DEFAULT)
 
     def beat(name, **change):
         """One section: the picture changes, then the caption reads itself.
@@ -693,13 +724,13 @@ def story(state):
         # through each other.
         if line != spoken[0]:
             state.update(say="", said=0)
-        cm.emit("swap")
+        tick("swap")
 
         state["say"] = line
         if line == spoken[0]:
             # Said already. Hold it, whole and bright, rather than stuttering
             # the same sentence at the viewer a second and a third time.
-            cm.emit(name)
+            tick(name)
             return
         spoken[0] = line
         reads(name, line)
@@ -716,13 +747,25 @@ def story(state):
         pieces = [piece for piece, _ in chunks(line)]
         if not pieces:
             state["said"] = 0
-            cm.emit(name)
+            tick(name)
             return
-        for i, piece in enumerate(pieces):
+
+        shares = [_pace(piece) for piece in pieces]
+        heard = VOICE.get(vocabulary.plain(line))
+        if heard:
+            # Real speech has its own length, and it is not the one a reading
+            # rate guessed. The section becomes the recording plus a moment,
+            # and the words keep their proportions inside it — so the mark is
+            # on the word being said rather than near it.
+            CUES.append({"file": heard["file"], "start": round(clock[0], 3)})
+            stretch = (heard["seconds"] + TAIL) / sum(shares)
+            shares = [share * stretch for share in shares]
+
+        for i, share in enumerate(shares):
             step = f"{name}.{i}"
-            HOLDS[step] = _pace(piece)
+            HOLDS[step] = share
             state["said"] = i + 1
-            cm.emit(step)
+            tick(step)
 
     def walk(name, steps=26, **targets):
         """Move every named value to its target, sampled.
@@ -735,16 +778,16 @@ def story(state):
         for i in range(1, steps + 1):
             for k, target in targets.items():
                 state[k] = was[k] + (target - was[k]) * i / steps
-            cm.emit(name)
+            tick(name)
 
     # 0. The name first, typed on, then underlined. Nothing else is on
     #    screen, so the film opens on it rather than fading up to it.
-    cm.emit("card")
+    tick("card")
     for i in range(1, len(CARD_PIECES) + 1):
         state["letters"] = i
-        cm.emit("type")
+        tick("type")
     walk("underline", steps=16, rule=1.0)
-    cm.emit("held")
+    tick("held")
 
     # 1. The hook. A steel block falls in and keeps going.
     beat("hook", carding=False, letters=0, rule=0.0, stage=True)
@@ -833,7 +876,7 @@ def story(state):
     for i in range(len(VERDICTS)):
         state.update(rows=i + 1, grow=0.0)
         walk("draw", steps=14, grow=1.0)
-        cm.emit("read")
+        tick("read")
     beat("law", rows=0, principle=True)
     beat("said")
 
@@ -845,11 +888,18 @@ cm.explain(
     # eased a second time at every step.
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(
-        default=0.1,
+        default=DEFAULT,
         events=HOLDS,
         # The film opens on a masked title, which is a black frame — so the
         # opening hold is short. A second of it would read as a stall.
-        opening=0.25, final_hold=1.8),
+        opening=LEAD, final_hold=FINAL),
 ).render(SAY["out"], fps=60, scale=1.5)
+
+if CUES:
+    # Written as the trace was walked, so the sound cannot disagree with the
+    # picture: both came from the same events, in the same order.
+    (AUDIO / "cues.json").write_text(
+        json.dumps(CUES, ensure_ascii=False, indent=2) + "\n")
+    print(f"wrote {AUDIO.name}/cues.json — run mix.py to lay the voice on")
 
 print(f"wrote {SAY['out']}")

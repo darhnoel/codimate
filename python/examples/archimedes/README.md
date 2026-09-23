@@ -260,13 +260,47 @@ changing value over a step at a time — depth, outline, and the five numbers of
 the pool alike — because a value set once tweens in a straight line, and the
 object would slide while the water it displaces jumped.
 
+## The voice
+
+```bash
+python python/examples/archimedes/narrate.py           # what would be said
+KIRI_API_KEY=... python .../narrate.py --write         # record the missing
+.venv/bin/python python/examples/archimedes/main.py km # render, writing cues
+python python/examples/archimedes/mix.py               # lay the voice on
+```
+
+The Khmer film is narrated; the English one is silent and keeps the reading
+rate. Kiri's voices are all Khmer, and the Khmer version is the one whose
+audience most needs to hear it rather than read while watching the tank.
+
+**Speech sets the length of the scene.** A reading rate is a guess; a
+recording is a fact. Where a caption has been spoken, its section becomes the
+recording plus half a second, and the words keep their proportions inside it
+so the mark is on the word being said rather than near it. Without the audio
+the film still runs, at the reading rate — the voice is an addition, never
+something the film depends on.
+
+**The cues come from the same walk as the picture.** `main.py` keeps a running
+clock through every emit and writes `audio/cues.json` as it renders, so the
+sound cannot disagree with the picture: both were walked from the same events
+in the same order. 21 lines, 86.6 seconds of speech, and no two overlap.
+
+**Only subtitles are spoken.** Titles are labels on the picture, not
+narration, and a line the film *holds* rather than re-reads is recorded once.
+
+The recordings are not committed — 8MB from a paid API, and not ours to
+publish. `narrate.py` caches by a hash of the text, the voice and the speed,
+so editing one caption later costs one request rather than twenty-one.
+
 ## The shape of it
 
 | file | what it knows |
 | --- | --- |
 | `world.py` | densities, depths, the hull solve, the arrow scale. No Codimate; checks itself. |
 | `vocabulary.py` | every scene's title and subtitle, in English and Khmer, and the unit. No Codimate; checks itself. |
-| `segment.py` | marks Khmer word boundaries in `vocabulary.py`. Authoring-time only; never runs during a render. |
+| `segment.py` | marks Khmer word boundaries in `vocabulary.py`. Authoring-time only. |
+| `narrate.py` | speaks the Khmer captions with Kiri TTS, and measures them. Authoring-time only. |
+| `mix.py` | lays the recordings onto the rendered video with ffmpeg. |
 | `main.py` | the trace and the view. |
 
 ## The Khmer one
