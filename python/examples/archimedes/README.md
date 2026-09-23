@@ -212,12 +212,29 @@ where its own words end, and `chunks()` splits on it. A line that has never
 been through the segmenter still runs, one orthographic cluster at a time —
 choppier, but not broken.
 
-**The section keeps the length it was tuned to, and does not read like a
-metronome.** Its time is *divided* among the words rather than added to, and
-not divided evenly: a long word is worth more than a short one and a word that
-closes a clause is given a rest after it. `reads()` registers each word's own
-duration under its own event name, because `Timing` looks a duration up by
-name. The film is the same 102 seconds it was before any of this existed.
+**Reading sets the length of the scene, not the other way round.** A section
+lasts exactly as long as its own caption takes to read: a word costs a fixed
+moment plus a little per letter, and a clause ending costs a rest. There is no
+hand-tuned hold any more — a line of four words is a short scene and a line of
+seventeen is a long one, which is the only pacing a viewer actually feels.
+`reads()` registers each word's own duration under its own event name, because
+`Timing` looks a duration up by name.
+
+The rate is about eleven characters a second, the middle of the range
+broadcast subtitles use. It is the single number that sets the film's length:
+at this rate the English film runs 2:57, and dropping to sixteen characters a
+second would bring it to about 2:25.
+
+**A repeated line is held, not read again.** If the caption has not changed
+since the last scene it stays on screen, whole and bright, while the picture
+carries on. The derivation shows four algebra steps under one sentence and
+reads it once; the Khmer scenes that share a line stop stuttering it.
+
+**No two lines are ever on screen together.** The old caption leaves during
+the change beat and the new one arrives after it, with its first word already
+bright. Left to overlap, a subtitle reads as handed over from the scene before
+rather than belonging to this one — and for a quarter second both are legible
+through each other.
 
 ## Units are mathematics, not words
 

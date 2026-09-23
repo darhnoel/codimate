@@ -359,18 +359,23 @@ def chunks(line):
 # gets a rest after it, rather than the next word arriving on top of it.
 STOPS = "។៕៖,.;:?!"
 
+# How fast the caption is read, and therefore how long a scene lasts. A word
+# costs a fixed moment plus a little per letter, and a clause ending costs a
+# rest. Around eleven characters a second, which is the middle of the range
+# broadcast subtitles use — slow enough to read while also watching the tank.
+WORD, PER_LETTER, CLAUSE = 0.24, 0.035, 0.55
+
 
 def _pace(piece):
-    """How much of a section's time one word is worth.
+    """How long one word of a caption is on the mark, in seconds.
 
-    A share for existing, a share for every few letters, and a rest if it
-    closes a clause. Khmer is counted by orthographic cluster rather than by
-    code point, or a word carrying three vowel signs would be read as though
-    it were three times as long.
+    Khmer is counted by orthographic cluster rather than by code point, or a
+    word carrying three vowel signs would be held three times as long as it
+    takes to read.
     """
     letters = len(clusters(vocabulary.plain(piece)))
-    rest = 1.6 if piece and piece[-1] in STOPS else 0.0
-    return 1.0 + letters * 0.34 + rest
+    rest = CLAUSE if piece and piece[-1] in STOPS else 0.0
+    return WORD + PER_LETTER * letters + rest
 
 
 def create_caption(scene, line, said):
@@ -629,9 +634,10 @@ OPENING = {
 AFLOAT = W.settles(W.HOLLOW_RHO)
 
 
-# How long each section holds, before its caption is broken into words. The
-# trace reads these back so a line can run inside its own section's time
-# rather than stretching it.
+# The motion steps, the title card, and how long a section holds when its
+# caption is a repeat and so is not read again. A section that *does* read
+# takes as long as its words take — see `reads()` — so most of these names are
+# no longer the authority on anything, only a fallback.
 HOLDS = {"swap": 0.26,
                 "card": 0.25, "type": 0.06, "underline": 0.028, "held": 1.7,
                 "hook": 2.0, "sink": 0.05, "hook2": 2.0,
@@ -665,6 +671,8 @@ def story(state):
     second and lets the section simply sit there.
     """
 
+    spoken = [""]                  # the line the caption is already showing
+
     def beat(name, **change):
         """One section: the picture changes, then the caption reads itself.
 
@@ -673,33 +681,46 @@ def story(state):
         jobs apart — a beat cannot quietly acquire a sentence for a title, or
         a title with nothing said underneath it.
         """
-        scene = change.pop("scene", name)
-        title, say = SCENES[scene]
-        state.update(title=title.format(**change.pop("says", {})),
-                     say=say.format(**change.pop("said", {})))
+        which = change.pop("scene", name)
+        title, say = SCENES[which]
+        line = say.format(**change.pop("said", {}))
+        state.update(title=title.format(**change.pop("says", {})))
         state.update(change)
+
+        # The old line leaves *before* the new one arrives. Left to overlap,
+        # a subtitle reads as handed over from the scene before rather than
+        # belonging to this one — and for a quarter second both are legible
+        # through each other.
+        if line != spoken[0]:
+            state.update(say="", said=0)
         cm.emit("swap")
-        reads(name, state["say"])
+
+        state["say"] = line
+        if line == spoken[0]:
+            # Said already. Hold it, whole and bright, rather than stuttering
+            # the same sentence at the viewer a second and a third time.
+            cm.emit(name)
+            return
+        spoken[0] = line
+        reads(name, line)
 
     def reads(name, line):
-        """Hold the section, with the mark stepping along the caption.
+        """Hold the section for exactly as long as its caption takes to read.
 
-        The section keeps the length it was tuned to: its time is divided
-        among the words rather than added to. It is not divided *evenly* — an
-        even step is a metronome, not reading. A long word takes longer to
-        take in than a short one, and a clause that has just closed wants a
-        moment before the next one starts.
+        The scene's length is the sum of its words, not a number tuned by
+        hand: a line of four words is a short scene and a line of seventeen is
+        a long one, which is the only pacing a viewer actually feels. Each
+        word gets its own event name, because `Timing` looks a duration up by
+        name and no two words are worth the same moment.
         """
         pieces = [piece for piece, _ in chunks(line)]
         if not pieces:
             state["said"] = 0
             cm.emit(name)
             return
-        shares = [_pace(piece) for piece in pieces]
-        whole = HOLDS.get(name, 0.6) / sum(shares)
-        for i, share in enumerate(shares):
+        for i, piece in enumerate(pieces):
             step = f"{name}.{i}"
-            HOLDS[step] = whole * share
+            HOLDS[step] = _pace(piece)
             state["said"] = i + 1
             cm.emit(step)
 
