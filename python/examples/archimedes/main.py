@@ -12,9 +12,17 @@ float, how far the water rises, and how long every arrow is, from three real
 densities; this file only says where to look and when.
 """
 
+import sys
+
 import codimate as cm
 
+import vocabulary
 import world as W
+
+# `python main.py km` renders the Khmer one. The physics, the geometry and
+# every layout decision are shared — only the vocabulary forks, so a fix to
+# the picture cannot land in one language and not the other.
+SAY = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
 
 cm.canvas(1280, 720)
 
@@ -24,7 +32,8 @@ WATER, GLASS = "#2f7fb8", "#58697e"
 UP, DOWN, HAND = "#38d6e0", "#ff7a59", "#f2c14e"     # buoyancy, weight, push
 PLATE = "#0b1018"
 SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "steel": "#96a2b0"}
-SAYS = {"water": "WATER", "ice": "ICE", "steel": "STEEL"}
+SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
+        "steel": SAY["steel_word"]}
 
 # ------------------------------------------------------------- the layout
 OBJ_X = 0.5 * (W.BEAKER[0] + W.BEAKER[2])       # both pools share this line
@@ -95,7 +104,8 @@ def create_water_tank(scene, pool, level, mark):
 
     if rest - level > 2.0:
         set_bracket(scene, "rise", (left - MARK_GAP, level, rest),
-                    (UP, -1), ("water displaced", f"= {mark:.3g} V"))
+                    (UP, -1), (SAY["displaced"],
+                               SAY["of_v"].format(mark=mark)))
 
 
 def set_bracket(scene, name, span, look, words):
@@ -177,7 +187,7 @@ def animate_force_balance(scene, state):
         scene.arrow("hand", start=(top[0], top[1] - 96), end=top,
                     w=7.0, head=19.0).fill(HAND).on(layer=MARK_LAYER + 2)
         # Left of the shaft: the buoyancy label already has the right side.
-        scene.text(("hand", "word"), "hand", size=19,
+        scene.text(("hand", "word"), SAY["hand"], size=19,
                    at=cm.at(x=top[0] - 78, y=top[1] - 96)).fill(HAND) \
              .on(layer=TEXT_LAYER)
 
@@ -191,7 +201,7 @@ def animate_force_balance(scene, state):
             a, b = middle[1] - up_px, middle[1] - down_px
             scene.line("net", start=(x, a), end=(x, b), w=3.0).fill(UP) \
                  .on(layer=MARK_LAYER + 2)
-            scene.text(("net", "word"), "net push up", size=17,
+            scene.text(("net", "word"), SAY["net"], size=17,
                        at=cm.at(x=x - 66, y=0.5 * (a + b))).fill(UP) \
                  .on(layer=TEXT_LAYER)
 
@@ -206,8 +216,9 @@ def set_submerged_bracket(scene, state, level):
     _, sub = W.surface(state["bottom"], state["w"], state["h"], state["pool"])
     x = state["pool"][2] + MARK_GAP
     for i, (a, b, colour, words) in enumerate((
-            (level, state["bottom"], UP, f"{sub:.1%} under"),
-            (state["bottom"] - state["h"], level, DIM, f"{1 - sub:.1%} above"))):
+            (level, state["bottom"], UP, SAY["under"].format(share=sub)),
+            (state["bottom"] - state["h"], level, DIM,
+             SAY["above"].format(share=1 - sub)))):
         if b - a >= 6:
             set_bracket(scene, ("brace", i), (x, a, b), (colour, 1), (words,))
 
@@ -221,7 +232,7 @@ def create_density_comparison(scene, state):
         scene.text(("cmp", i, "name"), words, size=19,
                    at=cm.at(x=NOTES_X + 66, y=y - 16)).fill(INK) \
              .on(layer=TEXT_LAYER)
-        scene.text(("cmp", i, "rho"), f"{rho:,.0f} kg/m3", size=19,
+        scene.text(("cmp", i, "rho"), SAY["rho"].format(rho=rho), size=19,
                    at=cm.at(x=NOTES_X + 66, y=y + 14)).fill(colour) \
              .on(layer=TEXT_LAYER)
 
@@ -268,28 +279,56 @@ def create_body(scene, state):
          .on(layer=LABEL_LAYER)
 
 
-CARD = "Archimedes' Principle"
+CARD = SAY["card"]
 CARD_SIZE = 58
 CARD_Y = 330.0
 
 
-def create_title_card(scene, state):
-    """The name, one letter at a time, then a rule drawn under it.
+def clusters(line):
+    """`line` split where a reader would say one character begins.
 
-    Each letter is its own shape with its own name, because that is the only
-    way the Engine can be told that one of them arrived and the others did
-    not. Laid out by measuring the prefix before it, so the spacing is the
-    font's rather than a guess.
+    Not by code point. Khmer writes a syllable as a base consonant plus marks
+    that hang off it — vowel signs, and COENG (U+17D2), which turns the letter
+    *after* it into a subscript. Split those apart and the shaper is handed
+    fragments that mean nothing: គោលការណ៍ types out as គ លេក រណអ៍.
+
+    So a cluster is a base plus everything that belongs to it, and the title
+    is revealed a cluster at a time in any language.
+    """
+    marks = range(0x17B4, 0x17D4)                  # Khmer vowels and signs
+    out, i = [], 0
+    while i < len(line):
+        piece, i = line[i], i + 1
+        while i < len(line):
+            here = ord(line[i])
+            if here == 0x17D2 and i + 1 < len(line):    # COENG + its consonant
+                piece, i = piece + line[i:i + 2], i + 2
+            elif here in marks or here == 0x17DD or 0x0300 <= here <= 0x036F:
+                piece, i = piece + line[i], i + 1
+            else:
+                break
+        out.append(piece)
+    return out
+
+
+CARD_PIECES = clusters(CARD)
+
+
+def create_title_card(scene, state):
+    """The name, typed on a cluster at a time, then a rule drawn under it.
+
+    One growing shape rather than one shape per character. Measuring each
+    character and placing it would drop the shaping *between* clusters, and
+    for a script with ligatures that is not the same text — so the whole
+    prefix is laid out by the engine and only its left edge is pinned.
     """
     wide, _ = cm.measure(CARD, size=CARD_SIZE)
     left = 640.0 - wide / 2
-    for i in range(min(state["letters"], len(CARD))):
-        if CARD[i] == " ":
-            continue
-        before, _ = cm.measure(CARD[:i], size=CARD_SIZE)
-        step, _ = cm.measure(CARD[i], size=CARD_SIZE)
-        scene.text(("card", i), CARD[i], size=CARD_SIZE,
-                   at=cm.at(x=left + before + step / 2, y=CARD_Y)) \
+    shown = "".join(CARD_PIECES[:state["letters"]])
+    if shown.strip():
+        so_far, _ = cm.measure(shown, size=CARD_SIZE)
+        scene.text("card", shown, size=CARD_SIZE,
+                   at=cm.at(x=left + so_far / 2, y=CARD_Y)) \
              .fill(INK).on(layer=TEXT_LAYER + 5)
 
     # Out from the middle, so it reads as being drawn rather than appearing.
@@ -302,14 +341,14 @@ def create_title_card(scene, state):
 
 # The four cases, on one scale. Steel is eight times off the end of it, which
 # is the point: it is the only row that needs the axis broken.
-VERDICTS = (("ice", W.RHO_ICE, SKIN["ice"], "floats"),
-            ("water", W.RHO_WATER, SKIN["water"], "neutral"),
-            ("steel ship", W.SHIP_RHO, SKIN["steel"], "floats"),
-            ("steel block", W.RHO_STEEL, SKIN["steel"], "sinks"))
+VERDICTS = ((SAY["ice_name"], W.RHO_ICE, SKIN["ice"], SAY["floats"]),
+            (SAY["water_name"], W.RHO_WATER, SKIN["water"], SAY["even"]),
+            (SAY["ship_name"], W.SHIP_RHO, SKIN["steel"], SAY["floats"]),
+            (SAY["block_name"], W.RHO_STEEL, SKIN["steel"], SAY["sinks"]))
 # Placed so the whole block — names, bars, values, verdicts — is centred on
 # the frame rather than the bars alone being centred.
 BAR_X, BAR_PER, BAR_MAX = 396.0, 0.30, 420.0     # px per kg/m3, and the cut
-VERDICT_INK = {"floats": UP, "neutral": DIM, "sinks": DOWN}
+VERDICT_INK = {SAY["floats"]: UP, SAY["even"]: DIM, SAY["sinks"]: DOWN}
 
 
 def create_verdict_chart(scene, state):
@@ -324,7 +363,7 @@ def create_verdict_chart(scene, state):
     deep = top + step * (len(VERDICTS) - 1) + 40
     scene.line("mark", start=(line, top - 46), end=(line, deep), w=2.0) \
          .fill(WATER).on(layer=MARK_LAYER, opacity=0.9)
-    scene.text("mark_word", "water  1,000 kg/m3", size=18,
+    scene.text("mark_word", SAY["water_mark"], size=18,
                at=cm.at(x=line + 104, y=top - 62)).fill(WATER) \
          .on(layer=TEXT_LAYER)
 
@@ -376,7 +415,7 @@ def view(frame):
     scene.text("title", state["title"], size=32, at=cm.at(x=640, top=TITLE_Y)) \
          .fill(INK).on(layer=TEXT_LAYER)
     if state["say"]:
-        scene.text("say", state["say"], size=21,
+        scene.text("say", state["say"], size=SAY["say_size"],
                    at=cm.at(x=640, bottom=SAY_Y)).fill(DIM).on(layer=TEXT_LAYER)
 
     if state["stage"]:
@@ -412,7 +451,9 @@ def view(frame):
 
 
 OPENING = {
-    "title": "", "letters": 0, "rule": 0.0,
+    # The film opens with the first cluster already on screen: the trace's
+    # first emit is a hold, so anything that starts at zero starts as black.
+    "title": "", "letters": 1, "rule": 0.0,
     "say": "", "stage": False, "material": "steel",
     "w": W.BOX_W, "h": W.BOX_H, "notch": 0.0,
     "bottom": 250.0, "pool": W.BEAKER, "label": False, "arrows": (),
@@ -458,7 +499,7 @@ def story(state):
     # 0. The name first, typed on, then underlined. Nothing else is on
     #    screen, so the film opens on it rather than fading up to it.
     cm.emit("card")
-    for i in range(1, len(CARD) + 1):
+    for i in range(2, len(CARD_PIECES) + 1):
         state["letters"] = i
         cm.emit("type")
     walk("underline", steps=16, rule=1.0)
@@ -466,104 +507,97 @@ def story(state):
 
     # 1. The hook. A steel block falls in and keeps going.
     beat("hook", letters=0, rule=0.0, stage=True,
-         title="A steel bolt sinks. A steel ship floats. Why?")
+         title=SAY["hook"])
     walk("sink", steps=32, bottom=W.floor(W.BEAKER))
-    beat("hook2", say="Same metal. Opposite answers.")
+    beat("hook2", say=SAY["hook2"])
 
     # 2. Simplify: one box, volume V, held above the water.
-    beat("simpler", title="Start simpler", say="One box. Volume V.",
+    beat("simpler", title=SAY["simpler"], say=SAY["one_box"],
          material="water", label=True, bottom=250.0)
 
     # 3. Make it a box *of water*, and lower it in.
-    beat("waterbox", title="A box of water, in water", say="")
+    beat("waterbox", title=SAY["waterbox"], say="")
     walk("dip", steps=32,
          bottom=W.water_level(W.BOX_AREA, W.BEAKER) + W.BOX_H)
-    beat("displace", say="The water climbs by exactly the volume that went in.",
-         rise=True)
-    beat("neutral", title="It neither rises nor sinks",
-         say="The water it displaces weighs what the box weighs.",
+    beat("displace", say=SAY["climbs"], rise=True)
+    beat("neutral", title=SAY["neutral"], say=SAY["weighs"],
          arrows=("up", "down"))
 
     # 4. Same box, different stuff.
-    beat("ice", title="Now make it ice", say="Same box. Same volume V.",
+    beat("ice", title=SAY["ice"], say=SAY["same_box"],
          material="ice", arrows=(),
-         compare=(("water", W.RHO_WATER, SKIN["water"]),
-                  ("ice", W.RHO_ICE, SKIN["ice"])))
-    beat("lighter", say="Same volume, less mass.")
+         compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
+                  (SAY["ice_name"], W.RHO_ICE, SKIN["ice"])))
+    beat("lighter", say=SAY["less_mass"])
 
     # 5. Hold it under, and look at the two forces.
-    beat("push", title="Hold it under", say="", compare=(),
+    beat("push", title=SAY["push"], say="", compare=(),
          arrows=("up", "down", "hand"), net=True)
-    beat("more", say="Full volume displaced, but less weight to carry.")
+    beat("more", say=SAY["full_under"])
 
     # 6. Let go. It rises; the push stays put until it breaks the surface.
-    beat("release", title="Let go", say="", arrows=("up", "down"))
+    beat("release", title=SAY["release"], say="", arrows=("up", "down"))
     walk("rise", steps=34,
          bottom=W.floating_bottom(W.ICE_SUBMERGED, W.BOX_W, W.BOX_H,
                                   W.BEAKER))
-    beat("shrink", say="As it leaves the water, it displaces less — "
-                       "so the push up falls.")
+    beat("shrink", say=SAY["shrink"])
 
     # 7. The payoff, and only then the algebra.
-    beat("stop", title="It stops here", say="", net=False, brace=True)
-    beat("why", say="Not a random height: the depth where it displaces "
-                    "its own weight.")
+    beat("stop", title=SAY["stop"], say="", net=False, brace=True)
+    beat("why", say=SAY["why"])
     # The brace comes off while the algebra is on screen: both want the right
     # hand side of the frame, and neither needs the other to be readable.
     for n in (1, 2, 3, 4):
         beat("derive", steps=n, say="", brace=False)
-    beat("percent", big=f"{W.ICE_SUBMERGED:.1%} SUBMERGED", steps=0,
-         say="", brace=True)
+    beat("percent", steps=0, say="", brace=True,
+         big=SAY["submerged"].format(share=W.ICE_SUBMERGED))
 
     # 8. Steel, in exactly the same box.
-    beat("steel", title="Now make it steel", say="Same box. Same volume V.",
+    beat("steel", title=SAY["steel"], say=SAY["same_box"],
          material="steel", big="", brace=False, arrows=(),
-         compare=(("water", W.RHO_WATER, SKIN["water"]),
-                  ("steel", W.RHO_STEEL, SKIN["steel"])))
+         compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
+                  (SAY["steel_word"], W.RHO_STEEL, SKIN["steel"])))
     walk("dip", steps=16, bottom=W.BEAKER[4] + W.BOX_H + 50.0)
-    beat("steelforce", say="Even fully under, it cannot displace enough.",
-         compare=(), arrows=("up", "down"))
+    beat("steelforce", say=SAY["not_enough"], compare=(),
+         arrows=("up", "down"))
     # The arrows go *before* it drops. Left on, a weight arrow this long
     # reaches out of the frame once the block is resting on the floor.
-    beat("sinks", say="So down it goes.", arrows=())
+    beat("sinks", say=SAY["sinks_now"], arrows=())
     walk("sink", steps=24, bottom=W.floor(W.BEAKER))
 
     # 9. The reveal: the same steel, spread out. Four sampled stages, and all
     #    of the reshaping happens in the air — a solid slab that wide would
     #    sink, so doing it in the water would be showing something false.
-    beat("question", title="Then how can a steel ship float?", say="",
+    beat("question", title=SAY["question"], say="",
          arrows=(), label=False)
     # A bigger tank first. Nothing in Archimedes cares what the water is held
     # in, and a beaker the box fills cannot also hold a hull nine times its
     # area — so the glass grows, sampled, and the block rides the floor down.
-    beat("bigger", say="A bigger tank — the same water.")
+    beat("bigger", say=SAY["bigger"])
     walk("grow", steps=26, pool=W.BASIN, bottom=W.floor(W.BASIN))
     walk("lift", steps=26, bottom=HELD_UP)
-    beat("spreadsay", title="", say="The same steel, spread out...")
+    beat("spreadsay", title="", say=SAY["spreading"])
     walk("spread", steps=26, w=W.HULL_W, h=W.HULL_H)
-    beat("hollowsay", say="...and hollowed out. Not one gram more or less.")
+    beat("hollowsay", say=SAY["hollowing"])
     walk("hollow", steps=22, notch=W.HULL_H - W.HULL_T)
-    beat("lowersay", title="Same steel, spread out", say="")
+    beat("lowersay", title=SAY["spread"], say="")
     walk("settle", steps=30, bottom=AFLOAT)
-    beat("ships", say="The steel never changed. The outside got "
-                      f"{W.SPREAD:.0f} times bigger.",
+    beat("ships", say=SAY["unchanged"].format(spread=W.SPREAD),
          arrows=("up", "down"), brace=True, rise=True)
-    beat("average", title="Steel and air together",
-         say=f"Average density {W.SHIP_RHO:,.0f} kg/m3 — "
-             f"lighter than water, so it floats.")
+    beat("average", title=SAY["average"],
+         say=SAY["density"].format(rho=W.SHIP_RHO))
 
     # 10. Four cases, on one scale, a bar at a time. Each row grows from
     #     nothing so the eye follows it to whichever side of 1,000 it lands
     #     on — which is the whole verdict.
-    beat("chart", title="Denser than water, or not", say="",
+    beat("chart", title=SAY["chart"], say="",
          stage=False, brace=False, arrows=(), rise=False)
     for i in range(len(VERDICTS)):
         state.update(rows=i + 1, grow=0.0)
         walk("draw", steps=14, grow=1.0)
         cm.emit("read")
     beat("law", title="", rows=0, principle=True)
-    beat("said", say="A thing floats when it can displace its own weight "
-                     "before it is all the way under.")
+    beat("said", say=SAY["said"])
 
 
 cm.explain(
@@ -575,7 +609,7 @@ cm.explain(
     timing=cm.Timing(
         default=0.1,
         events={"swap": 0.26,
-                "card": 0.7, "type": 0.055, "underline": 0.03, "held": 1.6,
+                "card": 0.3, "type": 0.06, "underline": 0.03, "held": 1.7,
                 "hook": 2.0, "sink": 0.05, "hook2": 2.0,
                 "simpler": 2.4, "waterbox": 0.8, "dip": 0.05,
                 "displace": 2.4, "neutral": 3.0,
@@ -593,6 +627,6 @@ cm.explain(
                 "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0},
         opening=0.9, final_hold=1.8),
-).render("results/archimedes.mp4", fps=60, scale=1.5)
+).render(SAY["out"], fps=60, scale=1.5)
 
-print("wrote results/archimedes.mp4")
+print(f"wrote {SAY['out']}")

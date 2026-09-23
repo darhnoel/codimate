@@ -107,8 +107,12 @@ then a ship.
 It is one name the whole way through, so the Engine tweens between the four
 rather than cutting. Nothing about the picture is placed by eye: the hull's
 wall thickness is *solved* so that the ship holds exactly the steel the block
-was made from, and the 654 kg/m³ that floats it is a consequence of the drawing
+was made from, and the 821 kg/m³ that floats it is a consequence of the drawing
 rather than a figure picked to make the point come out.
+
+It is also the example that renders in two languages — `main.py km` gives the
+Khmer one — and the README says what that took, which was less than you would
+think everywhere except the title card that types itself on.
 
 **[`otsu/`](otsu/)** — a threshold chosen by looking at the histogram.
 

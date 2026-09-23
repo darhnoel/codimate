@@ -57,8 +57,8 @@ ICE_SUBMERGED = submerged_fraction(RHO_ICE)      # 0.917, computed
 #
 # A pool is `(left, top, right, bottom, rest)` — the glass, and where the
 # surface sits with nothing in it.
-BEAKER = (500.0, 200.0, 780.0, 560.0, 380.0)
-BASIN = (370.0, 120.0, 910.0, 640.0, 340.0)
+BEAKER = (510.0, 210.0, 770.0, 560.0, 380.0)
+BASIN = (405.0, 150.0, 875.0, 600.0, 344.0)
 
 POOLS = (BEAKER, BASIN)
 
@@ -124,7 +124,7 @@ def floating_bottom(fraction, w, h, pool):
 
 # ---------------------------------------------------------------- the box
 
-BOX_W, BOX_H = 130.0, 100.0
+BOX_W, BOX_H = 120.0, 80.0
 BOX_AREA = BOX_W * BOX_H                 # the "volume V" the film talks about
 
 POINTS = 240            # per outline, fixed, so the box can morph into a hull
@@ -196,7 +196,7 @@ def _walk(corners, n, radius=CORNER):
 
 # ---------------------------------------------------------------- the ship
 
-HULL_W, HULL_H = 400.0, 300.0    # narrow enough that water shows either side
+HULL_W, HULL_H = 340.0, 270.0    # narrow enough that water shows either side
 HULL_OUTER = HULL_W * HULL_H
 
 

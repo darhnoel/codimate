@@ -1,7 +1,8 @@
 # Archimedes' Principle — one box, four materials
 
 ```bash
-.venv/bin/python python/examples/archimedes/main.py
+.venv/bin/python python/examples/archimedes/main.py        # results/archimedes.mp4
+.venv/bin/python python/examples/archimedes/main.py km     # results/archimedes-km.mp4
 ```
 
 A minute and three quarters, from a steel block on the bottom of a beaker to a
@@ -114,7 +115,37 @@ object would slide while the water it displaces jumped.
 | file | what it knows |
 | --- | --- |
 | `world.py` | densities, depths, the hull solve, the arrow scale. No Codimate; checks itself. |
+| `vocabulary.py` | every word the film says, in English and Khmer. No Codimate; checks itself. |
 | `main.py` | the trace and the view. |
+
+## The Khmer one
+
+Same film, same physics, same layout — only the words fork, so a fix to the
+picture cannot land in one language and not the other. `vocabulary.py` checks
+on import that neither language has a key the other lacks, and that no
+translation lost a `{placeholder}`: a hole would otherwise surface minutes into
+a render, as a caption printing its own template.
+
+Two things are worth knowing if you add a third language.
+
+**Nothing in the view needed changing.** `cm.measure` goes through the engine's
+real fonts including fallback, so every label plate, bracket and chart row
+sizes itself around Khmer exactly as it does around ASCII. The one layout
+number that belongs to the language rather than the design is the caption size,
+because Khmer sentences run longer — so it lives in the vocabulary.
+
+**The title card had to learn what a character is.** It types on, and typing
+by code point tears Khmer apart: a vowel sign is its own code point, and COENG
+(U+17D2) turns the letter *after* it into a subscript. Split those off their
+base and the shaper is handed fragments — `គោលការណ៍` types out as `គ លេក រណអ៍`.
+So `clusters()` groups a base with everything that belongs to it, and the card
+is revealed a cluster at a time. The prefix is then drawn as **one growing
+shape** rather than one shape per character, with only its left edge pinned:
+measuring characters and placing them individually would drop the shaping
+*between* clusters, which for a script with ligatures is not the same text.
+
+Numerals stay Western in both. A chart with `១,០០០` on its axis and `1000` in
+the algebra beside it would be two different claims to read.
 
 ## What to try changing
 
