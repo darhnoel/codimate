@@ -106,10 +106,18 @@ what the scene is *for* — a few words, holding still while the scene plays.
 The **subtitle** describes what is happening in front of you, and changes as it
 happens. A sentence in the title slot is a subtitle that got lost.
 
-That is enforced rather than remembered: `beat()` takes the scene's *name* and
-reads both lines out of the vocabulary, so a beat cannot quietly acquire a
-sentence for a title or a title with nothing said under it, and `vocabulary.py`
-refuses a title over 40 characters or one that ends in a full stop.
+That is enforced rather than remembered, because it has come apart twice —
+once when the titles grew into sentences, and again when a translation's own
+grouping of its lines was mapped straight into the slots. `beat()` takes the
+scene's *name* and reads both lines out of the vocabulary, so a beat cannot
+quietly acquire a sentence for a title or a title with nothing under it, and
+`vocabulary.py` refuses any scene with a blank slot or a title over 40
+characters.
+
+`KM_SCENES` holds no text of its own — every entry points at a line in `KM`,
+which is the translator's, or at one in `DRAFT`, which is not. `untranslated()`
+names the scenes still carrying a draft, so "which of these words are mine" has
+an answer without reading two languages side by side.
 
 Both lines are shrunk to fit at draw time rather than trusted to a size chosen
 in advance, because `text` has no newlines to wrap at — and, without a

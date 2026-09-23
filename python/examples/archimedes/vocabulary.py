@@ -127,9 +127,10 @@ EN_LABELS = {
 # ដង់ស៊ីតេ rather than being calqued. Numerals are left Western so that the
 # bars, the brackets and the algebra all carry the same digits — a chart with
 # ១,០០០ on the axis and 1000 in the formula would be two different claims.
-# Written by the author, and left exactly as written. The role each line
-# plays is the author's too: these were already split into titles and captions
-# before the scene table existed, so the table below only points at them.
+# Written by the author, and left exactly as written. The groupings below are
+# the author's original ones; which *slot* a line fills is decided by the scene
+# table further down, because several of these "titles" are verbose enough to
+# be subtitles by the rule at the top of this file.
 KM = {
     # titles
     "hook": "ប៊ូឡុងដែកតូចមួយលិច តើហេតុអ្វីបានជានាវាដែកដ៏ធំសម្បើម"
@@ -176,24 +177,39 @@ KM = {
 
 KM_LABELS_CARD = "គោលការណ៍អាកស៊ីម៉ែត"     # the author's, same as the card
 
-# Which line each scene shows, in which slot. An empty subtitle is a scene the
-# author has not written a caption for yet — the view simply draws no
-# subtitle, the same as when these were `say=""`.
+# Mine, not the author's — short Khmer titles for the scenes where both of the
+# author's lines are verbose, and subtitles for the three that had none. Every
+# one of these is a placeholder to be replaced; nothing the author wrote is in
+# here. `untranslated()` and the render both leave the author's lines alone.
+DRAFT = {
+    "t_waterbox": "ប្រអប់ទឹក ក្នុងទឹក",
+    "t_neutral": "មិនអណ្ដែត មិនលិច",
+    "t_push": "សង្កត់ឲ្យលិច",
+    "t_chart": "ម៉ាសមាឌ ធៀបនឹងទឹក",
+    "s_question": "លោហៈមិនប្រែ ប្រែតែរូបរាង",
+    "s_bigger": "ទឹកដដែល តែអាងធំជាងមុន",
+    "s_lowering": "ដាក់លោហៈដដែលចូលទឹកវិញ",
+}
+
+# Which line each scene shows, in which slot. The title names what the scene
+# is for; the subtitle says what is happening. Where the author wrote one
+# verbose line and one short one, the short one is the title — that is the
+# only judgement made here, and it moves nothing and edits nothing.
 KM_SCENES = {
-    "hook": (KM["hook"], KM["hook2"]),
-    "hook2": (KM["hook"], KM["hook2"]),
+    "hook": (KM["hook2"], KM["hook"]),
+    "hook2": (KM["hook2"], KM["hook"]),
 
     "simpler": (KM["simpler"], KM["one_box"]),
-    "waterbox": (KM["waterbox"], KM["climbs"]),
-    "displace": (KM["waterbox"], KM["climbs"]),
-    "neutral": (KM["neutral"], KM["weighs"]),
-    "why_neutral": (KM["neutral"], KM["weighs"]),
+    "waterbox": (DRAFT["t_waterbox"], KM["waterbox"]),
+    "displace": (DRAFT["t_waterbox"], KM["climbs"]),
+    "neutral": (DRAFT["t_neutral"], KM["neutral"]),
+    "why_neutral": (DRAFT["t_neutral"], KM["weighs"]),
 
     "ice": (KM["ice"], KM["same_box"]),
     "lighter": (KM["ice"], KM["less_mass"]),
 
-    "push": (KM["push"], KM["full_under"]),
-    "more": (KM["push"], KM["full_under"]),
+    "push": (DRAFT["t_push"], KM["push"]),
+    "more": (DRAFT["t_push"], KM["full_under"]),
 
     "release": (KM["release"], KM["shrink"]),
     "shrink": (KM["release"], KM["shrink"]),
@@ -207,15 +223,15 @@ KM_SCENES = {
     "steelforce": (KM["steel"], KM["not_enough"]),
     "sinks": (KM["steel"], KM["sinks_now"]),
 
-    "question": (KM["question"], ""),
-    "bigger": (KM["question"], KM["bigger"]),
-    "spreading": (KM["spread"], KM["spreading"]),
-    "hollowing": (KM["spread"], KM["hollowing"]),
-    "lowering": (KM["spread"], ""),
-    "ships": (KM["spread"], KM["unchanged"]),
+    "question": (KM["question"], DRAFT["s_question"]),
+    "bigger": (KM["bigger"], DRAFT["s_bigger"]),
+    "spreading": (KM["spreading"], KM["spread"]),
+    "hollowing": (KM["spreading"], KM["hollowing"]),
+    "lowering": (KM["spreading"], DRAFT["s_lowering"]),
+    "ships": (KM["spreading"], KM["unchanged"]),
     "average": (KM["average"], KM["density"]),
 
-    "chart": (KM["chart"], ""),
+    "chart": (DRAFT["t_chart"], KM["chart"]),
     "law": (KM_LABELS_CARD, KM["said"]),
     "said": (KM_LABELS_CARD, KM["said"]),
 }
@@ -266,15 +282,21 @@ def pick(lang="en"):
     return labels, scenes
 
 
-def untranslated(lang):
-    """Scene slots with nothing in them yet, for `lang`.
+TITLE_LIMIT = 40        # characters; past this a title is a subtitle
 
-    Not an error. A translator fills these in their own time, and a blank
-    subtitle simply draws no subtitle — the film still plays.
+
+def untranslated(lang):
+    """Scene slots still carrying a draft, or nothing, for `lang`.
+
+    Not an error — a translator fills these in their own time. It exists so
+    that "which of these words are mine" is a question with an answer, rather
+    than something to be worked out by reading two languages side by side.
     """
     _, scenes = VOCABULARIES[lang]
-    return sorted(key for key, (title, sub) in scenes.items()
-                  if not title.strip() or not sub.strip())
+    drafts = set(DRAFT.values())
+    return sorted(key for key, lines in scenes.items()
+                  if any(not line.strip() or line in drafts
+                         for line in lines))
 
 
 def _every_language_says_everything():
@@ -285,14 +307,21 @@ def _every_language_says_everything():
                                               sorted(set(theirs) ^ set(mine)))
         # A format string that lost its placeholder would silently print the
         # template, so the braces are checked to match rather than exist.
-        # A blank is exempt: it is a slot waiting for words, not a broken one.
         for key, line in labels.items():
             assert line.count("{") == EN_LABELS[key].count("{"), (name, key)
+
         for key, (title, sub) in scenes.items():
             want = EN_SCENES[key]
-            for mine, theirs in ((title, want[0]), (sub, want[1])):
-                assert not mine.strip() or \
-                    mine.count("{") == theirs.count("{"), (name, key)
+            assert title.count("{") == want[0].count("{"), (name, key)
+            assert sub.count("{") == want[1].count("{"), (name, key)
+
+            # The split only means something if it is kept, and it has come
+            # apart twice: once when the titles grew into sentences, and again
+            # when a translation's own grouping was mapped straight into the
+            # slots. So the shape is checked rather than remembered.
+            assert title.strip(), (name, key, "no title")
+            assert sub.strip(), (name, key, "no subtitle")
+            assert len(title) <= TITLE_LIMIT, (name, key, len(title), title)
     return True
 
 
