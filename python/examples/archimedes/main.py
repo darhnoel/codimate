@@ -25,7 +25,17 @@ import world as W
 # `python main.py km` renders the Khmer one. The physics, the geometry and
 # every layout decision are shared — only the vocabulary forks, so a fix to
 # the picture cannot land in one language and not the other.
-SAY, SCENES = vocabulary.pick(sys.argv[1] if len(sys.argv) > 1 else "en")
+#
+# `--clean` renders the same film with no subtitle and no cues, so there is
+# nothing for `mix.py` to lay a voice onto. The *timing* is untouched: every
+# scene still lasts exactly as long as its line takes to say, so the clean cut
+# is frame for frame the narrated one with the words taken off — which is what
+# makes it worth having, whether to dub it yourself or to watch the picture
+# make its own case.
+CLEAN = "--clean" in sys.argv
+_args = [word for word in sys.argv[1:] if not word.startswith("-")]
+SAY, SCENES = vocabulary.pick(_args[0] if _args else "en")
+OUT = SAY["out"].replace(".mp4", "-clean.mp4") if CLEAN else SAY["out"]
 
 cm.canvas(1280, 720)
 
@@ -601,7 +611,7 @@ def view(frame):
 
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
-    if state["say"]:
+    if state["say"] and not CLEAN:
         create_caption(scene, state["say"], state["said"])
     if state["note"]:
         scene.formula("note", state["note"], size=31,
@@ -757,7 +767,9 @@ def story(state):
             # rate guessed. The section becomes the recording plus a moment,
             # and the words keep their proportions inside it — so the mark is
             # on the word being said rather than near it.
-            CUES.append({"file": heard["file"], "start": round(clock[0], 3)})
+            if not CLEAN:
+                CUES.append({"file": heard["file"],
+                             "start": round(clock[0], 3)})
             stretch = (heard["seconds"] + TAIL) / sum(shares)
             shares = [share * stretch for share in shares]
 
@@ -893,7 +905,7 @@ cm.explain(
         # The film opens on a masked title, which is a black frame — so the
         # opening hold is short. A second of it would read as a stall.
         opening=LEAD, final_hold=FINAL),
-).render(SAY["out"], fps=60, scale=1.5)
+).render(OUT, fps=60, scale=1.5)
 
 if CUES:
     # Written as the trace was walked, so the sound cannot disagree with the
@@ -902,4 +914,4 @@ if CUES:
         json.dumps(CUES, ensure_ascii=False, indent=2) + "\n")
     print(f"wrote {AUDIO.name}/cues.json — run mix.py to lay the voice on")
 
-print(f"wrote {SAY['out']}")
+print(f"wrote {OUT}")

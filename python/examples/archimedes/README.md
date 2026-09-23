@@ -1,8 +1,9 @@
 # Archimedes' Principle — one box, four materials
 
 ```bash
-.venv/bin/python python/examples/archimedes/main.py        # results/archimedes.mp4
-.venv/bin/python python/examples/archimedes/main.py km     # results/archimedes-km.mp4
+.venv/bin/python python/examples/archimedes/main.py             # archimedes.mp4
+.venv/bin/python python/examples/archimedes/main.py km          # archimedes-km.mp4
+.venv/bin/python python/examples/archimedes/main.py km --clean  # ...-km-clean.mp4
 ```
 
 One box of volume V, four times over: water, ice, solid iron, and the same
@@ -287,6 +288,14 @@ in the same order. 21 lines, 86.6 seconds of speech, and no two overlap.
 
 **Only subtitles are spoken.** Titles are labels on the picture, not
 narration, and a line the film *holds* rather than re-reads is recorded once.
+
+**`--clean` renders the same film with no subtitle and no cues**, so there is
+nothing for `mix.py` to lay a voice onto. The timing is untouched: every scene
+still lasts exactly as long as its line takes to say, so the clean cut is frame
+for frame the narrated one with the words taken off — the same 150.23 seconds.
+That is what makes it worth having, whether to dub it yourself over a picture
+whose pauses are already the right length, or to watch the tank make its own
+case without being told.
 
 The recordings are not committed — 8MB from a paid API, and not ours to
 publish. `narrate.py` caches by a hash of the text, the voice and the speed,
