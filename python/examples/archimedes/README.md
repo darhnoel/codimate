@@ -116,6 +116,16 @@ at every instant instead of once for the finished hull. The walls thin as the
 outside grows, starting from a block where they meet in the middle and there is
 no cavity at all. `_the_reshape_conserves_steel` checks all forty steps.
 
+**The hollowing happens at the surface.** It used to happen on the tank floor,
+where the change was hard to see and the finished box sat in the dark. The box
+is at the waterline now, its top exactly on the surface, and the walls thin
+there. Getting it there is a **cut** — nothing lifts it, because a solid iron
+box cannot come back up on its own and the film does not pretend otherwise. It
+starts the next thought somewhere else, the way it moves between any two
+scenes. (The alternative was the yellow hand from section 5, lifting it and
+then being needed less and less until it lets go. That is more honest and it
+is one more scene.)
+
 **Nothing is told to rise.** `settles` is asked where a body with that outside
 belongs, and the answer changes from "the floor" to "floating" the moment the
 outside is big enough to carry the metal. The lift-off is a consequence. It
@@ -124,6 +134,24 @@ also happens late — always at 86% of the final area, since that is where
 pixels when it crosses, so the last of the opening and the rise are walked
 together rather than one after the other. `_the_body_finds_its_own_level`
 checks that it leaves the floor exactly once and never sinks back.
+
+## The template
+
+Four bands down the frame, and nothing crosses between them. Every `y` in
+`main.py` is one of these or is derived from `W.TANK`; a scene that wants to
+put something somewhere puts it in a band rather than picking a number.
+
+| band | y | what lives there |
+| --- | --- | --- |
+| `TITLE_Y` | 26 | the scene's name — what it is *for* |
+| `BANNER_Y` | 110 | the one thing this scene is shouting: a big number, or the law |
+| the stage | 150 | the tank and everything in it, `W.TANK` |
+| `SAY_Y` | 636 | the caption on its plate — what is *happening* |
+
+The notes column, to the right of the tank, is the only thing outside them.
+Before there were bands, the `91.7% SUBMERGED` readout was moved three times —
+into the water, onto the caption, and onto the floating box — because each new
+tank size moved something it had been dodging.
 
 ## Title and subtitle have different jobs
 
@@ -165,23 +193,31 @@ line for the same reason — keyed by place it tweens to the next line's width
 while the words change instantly, and for a quarter of a second the line hangs
 off both ends of its own plate.
 
-**The mark is one rect.** So the Engine slides and resizes it from word to
-word instead of blinking it out and in. That movement is the reading.
+**The mark is a colour, not a plate.** A highlight rectangle was tried first
+and is wrong for Khmer: its words are set flush, so a highlight has no gap of
+its own to sit in and ends up under its neighbours. The word the line has got
+to is simply the bright one, and the rest are dim.
 
-**The section keeps the length it was tuned to.** Its time is *divided* by the
-word count, not added to: `reads()` registers a per-caption pace under its own
-event name, because `Timing` looks a duration up by name and a line of four
-words cannot share one with a line of forty. The film is the same 102 seconds
-it was before the mark existed.
+**Khmer does not put spaces between its words.** That is the rule the first
+attempt broke — it gave every segmenter boundary a space, which is Khmer with
+the spacing of English. A boundary the segmenter found is invisible and stays
+invisible; only a space the author actually typed becomes a space.
 
-**Khmer needs to be told where its words are.** It does not separate them with
-spaces, and finding out needs a dictionary and a Viterbi search — far too much
-to carry into a render. So `segment.py` does it once, at authoring time, and
-writes the answer into the line itself as U+200B ZERO WIDTH SPACE, which is
-the character Khmer already uses for a word boundary. The video needs no
-segmenter and no model: the text arrives knowing where its own words end, and
-`chunks()` just splits on it. A line that has never been through the segmenter
-still runs, one orthographic cluster at a time — choppier, but not broken.
+**Khmer still needs to be told where its words are.** Finding out needs a
+dictionary and a Viterbi search — far too much to carry into a render. So
+`segment.py` does it once, at authoring time, and writes the answer into the
+line as U+200B ZERO WIDTH SPACE, the character Khmer already uses for a word
+boundary. The video needs no segmenter and no model: the text arrives knowing
+where its own words end, and `chunks()` splits on it. A line that has never
+been through the segmenter still runs, one orthographic cluster at a time —
+choppier, but not broken.
+
+**The section keeps the length it was tuned to, and does not read like a
+metronome.** Its time is *divided* among the words rather than added to, and
+not divided evenly: a long word is worth more than a short one and a word that
+closes a clause is given a rest after it. `reads()` registers each word's own
+duration under its own event name, because `Timing` looks a duration up by
+name. The film is the same 102 seconds it was before any of this existed.
 
 ## Units are mathematics, not words
 

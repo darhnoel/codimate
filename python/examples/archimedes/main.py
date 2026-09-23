@@ -36,19 +36,32 @@ PLATE = "#0b1018"
 # holds rather than a bar of fixed width, so the narration has a place of its
 # own instead of looking like chrome.
 CAPTION_BG = "#141a26"
-MARK = "#1d4e77"                 # the word the line has got to
-MARK_PAD = 13.0                  # how far it reaches past that word
+READ, UNREAD = INK, "#5d6a7e"    # the word the line is on, and the rest
 SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "iron": "#96a2b0"}
 RHO = {"water": W.RHO_WATER, "ice": W.RHO_ICE, "iron": W.RHO_IRON}
 SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
         "iron": SAY["iron_word"]}
 
-# ------------------------------------------------------------- the layout
+# ----------------------------------------------------------- the template
+#
+# Four bands down the frame, and nothing crosses between them. Every `y` in
+# this file is one of these or is derived from `W.TANK`; a scene that wants to
+# put something somewhere puts it in a band.
+#
+#     TITLE_Y    26   the scene's name — what it is for
+#     BANNER_Y  110   the one thing this scene is shouting: a big number, or
+#                     the law. Between the title and the tank's rim, where
+#                     nothing else ever goes.
+#     the stage 150   the tank and everything in it, W.TANK
+#     SAY_Y     636   the caption on its plate — what is happening
+#
+# The notes column is the only thing outside them, to the right of the tank.
+TITLE_Y, BANNER_Y, SAY_Y = 26.0, 110.0, 636.0
+TITLE_SIZE, SAY_SIZE, BANNER_SIZE = 30, 26, 42
+LABEL_SIZE, BODY_SIZE = 22, 26   # the marks outside the glass, and the body's
+
 OBJ_X = 0.5 * (W.TANK[0] + W.TANK[2])
 NOTES_X = 1116.0                 # the column the tank never reaches into
-TITLE_Y, SAY_Y = 26.0, 662.0
-TITLE_SIZE, SAY_SIZE = 30, 26
-LABEL_SIZE, BODY_SIZE = 22, 26   # the marks outside the glass, and the body's
 ROOM = 1150.0                    # the widest any line of prose may be
 
 # Both marks live outside the glass: the displaced volume down the left wall,
@@ -297,7 +310,7 @@ def create_body(scene, state):
          .on(layer=LABEL_LAYER)
 
 
-CARD = SAY["card"]
+CARD = vocabulary.plain(SAY["card"])
 CARD_SIZE = 58
 CARD_Y = 330.0
 
@@ -342,6 +355,24 @@ def chunks(line):
     return pieces
 
 
+# Punctuation that closes a clause, in either language. The word carrying one
+# gets a rest after it, rather than the next word arriving on top of it.
+STOPS = "។៕៖,.;:?!"
+
+
+def _pace(piece):
+    """How much of a section's time one word is worth.
+
+    A share for existing, a share for every few letters, and a rest if it
+    closes a clause. Khmer is counted by orthographic cluster rather than by
+    code point, or a word carrying three vowel signs would be read as though
+    it were three times as long.
+    """
+    letters = len(clusters(vocabulary.plain(piece)))
+    rest = 1.6 if piece and piece[-1] in STOPS else 0.0
+    return 1.0 + letters * 0.34 + rest
+
+
 def create_caption(scene, line, said):
     """The subtitle, with a mark running along it a word at a time.
 
@@ -357,9 +388,11 @@ def create_caption(scene, line, said):
     space = cm.measure(" ", size=size)[0]
     widths = [cm.measure(piece, size=size)[0] for piece, _ in pieces]
 
-    # A boundary the segmenter found has no gap of its own, so give it a
-    # space; a real space in the source gets more, so phrasing still reads.
-    leads = [0.0] + [space * 1.7 if gap else space for _, gap in pieces[1:]]
+    # **Khmer does not put spaces between its words.** The segmenter's
+    # boundaries are invisible ones and must stay invisible — a gap at every
+    # one of them is not Khmer, it is Khmer with the spacing of English. Only
+    # a space the author actually typed becomes a space.
+    leads = [0.0] + [space if gap else 0.0 for _, gap in pieces[1:]]
 
     # Positions computed once, so the mark cannot drift away from the word it
     # is marking — two copies of this arithmetic is exactly how that happens.
@@ -375,16 +408,15 @@ def create_caption(scene, line, said):
     scene.rect(("say_plate", line), w=run + 52, h=size + 30, at=(640, SAY_Y)) \
          .fill(CAPTION_BG).round(15).on(layer=TEXT_LAYER - 2)
 
+    # The word the line has got to is the bright one; the rest are dim. A
+    # plate behind the word was tried and is wrong for Khmer, where the words
+    # are set flush and a highlight has no gap of its own to sit in — it ends
+    # up under its neighbours.
     here = said - 1
-    if 0 <= here < len(pieces):
-        scene.rect("say_mark", w=widths[here] + MARK_PAD, h=size + 14,
-                   at=(left + centres[here], SAY_Y)).fill(MARK).round(7) \
-             .on(layer=TEXT_LAYER - 1)
-
     for i, ((piece, _), centre) in enumerate(zip(pieces, centres)):
         scene.text(("say", i, piece), piece, size=size,
-                   at=cm.at(x=left + centre, y=SAY_Y)).fill(INK) \
-             .on(layer=TEXT_LAYER)
+                   at=cm.at(x=left + centre, y=SAY_Y)) \
+             .fill(READ if i == here else UNREAD).on(layer=TEXT_LAYER)
 
 
 def clusters(line):
@@ -399,6 +431,7 @@ def clusters(line):
     is revealed a cluster at a time in any language.
     """
     marks = range(0x17B4, 0x17D4)                  # Khmer vowels and signs
+    line = vocabulary.plain(line)                  # word marks are not letters
     out, i = [], 0
     while i < len(line):
         piece, i = line[i], i + 1
@@ -547,7 +580,7 @@ def view(frame):
         create_caption(scene, state["say"], state["said"])
     if state["note"]:
         scene.formula("note", state["note"], size=31,
-                      at=cm.at(x=640, y=598)).fill(INK) \
+                      at=cm.at(x=640, y=BANNER_Y)).fill(INK) \
              .on(layer=TEXT_LAYER)
 
     if state["stage"]:
@@ -570,9 +603,8 @@ def view(frame):
         create_title_card(scene, state)
 
     if state["big"]:
-        # In the band between the title and the tank's rim. Inside the tank
-        # it lands on the floating box, and below the glass is the subtitle.
-        scene.text("big", state["big"], size=42, at=cm.at(x=640, y=110)) \
+        scene.text("big", state["big"], size=BANNER_SIZE,
+                   at=cm.at(x=640, y=BANNER_Y)) \
              .fill(UP).on(layer=TEXT_LAYER + 5)
     if state["principle"]:
         scene.formula("law", r"F_B \;=\; \rho_{fluid}\, V_{displaced}\, g",
@@ -617,12 +649,9 @@ HOLDS = {"swap": 0.26,
                 "floats": 3.0, "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0}
 
-# One entry per caption, added as the trace goes: the pace its words run at,
-# which is the section's own time divided by how many words it has. Named per
-# caption because `Timing` looks a duration up by event name, and a line of
-# four words and a line of forty cannot share one.
-PACE = {}
-HOLDS.update(PACE)
+# `reads()` adds one entry per *word* as the trace goes, named after its
+# section and its place in the line, because `Timing` looks a duration up by
+# event name and no two words are worth the same length of time.
 
 
 @cm.trace()
@@ -655,20 +684,23 @@ def story(state):
     def reads(name, line):
         """Hold the section, with the mark stepping along the caption.
 
-        The section keeps the length it was tuned to: its time is divided by
-        the number of words rather than added to. A silent section is one
-        emit, exactly as before.
+        The section keeps the length it was tuned to: its time is divided
+        among the words rather than added to. It is not divided *evenly* — an
+        even step is a metronome, not reading. A long word takes longer to
+        take in than a short one, and a clause that has just closed wants a
+        moment before the next one starts.
         """
-        words = len(chunks(line))
-        if words < 1:
+        pieces = [piece for piece, _ in chunks(line)]
+        if not pieces:
             state["said"] = 0
             cm.emit(name)
             return
-        step = f"{name}.{words}"
-        PACE.setdefault(step, HOLDS.get(name, 0.6) / words)
-        HOLDS[step] = PACE[step]
-        for i in range(1, words + 1):
-            state["said"] = i
+        shares = [_pace(piece) for piece in pieces]
+        whole = HOLDS.get(name, 0.6) / sum(shares)
+        for i, share in enumerate(shares):
+            step = f"{name}.{i}"
+            HOLDS[step] = whole * share
+            state["said"] = i + 1
             cm.emit(step)
 
     def walk(name, steps=26, **targets):
@@ -676,8 +708,7 @@ def story(state):
 
         Continuous change has to be handed over a step at a time. Set it in
         one beat instead and it tweens in a straight line — the object would
-        slide to its new depth while the water it displaces jumped there, and
-        the box would cross to the hull through shapes that are neither.
+        slide to its new depth while the water it displaces jumped there.
         """
         was = {k: state[k] for k in targets}
         for i in range(1, steps + 1):
@@ -752,15 +783,22 @@ def story(state):
     #    enough iron is gone.
     beat("question", arrows=(), label=False)
 
-    # The walls thin inward. Nothing is added and nothing grows — iron is
-    # taken away, and the average over the same outside falls with it.
-    beat("hollowing")
-    walk("thin", steps=34, wall=W.thinning(W.LIFTS_AT))
+    # A cut, not a journey: the box is at the surface now, its top exactly on
+    # the waterline. Nothing lifted it — a solid iron box cannot come back up
+    # on its own, and the film does not pretend otherwise; it simply starts
+    # the next thought somewhere else, the way it cuts between any two scenes.
+    #
+    # The walls thin *there*, where the change can be seen against the
+    # surface rather than in the dark at the bottom of the tank. Nothing is
+    # added and nothing grows: iron is taken away, and the average over the
+    # same outside falls with it.
+    beat("hollowing", bottom=W.water_level(W.BOX_AREA) + W.BOX_H)
+    walk("thin", steps=40, wall=W.WALL)
 
-    # The last of the thinning and the lift-off are one move. Left as two, the
-    # film shows a box that can float sitting on the bottom of the tank.
+    # And now it can carry itself, so it comes up to the depth its density
+    # asks for. `settles` decides that; the trace only samples the journey.
     beat("rising")
-    walk("lifts", steps=30, wall=W.WALL, bottom=AFLOAT)
+    walk("lifts", steps=26, bottom=AFLOAT)
     beat("floats", said={"left": 100 * W.LEFT_OF_IT},
          arrows=("up", "down"), brace=True, rise=True)
     beat("average", note=vocabulary.unit(W.HOLLOW_RHO)
