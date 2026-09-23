@@ -99,6 +99,24 @@ order is resolved once per *segment* rather than per frame — so any layer that
 changes is a hard cut at a scene boundary, sixteen times a second. The fix is
 to freeze the order, which is free when nothing is filled.
 
+## When the numbers have to be real
+
+**[`archimedes/`](archimedes/)** — one box that becomes water, ice, steel and
+then a ship.
+
+It is one name the whole way through, so the Engine tweens between the four
+rather than cutting. Nothing about the picture is placed by eye: the hull's
+wall thickness is *solved* so that the ship holds exactly the steel the block
+was made from, and the 654 kg/m³ that floats it is a consequence of the drawing
+rather than a figure picked to make the point come out.
+
+**[`otsu/`](otsu/)** — a threshold chosen by looking at the histogram.
+
+The example where Codimate cannot help: an image is pixels, and `scene.image`
+places a file without being able to compute one, so a sliding threshold is a
+sequence of PNGs written before the render. The README is mostly about the
+three places where a jump in the threshold drew a chord instead of a path.
+
 ## If you are coming from Manim
 
 **[`manim/`](manim/)** — five of Manim's tutorial scenes, translated.
