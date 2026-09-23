@@ -31,9 +31,10 @@ INK, DIM, AIR = "#e8eef7", "#93a0b2", "#161c25"
 WATER, GLASS = "#2f7fb8", "#58697e"
 UP, DOWN, HAND = "#38d6e0", "#ff7a59", "#f2c14e"     # buoyancy, weight, push
 PLATE = "#0b1018"
-SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "steel": "#96a2b0"}
+SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "iron": "#96a2b0"}
+RHO = {"water": W.RHO_WATER, "ice": W.RHO_ICE, "iron": W.RHO_IRON}
 SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
-        "steel": SAY["steel_word"]}
+        "iron": SAY["iron_word"]}
 
 # ------------------------------------------------------------- the layout
 OBJ_X = 0.5 * (W.TANK[0] + W.TANK[2])
@@ -71,7 +72,7 @@ def _fits(line, size, room=ROOM):
 
 
 def _middle(state):
-    return (OBJ_X, state["bottom"] - state["h"] / 2)
+    return (OBJ_X, state["bottom"] - W.BOX_H / 2)
 
 
 def create_water_tank(scene, level, mark):
@@ -173,11 +174,13 @@ def animate_force_balance(scene, state):
     original block: that is the whole argument of the last section, and it
     would be lost if the hull's outer area were weighed instead.
     """
-    w, h = state["w"], state["h"]
+    w, h = W.BOX_W, W.BOX_H
     _, sub = W.surface(state["bottom"], w, h)
     middle = _middle(state)
-    rho = {"water": W.RHO_WATER, "ice": W.RHO_ICE,
-           "steel": W.RHO_STEEL}[state["material"]]
+    # The average over the outside, which for a solid box is just the stuff it
+    # is made of and for the hollow one is a few hundred. One formula, so the
+    # arrows cannot say one thing in the last section and another before it.
+    rho = W.density(RHO[state["material"]], state["wall"])
     push = W.buoyancy(w * h * sub)
     pull = W.weight(rho, W.BOX_AREA)
 
@@ -220,11 +223,11 @@ def set_submerged_bracket(scene, state, level):
     hull almost in the notes column. Out here it mirrors the displaced-volume
     bracket on the left and can never cover anything.
     """
-    _, sub = W.surface(state["bottom"], state["w"], state["h"])
+    _, sub = W.surface(state["bottom"], W.BOX_W, W.BOX_H)
     x = W.TANK[2] + MARK_GAP
     for i, (a, b, colour, words) in enumerate((
             (level, state["bottom"], UP, SAY["under"].format(share=sub)),
-            (state["bottom"] - state["h"], level, DIM,
+            (state["bottom"] - W.BOX_H, level, DIM,
              SAY["above"].format(share=1 - sub)))):
         if b - a >= 6:
             set_bracket(scene, ("brace", i), (x, a, b), (colour, 1), (words,))
@@ -262,13 +265,12 @@ def create_body(scene, state):
     Rounded at every corner, including the hull's, because the rounding lives
     in the outline itself — a rounded rect could not morph.
     """
-    w, h = state["w"], state["h"]
     middle = _middle(state)
-    scene.polygon("body", W.outline(middle, w, h)) \
+    scene.polygon("body", W.outline(middle, state["wall"])) \
          .fill(SKIN[state["material"]], edge=INK, edge_w=2.0) \
          .on(layer=BODY_LAYER)
 
-    left, top, right, bottom = W.cavity(middle, w, h)
+    left, top, right, bottom = W.cavity(middle, state["wall"])
     if right - left > 2.0:
         scene.rect("hold", w=right - left, h=bottom - top,
                    at=(0.5 * (left + right), 0.5 * (top + bottom))) \
@@ -371,8 +373,8 @@ def create_title_card(scene, state):
 # is the point: it is the only row that needs the axis broken.
 VERDICTS = ((SAY["ice_name"], W.RHO_ICE, SKIN["ice"], SAY["floats"]),
             (SAY["water_name"], W.RHO_WATER, SKIN["water"], SAY["even"]),
-            (SAY["ship_name"], W.SHIP_RHO, SKIN["steel"], SAY["floats"]),
-            (SAY["block_name"], W.RHO_STEEL, SKIN["steel"], SAY["sinks"]))
+            (SAY["hollow_name"], W.HOLLOW_RHO, SKIN["iron"], SAY["floats"]),
+            (SAY["block_name"], W.RHO_IRON, SKIN["iron"], SAY["sinks"]))
 # Placed so the whole block — names, bars, values, verdicts — is centred on
 # the frame rather than the bars alone being centred.
 BAR_X, BAR_PER, BAR_MAX = 396.0, 0.30, 420.0     # px per kg/m3, and the cut
@@ -443,7 +445,7 @@ def create_verdict_row(scene, i, bar, words):
 def view(frame):
     scene = cm.Scene()
     state = frame.state
-    level, _ = W.surface(state["bottom"], state["w"], state["h"])
+    level, _ = W.surface(state["bottom"], W.BOX_W, W.BOX_H)
 
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
@@ -459,8 +461,8 @@ def view(frame):
     if state["stage"]:
         mark = None
         if state["rise"]:
-            mark = W.displaced(state["bottom"], state["w"],
-                               state["h"]) / W.BOX_AREA
+            mark = W.displaced(state["bottom"], W.BOX_W,
+                               W.BOX_H) / W.BOX_AREA
         create_water_tank(scene, level, mark)
         create_body(scene, state)
         animate_force_balance(scene, state)
@@ -476,9 +478,9 @@ def view(frame):
         create_title_card(scene, state)
 
     if state["big"]:
-        # In the tank's own air gap, above the waterline. Below the glass is
-        # where the subtitle lives, and inside the water it was unreadable.
-        scene.text("big", state["big"], size=44, at=cm.at(x=640, y=186)) \
+        # In the band between the title and the tank's rim. Inside the tank
+        # it lands on the floating box, and below the glass is the subtitle.
+        scene.text("big", state["big"], size=42, at=cm.at(x=640, y=110)) \
              .fill(UP).on(layer=TEXT_LAYER + 5)
     if state["principle"]:
         scene.formula("law", r"F_B \;=\; \rho_{fluid}\, V_{displaced}\, g",
@@ -492,14 +494,14 @@ def view(frame):
 
 OPENING = {
     "title": "", "carding": True, "letters": 0, "rule": 0.0, "note": "",
-    "say": "", "stage": False, "material": "steel",
-    "w": W.BOX_W, "h": W.BOX_H,
+    "say": "", "stage": False, "material": "iron",
+    "wall": W.SOLID,
     "bottom": 250.0, "label": False, "arrows": (),
     "net": False, "brace": False, "rise": False, "compare": (),
     "steps": 0, "big": "", "principle": False, "rows": 0, "grow": 0.0,
 }
 
-AFLOAT = W.settles(W.RHO_STEEL, W.HULL_W, W.HULL_H)
+AFLOAT = W.settles(W.HOLLOW_RHO)
 
 
 @cm.trace()
@@ -579,7 +581,7 @@ def story(state):
     # 6. Let go. It rises; the push stays put until it breaks the surface.
     beat("release", arrows=("up", "down"))
     walk("rise", steps=34,
-         bottom=W.settles(W.RHO_ICE, W.BOX_W, W.BOX_H))
+         bottom=W.settles(W.RHO_ICE))
     beat("shrink")
 
     # 7. The payoff, and only then the algebra.
@@ -593,9 +595,9 @@ def story(state):
          big=SAY["submerged"].format(share=W.ICE_SUBMERGED))
 
     # 8. Steel, in exactly the same box.
-    beat("steel", material="steel", big="", brace=False, arrows=(),
+    beat("steel", material="iron", big="", brace=False, arrows=(),
          compare=((SAY["water_name"], W.RHO_WATER, SKIN["water"]),
-                  (SAY["steel_word"], W.RHO_STEEL, SKIN["steel"])))
+                  (SAY["iron_word"], W.RHO_IRON, SKIN["iron"])))
     walk("dip", steps=16, bottom=W.REST_LEVEL + W.BOX_H + 50.0)
     beat("steelforce", compare=(), arrows=("up", "down"))
     # The arrows go *before* it drops. Left on, a weight arrow this long
@@ -603,29 +605,24 @@ def story(state):
     beat("sinks", arrows=())
     walk("sink", steps=24, bottom=W.FLOOR)
 
-    # 9. The reveal. The block never leaves the floor to be reshaped, and it
-    #    is never told to rise: `settles` is asked where a body with that
-    #    outside belongs, and the answer changes from "the floor" to
-    #    "floating" once the outside is big enough to carry the metal.
+    # 9. The answer. The box never changes size and never leaves the floor to
+    #    be worked on, and it is never told to rise: `settles` is asked where
+    #    a box of that average density belongs, and the answer changes once
+    #    enough iron is gone.
     beat("question", arrows=(), label=False)
 
-    # Spreading and hollowing are one motion, not two. A solid block cannot
-    # simply widen — that would multiply the steel ninefold, which is the one
-    # thing this section says does not happen — so the walls thin as the
-    # outside grows, with `thickness` solving for constant area at every step.
-    beat("spreading")
-    nearly = W.reshaping(W.LIFTS_AT)
-    walk("spread", steps=34, w=nearly[0], h=nearly[1])
+    # The walls thin inward. Nothing is added and nothing grows — iron is
+    # taken away, and the average over the same outside falls with it.
+    beat("hollowing")
+    walk("thin", steps=34, wall=W.thinning(W.LIFTS_AT))
 
-    # The last of the opening and the lift-off are one move. Left as two, the
-    # film shows a finished air-filled hull sitting at rest on the bottom of
-    # the tank — which is both a large black hole in the picture and a thing
-    # that would not stay there for an instant.
+    # The last of the thinning and the lift-off are one move. Left as two, the
+    # film shows a box that can float sitting on the bottom of the tank.
     beat("rising")
-    walk("lifts", steps=34, w=W.HULL_W, h=W.HULL_H, bottom=AFLOAT)
-    beat("ships", said={"spread": W.SPREAD},
+    walk("lifts", steps=30, wall=W.WALL, bottom=AFLOAT)
+    beat("floats", said={"left": 100 * W.LEFT_OF_IT},
          arrows=("up", "down"), brace=True, rise=True)
-    beat("average", note=vocabulary.unit(W.SHIP_RHO)
+    beat("average", note=vocabulary.unit(W.HOLLOW_RHO)
          + r"\;<\;" + vocabulary.unit(W.RHO_WATER))
 
     # 10. Four cases, on one scale, a bar at a time. Each row grows from
@@ -660,10 +657,10 @@ cm.explain(
                 "stop": 2.2, "why": 2.6, "derive": 1.7, "percent": 3.4,
                 "steel": 2.6, "steelforce": 3.0, "sinks": 1.8,
                 "question": 2.6,
-                "spreading": 1.6, "spread": 0.05,
+                "hollowing": 1.6, "thin": 0.05,
                 "rising": 1.4, "lifts": 0.055,
-                "ships": 3.0, "average": 3.2,
-                "chart": 1.4, "draw": 0.04, "read": 1.0,
+                "average": 3.2,
+                "floats": 3.0, "chart": 1.4, "draw": 0.04, "read": 1.0,
                 "law": 3.0, "said": 4.0},
         # The film opens on a masked title, which is a black frame — so the
         # opening hold is short. A second of it would read as a stall.

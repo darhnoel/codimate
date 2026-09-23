@@ -5,21 +5,28 @@
 .venv/bin/python python/examples/archimedes/main.py km     # results/archimedes-km.mp4
 ```
 
-A minute and three quarters, from a steel block on the bottom of a beaker to a
-steel ship floating in a basin. Ice settles at 91.7% under, the derivation
-arrives *after* that number rather than before it, and the ship is the same
-steel spread nine times wider.
+One box of volume V, four times over: water, ice, solid iron, and the same
+iron with its walls thinned until most of what is inside its outside is air.
+Ice settles at 91.7% under, the derivation arrives *after* that number rather
+than before it, and the iron box floats without ever changing size.
 
 ## What it teaches
 
-**One name, the whole film.** `"body"` is a box of water, then ice, then steel,
-then a ship's hull. It is never replaced, only changed, so the Engine tweens
-between them — a name is what moves. That is also why the box and the hull are
-both sampled to exactly `POINTS` points: two polygons only interpolate when
-their point counts match (ADR 0010), so a hull with eight corners and a box
-with four still correspond point for point when both are walked by distance.
-The corner rounding lives inside that walk for the same reason — a rounded
-rect could not morph.
+**One name, and one size, the whole film.** `"body"` is a box of water, then
+ice, then solid iron, then hollow iron. It is never replaced and never
+resized — only its contents change — so the Engine tweens between them, and a
+name is what moves. Every shape it takes is sampled to exactly `POINTS` points,
+because two polygons only interpolate when their point counts match (ADR 0010):
+a hollow box with eight corners and a solid one with four still correspond
+point for point when both are walked by distance. The corner rounding lives
+inside that walk for the same reason — a rounded rect could not morph.
+
+**One formula for every object.** `density(rho, wall)` is the average over the
+box's outside. At `SOLID` the walls meet in the middle, the metal is the whole
+volume, and it gives back exactly the density of the stuff — 1,000 for water,
+917 for ice, 7,850 for iron. Thin the walls and it falls, because most of what
+is inside the outside is now air. That is the entire last section, and it is
+the same line of code the first section runs on.
 
 **The picture is solved, not drawn.** Nothing in `world.py` is placed by eye
 except the two pools and the box:
@@ -27,11 +34,10 @@ except the two pools and the box:
 | number | where it comes from |
 | --- | --- |
 | 91.7% submerged | `917 / 1000`, not typed anywhere |
-| hull wall 13.4px | solved so `wh - (w-2t)(h-t)` equals the block's area exactly |
-| average density 850 kg/m³ | steel over the hull's *outer* volume |
-| 85.0% draft | that density over water's |
-| spread 9.2× | outer area over block area |
-| displaced 7.85 V | steel over water, so the bracket reads it off the densities |
+| 8.6% of the iron left | what a 6px wall holds, over the box's area |
+| average density 672 kg/m³ | iron, times the fraction of it still there |
+| 67.2% draft | that density over water's |
+| lift-off at 90% | where the average first drops under 1,000 |
 
 The ship floating is therefore a consequence of the drawing, not a figure
 chosen to make the point come out. `world.py` checks it: at every floating
@@ -66,25 +72,27 @@ scene, but only the fully sunk water box displaces V: the floating ice displaces
 0.917 V and the ship 7.85 V. It now reads the multiple off the geometry, which
 also makes it the same fact as the 91.7% on the other side of the tank.
 
-**The box looks small, and that is the price of one tank.** A ship displaces
-its own steel, so its draft is `7.85 × V / hull width` and nothing else. That
-identity ties every size together: the hull must enclose about nine times the
-block's area before steel and air average out lighter than water, and the tank
-must be wider than the hull and deeper than its draft. A tank that can hold the
-ship is therefore about four times the box in every direction, and no amount of
-tuning moves that ratio — zooming does not touch it either, because a ratio is
-a ratio.
+**The ship, and why it is gone.** The film used to end with a hull: the same
+steel spread nine times wider until steel and air together came out lighter
+than water. It is the right physics and it wrecked everything around it. A hull
+nine times the box needs a tank sized for the hull, and in a tank that size the
+box is a quarter of the width and lost in water it never reaches. Two pools
+were tried — a beaker the box filled, growing into a basin for the ship — and
+that was worse still, because **a container cannot inflate**.
 
-Two pools were tried: a beaker the box filled, growing into a basin when the
-ship was built. It solved the ratio and cost more than it bought — **a container
-cannot inflate**, and watching the glass stretch was worse than the box looking
-small. One tank, and every motion in the film is one that could happen.
+Three impossible things went with the ship: the glass stretching, the sunk
+block rising off the floor with nothing to lift it, and a solid steel slab
+balanced on the waterline while it widened to nine times its own area.
 
-**Three impossible things went with it.** The glass stretching; the sunk block
-rising off the floor with nothing to lift it; and, worst, a solid steel slab
-balanced on the waterline while it widened to nine times its own area. All
-three are gone, and the section they were in is now the most honest part of the
-film rather than the least.
+The box that floats is the same box. Nothing in the film is ever bigger than V,
+so the tank is small and the box fills nearly half of it — and the last section
+became the most honest part of the film rather than the least.
+
+**What it costs, said plainly.** Iron is 7.85 times water, so a box of iron can
+only float once all but an eighth of the iron is gone. The hollow box holds
+8.6% of what the solid one held. "Not one gram added or taken away" was the
+ship's claim and it is not this one: here the claim is that the *outside* never
+changed, and the average over that outside is what decides.
 
 **The label under the arrow.** The force arrows run through the object's centre
 and so does its name, so `WATER` / `ICE` / `STEEL` sat under the shaft. A dark

@@ -27,7 +27,7 @@ than being trusted to a size chosen here.
 EN_SCENES = {
     # key             title (what the scene is for)   subtitle (what happens)
     "hook": ("Two answers from one metal",
-             "A steel bolt sinks. A steel ship floats. Why?"),
+             "An iron bolt sinks. An iron ship floats. Why?"),
     "hook2": ("Two answers from one metal",
               "Same metal. Opposite answers."),
 
@@ -69,26 +69,26 @@ EN_SCENES = {
     "percent": ("Why that depth and no other",
                 "The answer is a ratio of densities, and nothing else."),
 
-    "steel": ("Now make it steel",
+    "steel": ("Now make it iron",
               "Same box. Same volume V. Only the material has changed."),
-    "steelforce": ("Now make it steel",
+    "steelforce": ("Now make it iron",
                    "Even fully under, it cannot displace enough."),
-    "sinks": ("Now make it steel",
+    "sinks": ("Now make it iron",
               "So down it goes."),
 
-    "question": ("Then how can a steel ship float?",
-                 "Nothing about the metal changes. Only its shape does."),
-    "spreading": ("Same steel, spread out",
-                  "It opens out where it lies. The walls thin as it widens, "
-                  "so the metal is the same metal."),
+    "question": ("Then how can iron ever float?",
+                 "The metal is the same metal. Only where it sits changes."),
+    "hollowing": ("Make the box hollow",
+                  "Same box, same volume V. The walls thin, and the inside "
+                  "becomes air."),
     "rising": ("Now it can float",
-               "The outside is big enough to carry the steel, so up it "
-               "comes on its own."),
-    "ships": ("Same steel, spread out",
-              "The steel never changed. The outside got {spread:.0f} times "
-              "bigger."),
-    "average": ("Steel and air together",
-                "What floats a ship is its average density, not the metal's."),
+               "Enough iron has gone that the water can carry what is left."),
+    "floats": ("Iron, floating",
+               "Same outside as every other box. Only {left:.0f}% of the "
+               "iron is still there."),
+    "average": ("Iron and air together",
+                "What floats a thing is the average over its outside, not "
+                "the density of the stuff."),
 
     "chart": ("Denser than water, or not",
               "Four cases, on one scale, against the only number that "
@@ -105,7 +105,7 @@ EN_LABELS = {
     "out": "results/archimedes.mp4",
     "card": "Archimedes' Principle",
 
-    "water": "WATER", "ice_word": "ICE", "steel_word": "STEEL",
+    "water": "WATER", "ice_word": "ICE", "iron_word": "IRON",
     "displaced": "water displaced",
     "of_v": "= {mark:.3g} V",
     "under": "{share:.1%} under",
@@ -115,7 +115,7 @@ EN_LABELS = {
     "submerged": "{share:.1%} SUBMERGED",
 
     "water_name": "water", "ice_name": "ice",
-    "ship_name": "steel ship", "block_name": "steel block",
+    "hollow_name": "hollow iron", "block_name": "solid iron",
     "floats": "floats", "even": "neutral", "sinks": "sinks",
 }
 
@@ -189,12 +189,13 @@ DRAFT = {
     # The reshape section. The four lines that used to be here were mine from
     # the first pass, not the author's, and they described a tank that grew
     # and a slab that balanced on the surface — neither of which happens now.
-    "t_spread": "ដែកដដែល បើកចេញទូលាយ",
-    "s_spreading": "វាបើកចេញនៅនឹងកន្លែង ជញ្ជាំងស្ដើងទៅតាមការទូលាយ "
-                   "ដូច្នេះដែកនៅដដែល",
+    "t_hollow": "ធ្វើឲ្យប្រអប់ប្រហោង",
+    "s_hollowing": "ប្រអប់ដដែល មាឌ V ដដែល ជញ្ជាំងស្ដើង "
+                   "ហើយខាងក្នុងក្លាយជាខ្យល់",
     "t_rising": "ឥឡូវវាអាចអណ្ដែត",
-    "s_rising": "ខាងក្រៅធំល្មមទ្រដែកបាន ដូច្នេះវាងើបឡើងដោយខ្លួនឯង",
-    "s_unchanged": "ដែកនៅដដែល តែមាឌខាងក្រៅធំជាងមុន {spread:.0f} ដង",
+    "s_rising": "ដែកបាត់ទៅច្រើនល្មម ទឹកអាចទ្រអ្វីដែលនៅសល់បាន",
+    "t_floats": "ដែកអណ្ដែត",
+    "s_floats": "ខាងក្រៅដូចប្រអប់ឯទៀត តែដែកនៅសល់ត្រឹម {left:.0f}%",
 }
 
 # Which line each scene shows, in which slot. The title names what the scene
@@ -230,9 +231,9 @@ KM_SCENES = {
     "sinks": (KM["steel"], KM["sinks_now"]),
 
     "question": (KM["question"], DRAFT["s_question"]),
-    "spreading": (DRAFT["t_spread"], DRAFT["s_spreading"]),
+    "hollowing": (DRAFT["t_hollow"], DRAFT["s_hollowing"]),
     "rising": (DRAFT["t_rising"], DRAFT["s_rising"]),
-    "ships": (DRAFT["t_spread"], DRAFT["s_unchanged"]),
+    "floats": (DRAFT["t_floats"], DRAFT["s_floats"]),
     "average": (KM["average"], KM["density"]),
 
     "chart": (DRAFT["t_chart"], KM["chart"]),
@@ -245,7 +246,7 @@ KM_LABELS = {
     "out": "results/archimedes-km.mp4",
     "card": KM_LABELS_CARD,
 
-    "water": "ទឹក", "ice_word": "ទឹកកក", "steel_word": "ដែក",
+    "water": "ទឹក", "ice_word": "ទឹកកក", "iron_word": "ដែក",
     "displaced": "ទឹកដែលត្រូវបានរុញចេញ",
     "of_v": "= {mark:.3g} V",
     "under": "ផ្នែកលិចក្នុងទឹក {share:.1%}",
@@ -255,7 +256,7 @@ KM_LABELS = {
     "submerged": "លិចក្នុងទឹក {share:.1%}",
 
     "water_name": "ទឹក", "ice_name": "ទឹកកក",
-    "ship_name": "នាវាដែក", "block_name": "ដុំដែក",
+    "hollow_name": "ប្រអប់ដែកប្រហោង", "block_name": "ដុំដែកតាន់",
     "floats": "អណ្ដែត", "even": "ស្មើ", "sinks": "លិច",
 }
 
