@@ -4,10 +4,10 @@
 .venv/bin/python python/examples/archimedes/main.py
 ```
 
-A minute and a half, from a steel block on the bottom of a tank to a steel ship
-floating in the same water. Ice settles at 91.7% under, the derivation arrives
-*after* that number rather than before it, and the ship is the same steel
-spread twelve times wider.
+A minute and three quarters, from a steel block on the bottom of a beaker to a
+steel ship floating in a basin. Ice settles at 91.7% under, the derivation
+arrives *after* that number rather than before it, and the ship is the same
+steel spread nine times wider.
 
 ## What it teaches
 
@@ -17,17 +17,20 @@ between them — a name is what moves. That is also why the box and the hull are
 both sampled to exactly `POINTS` points: two polygons only interpolate when
 their point counts match (ADR 0010), so a hull with eight corners and a box
 with four still correspond point for point when both are walked by distance.
+The corner rounding lives inside that walk for the same reason — a rounded
+rect could not morph.
 
 **The picture is solved, not drawn.** Nothing in `world.py` is placed by eye
-except the tank and the box:
+except the two pools and the box:
 
 | number | where it comes from |
 | --- | --- |
 | 91.7% submerged | `917 / 1000`, not typed anywhere |
-| hull wall 11.86px | solved so `wh - (w-2t)(h-t)` equals the block's area exactly |
-| average density 654 kg/m³ | steel over the hull's *outer* volume |
-| 65.4% draft | that density over water's |
-| spread 12× | outer area over block area |
+| hull wall 13.4px | solved so `wh - (w-2t)(h-t)` equals the block's area exactly |
+| average density 850 kg/m³ | steel over the hull's *outer* volume |
+| 85.0% draft | that density over water's |
+| spread 9.2× | outer area over block area |
+| displaced 7.85 V | steel over water, so the bracket reads it off the densities |
 
 The ship floating is therefore a consequence of the drawing, not a figure
 chosen to make the point come out. `world.py` checks it: at every floating
@@ -40,7 +43,7 @@ surface, and the higher surface swallows more of the object. Driving the level
 directly would let the two drift apart the moment anything moved, so `surface()`
 solves the one equation instead:
 
-    L = REST - w (bottom - L) / TANK_W
+    L = REST - w (bottom - L) / WIDTH
 
 **One scale for every arrow.** `arrow_length` converts force to pixels once for
 the whole film. Steel genuinely runs off the end at that scale, so the arrow is
@@ -50,13 +53,33 @@ scenes, which would quietly make steel look no heavier than ice.
 ## Things that were wrong first
 
 **The rise you cannot see.** A box of volume V raises a tank of width W by
-`V / W` — here 21 pixels, which reads as nothing. Two fixes were tried and
-rejected: a second beaker catching the overflow (which never fills, because the
-tank had 121,520px² of headroom against 13,000px² of displacement), and a
-brim-full overflow can (which fills, but then the level cannot rise, so there
-is nothing to mark). A closed tank with a dashed "before" line and a bracket
-labelled *water displaced = V* keeps both readings. The payoff is the ship,
-whose 164px rise needs no help at all.
+`V / W` — 46 pixels in the beaker, which still reads as very little. Two fixes were tried and rejected:
+a second beaker catching the overflow (which never fills, because the tank has
+far more headroom than the box has volume), and a brim-full overflow can (which
+fills, but then the level cannot rise, so there is nothing to mark). A closed
+tank with a dashed "before" line and a bracket keeps both readings. The payoff
+is the ship, whose 189px rise needs no help at all.
+
+**A bracket that lied by staying still.** It read *water displaced = V* in every
+scene, but only the fully sunk water box displaces V: the floating ice displaces
+0.917 V and the ship 7.85 V. It now reads the multiple off the geometry, which
+also makes it the same fact as the 91.7% on the other side of the tank.
+
+**One tank could not do both jobs.** A ship displaces its own steel, so its
+draft is `7.85 × V / hull width` and nothing else. That one identity ties every
+size together: the hull must enclose about nine times the block's area before
+steel and air average out lighter than water, the tank must be wider than the
+hull and deeper than its draft — so a tank sized for the ship is about five
+times the box in every direction, and the box is left looking lost in a column
+of water it never reaches.
+
+No amount of tuning moves that ratio, and zooming does not touch it either: a
+ratio is a ratio. But nothing in Archimedes cares what the water is held in. So
+there are **two pools** — a beaker the box fills to 46% of its width for the
+first eight sections, and a basin that the glass *grows into* when the ship is
+built. The growth is sampled like every other change, so it reads as the setup
+being scaled up rather than as a cut, and the block rides the floor down as it
+goes.
 
 **The label under the arrow.** The force arrows run through the object's centre
 and so does its name, so `WATER` / `ICE` / `STEEL` sat under the shaft. A dark
@@ -71,7 +94,9 @@ switched off before the block drops the last stretch to the floor.
 
 **A morph inside a swap beat.** Box to hull happened in the 0.26s beat that
 changes everything else at once, and read as a glitch rather than as the
-answer. It has its own two-second beat.
+answer. It is now four sampled stages — lift, spread, hollow, lower — and all
+of the reshaping happens in the air, because a solid slab that wide would sink
+and doing it underwater would be showing something false.
 
 ## Why two beats per section
 
@@ -79,9 +104,10 @@ A shape entering or leaving a Scene fades, and the fade takes the **whole**
 beat. A panel appearing at the top of a six-second section spends six seconds
 arriving. So every section is a short `swap` beat (0.26s) that changes what is
 shown, followed by a long one where nothing changes and the picture simply
-sits. Continuous motion is the other half of the same rule: `glide()` hands the
-depth over a step at a time, because a position set once tweens in a straight
-line and the object would slide while the water it displaces jumped.
+sits. Continuous motion is the other half of the same rule: `walk()` hands each
+changing value over a step at a time — depth, outline, and the five numbers of
+the pool alike — because a value set once tweens in a straight line, and the
+object would slide while the water it displaces jumped.
 
 ## The shape of it
 
@@ -97,3 +123,6 @@ line and the object would slide while the water it displaces jumped.
 - `HULL_W`, `HULL_H`. The wall thickness re-solves to keep the steel constant,
   and the ship floats higher or lower on its own. Shrink it far enough and the
   assertions stop you before the render does.
+- `BEAKER` and `BASIN`. Every depth, waterline and bracket is computed from
+  whichever pool the scene is in, and `_the_pool_holds` runs the same
+  consistency checks against both.

@@ -40,61 +40,86 @@ def buoyancy(volume_displaced, rho_fluid=RHO_WATER):
 ICE_SUBMERGED = submerged_fraction(RHO_ICE)      # 0.917, computed
 
 
-# ---------------------------------------------------------------- the tank
+# --------------------------------------------------------------- the pools
 
-# One container, centred on the frame, with the notes column to its right.
-TANK = (330.0, 170.0, 950.0, 620.0)              # left, top, right, bottom
-TANK_W = TANK[2] - TANK[0]
-REST_LEVEL = 392.0                               # with nothing in the tank
+# Two containers, not one, and the reason is arithmetic rather than taste.
+#
+# A hull has to enclose about nine times the block's area before steel and air
+# together come out lighter than water, and the tank has to be wider than the
+# hull and deeper than its draft. So a tank sized for the ship is roughly five
+# times the box in every direction — which leaves the box looking lost in a
+# column of water it never reaches.
+#
+# Nothing in Archimedes cares what the water is held in. So the first eight
+# sections use a beaker the box actually fills, and the tank *grows* into a
+# basin when the ship is built. The growth is sampled like everything else, so
+# it reads as the setup being scaled up rather than as a cut.
+#
+# A pool is `(left, top, right, bottom, rest)` — the glass, and where the
+# surface sits with nothing in it.
+BEAKER = (500.0, 200.0, 780.0, 560.0, 380.0)
+BASIN = (370.0, 120.0, 910.0, 640.0, 340.0)
+
+POOLS = (BEAKER, BASIN)
 
 
-def water_level(displaced_area):
+def width(pool):
+    return pool[2] - pool[0]
+
+
+def floor(pool):
+    """Where a sunk thing comes to rest — on the glass, not above it."""
+    return pool[3] - 1.5
+
+
+def water_level(displaced_area, pool):
     """Where the surface sits once something has pushed water aside.
 
     A tank this wide gains `area / width` of depth for every bit of volume put
     into it, which is the whole of "the water went up because the box went in".
     """
-    return REST_LEVEL - displaced_area / TANK_W
+    return pool[4] - displaced_area / width(pool)
 
 
-def surface(bottom, w, h):
+def surface(bottom, w, h, pool):
     """Where the water settles, and how much of the object is under it.
 
     The two answer each other: the object pushes the surface up, and the
     higher surface swallows more of the object. For a straight sided tank
     that is one equation rather than a search —
 
-        L = REST - w (bottom - L) / TANK_W
+        L = REST - w (bottom - L) / WIDTH
 
     solved for L. Driving the level directly and reading the depth off it
     would let the two drift apart the moment anything moved.
     """
-    if bottom <= REST_LEVEL:                       # still clear of the water
-        return REST_LEVEL, 0.0
-    sunk = water_level(w * h)                      # fully under
+    rest, span = pool[4], width(pool)
+    if bottom <= rest:                             # still clear of the water
+        return rest, 0.0
+    sunk = water_level(w * h, pool)                # fully under
     if bottom - h >= sunk:
         return sunk, 1.0
-    level = (REST_LEVEL - w * bottom / TANK_W) / (1.0 - w / TANK_W)
+    level = (rest - w * bottom / span) / (1.0 - w / span)
     return level, max(0.0, min(1.0, (bottom - level) / h))
 
 
-def displaced(bottom, w, h):
+def displaced(bottom, w, h, pool):
     """The volume pushed aside: the part of the object under the waterline."""
-    return w * h * surface(bottom, w, h)[1]
+    return w * h * surface(bottom, w, h, pool)[1]
 
 
-def rise(bottom, w, h):
+def rise(bottom, w, h, pool):
     """How far the surface has climbed — the displaced volume, made visible.
 
     This is the whole of the second scene in one number: the water goes up by
     exactly the volume that went in, spread over the width of the tank.
     """
-    return REST_LEVEL - surface(bottom, w, h)[0]
+    return pool[4] - surface(bottom, w, h, pool)[0]
 
 
-def floating_bottom(fraction, w, h):
+def floating_bottom(fraction, w, h, pool):
     """Where an object's underside sits when it floats `fraction` submerged."""
-    return water_level(w * h * fraction) + fraction * h
+    return water_level(w * h * fraction, pool) + fraction * h
 
 
 # ---------------------------------------------------------------- the box
@@ -103,9 +128,48 @@ BOX_W, BOX_H = 130.0, 100.0
 BOX_AREA = BOX_W * BOX_H                 # the "volume V" the film talks about
 
 POINTS = 240            # per outline, fixed, so the box can morph into a hull
+CORNER = 12.0           # every corner is arced, on the box and on the hull
 
 
-def _walk(corners, n):
+def _round_corners(corners, radius):
+    """Replace each corner with a short arc, keeping the shape closed.
+
+    The body has to be a polygon rather than a rounded rect, because only a
+    polygon can morph into the hull. So the rounding is put into the outline
+    itself: each corner becomes a few points on a circle of `radius`, clamped
+    so a short side cannot be eaten from both ends at once.
+    """
+    n = len(corners)
+    out = []
+    for i, here in enumerate(corners):
+        before, after = corners[i - 1], corners[(i + 1) % n]
+        arms = []
+        for other in (before, after):
+            run = math.dist(here, other)
+            r = min(radius, run / 2.0)
+            arms.append(((here[0] + (other[0] - here[0]) * r / run,
+                          here[1] + (other[1] - here[1]) * r / run), r))
+        (a, ra), (b, rb) = arms
+        r = min(ra, rb)
+        if r < 0.5:                                # too tight to round
+            out.append(here)
+            continue
+        # A quadratic arc from one arm to the other with the corner itself as
+        # the control point. Five samples is plenty at this radius, and `_walk`
+        # resamples the whole outline afterwards anyway.
+        a = (here[0] + (before[0] - here[0]) * r / math.dist(here, before),
+             here[1] + (before[1] - here[1]) * r / math.dist(here, before))
+        b = (here[0] + (after[0] - here[0]) * r / math.dist(here, after),
+             here[1] + (after[1] - here[1]) * r / math.dist(here, after))
+        for k in range(5):
+            u = k / 4.0
+            m = (1 - u) ** 2, 2 * u * (1 - u), u ** 2
+            out.append((m[0] * a[0] + m[1] * here[0] + m[2] * b[0],
+                        m[0] * a[1] + m[1] * here[1] + m[2] * b[1]))
+    return out
+
+
+def _walk(corners, n, radius=CORNER):
     """`n` points evenly spaced around a closed outline, by distance.
 
     By distance rather than by corner, so two outlines with different corner
@@ -113,6 +177,7 @@ def _walk(corners, n):
     Sampling by corner would need the same number of corners, which a
     rectangle and a hull do not have.
     """
+    corners = _round_corners(list(corners), radius) if radius else list(corners)
     ring = list(corners) + [corners[0]]
     runs = [math.dist(a, b) for a, b in zip(ring, ring[1:])]
     total = sum(runs)
@@ -129,15 +194,9 @@ def _walk(corners, n):
     return out
 
 
-def box_outline(middle, w=BOX_W, h=BOX_H):
-    """The block, as `POINTS` points clockwise from its top left corner."""
-    x, y = middle[0] - w / 2, middle[1] - h / 2
-    return _walk([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], POINTS)
-
-
 # ---------------------------------------------------------------- the ship
 
-HULL_W, HULL_H = 520.0, 300.0    # narrower than the tank, so it fits in it
+HULL_W, HULL_H = 400.0, 300.0    # narrow enough that water shows either side
 HULL_OUTER = HULL_W * HULL_H
 
 
@@ -164,12 +223,33 @@ def hull_thickness(steel_area=BOX_AREA, w=HULL_W, h=HULL_H):
 HULL_T = hull_thickness()
 
 
-def hull_outline(middle, w=HULL_W, h=HULL_H, t=HULL_T):
-    """The same steel, spread into an open vessel. Same point count as a box."""
+def outline(middle, w, h, notch=0.0):
+    """The body at any point in its reshape, as `POINTS` points.
+
+    `notch` is how far the cavity has been excavated down from the top: zero
+    is a solid block, `h - HULL_T` is the finished hull. One family rather
+    than two shapes, because the morph is *sampled* — handed over a step at a
+    time — and a step needs a shape in between to be a step towards.
+    """
     x, y = middle[0] - w / 2, middle[1] - h / 2
-    return _walk([(x, y), (x + t, y), (x + t, y + h - t),
-                  (x + w - t, y + h - t), (x + w - t, y), (x + w, y),
+    t = HULL_T
+    if notch < 1.0 or w <= 2 * t:
+        return _walk([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], POINTS)
+    notch = min(notch, h - t)
+    return _walk([(x, y), (x + t, y), (x + t, y + notch),
+                  (x + w - t, y + notch), (x + w - t, y), (x + w, y),
                   (x + w, y + h), (x, y + h)], POINTS)
+
+
+def cavity(middle, w, h, notch):
+    """The dry air inside the hull: left, top, right, bottom in pixels.
+
+    Drawn over the water, because the Engine has no clipping — without it the
+    translucent water runs straight through the hull and the ship looks
+    swamped, which is the opposite of what floats it.
+    """
+    x, y = middle[0] - w / 2, middle[1] - h / 2
+    return (x + HULL_T, y, x + w - HULL_T, y + min(notch, h - HULL_T))
 
 
 def ship_average_density(steel_area=BOX_AREA, outer=HULL_OUTER):
@@ -189,8 +269,8 @@ SPREAD = HULL_OUTER / BOX_AREA           # how much bigger the outside got
 
 # ------------------------------------------------------------- the arrows
 
-FORCE_PX = 120.0        # what a fully submerged box of water is drawn as
-ARROW_CAP = 170.0       # beyond this an arrow runs out of the tank
+FORCE_PX = 110.0        # what a fully submerged box of water is drawn as
+ARROW_CAP = 140.0       # beyond this an arrow reaches the title
 
 
 def arrow_length(force):
@@ -226,50 +306,79 @@ def _the_physics_holds():
 
     # Spread that wide it floats, and the depth is computed, not chosen.
     assert RHO_WATER * 0.2 < SHIP_RHO < RHO_WATER * 0.9, SHIP_RHO
-    assert 0.2 < SHIP_SUBMERGED < 0.9, SHIP_SUBMERGED
 
-    # Every outline has the same point count, which is what lets the box
-    # become a hull instead of cutting to one.
-    assert len(box_outline((0, 0))) == len(hull_outline((0, 0))) == POINTS
+    # Every shape in the reshape has the same point count, which is what lets
+    # the box become a hull one sampled step at a time instead of cutting.
+    counts = {len(outline((0, 0), BOX_W, BOX_H)),
+              len(outline((0, 0), HULL_W, HULL_H)),
+              len(outline((0, 0), HULL_W, HULL_H, 40.0)),
+              len(outline((0, 0), HULL_W, HULL_H, HULL_H - HULL_T))}
+    assert counts == {POINTS}, counts
 
-    # The ship has to fit in the tank, and float in the water that is in it.
-    assert HULL_W < TANK_W, (HULL_W, TANK_W)
+    # Rounding does not move the outline off its own box: every point of a
+    # rounded rectangle is still inside it, and its corners are pulled in by
+    # no more than the radius.
+    pts = outline((0.0, 0.0), BOX_W, BOX_H)
+    assert max(abs(x) for x, _ in pts) <= BOX_W / 2 + 1e-9
+    assert max(abs(y) for _, y in pts) <= BOX_H / 2 + 1e-9
+    assert max(abs(x) for x, _ in pts) > BOX_W / 2 - 1e-9, "not rounded at all"
+
+    # Both pools are centred on the same line, so growing from one to the
+    # other is the tank getting bigger rather than the tank sliding sideways.
+    assert BEAKER[0] + BEAKER[2] == BASIN[0] + BASIN[2]
+
+    # The box has real presence in the beaker — the whole reason there are two.
+    assert BOX_W > 0.4 * width(BEAKER), "the box is lost in the beaker"
+
+    _the_pool_holds(BEAKER, BOX_W, BOX_H)
+    _the_pool_holds(BASIN, BOX_W, BOX_H)
+
+    # The ship has to fit the basin, float in the water that is in it, and not
+    # push that water over the rim on the way.
+    assert HULL_W < width(BASIN) - 120, "no water either side of the ship"
     draft = SHIP_SUBMERGED * HULL_H
-    assert draft < TANK[3] - REST_LEVEL, (draft, TANK[3] - REST_LEVEL)
+    assert draft < HULL_H, "the ship floats lower than it is tall"
+    assert draft < 0.9 * (BASIN[3] - BASIN[4]), (draft, BASIN)
+    ship = floating_bottom(SHIP_SUBMERGED, HULL_W, HULL_H, BASIN)
+    assert ship < floor(BASIN), (ship, floor(BASIN))
+    assert surface(ship, HULL_W, HULL_H, BASIN)[0] > BASIN[1] + 20, "over the rim"
 
-    # The surface climbs by exactly the volume put in, over the tank's width,
-    # and the depth it settles at is consistent with that same rise.
-    for bottom in (REST_LEVEL - 40, REST_LEVEL + BOX_H / 2,
-                   REST_LEVEL + BOX_H, REST_LEVEL + 300):
-        level, sub = surface(bottom, BOX_W, BOX_H)
-        assert abs(level - water_level(BOX_AREA * sub)) < 1e-9, bottom
-        assert abs(rise(bottom, BOX_W, BOX_H)
-                   - BOX_AREA * sub / TANK_W) < 1e-9, bottom
+    # It displaces its own steel — the one number the ship scene rests on.
+    assert abs(displaced(ship, HULL_W, HULL_H, BASIN)
+               - BOX_AREA * RHO_STEEL / RHO_WATER) < 1e-6
+
+    # The longest arrow lands inside the tank rather than in the caption, and
+    # the ship's push arrow stops short of the title.
+    deepest = floating_bottom(1.0, BOX_W, BOX_H, BEAKER)
+    assert deepest - BOX_H / 2 + ARROW_CAP < BEAKER[3] + 8, "weight arrow escapes"
+    assert ship - HULL_H / 2 - ARROW_CAP > 100.0, "push arrow reaches the title"
+    return True
+
+
+def _the_pool_holds(pool, w, h):
+    """The surface and the depth agree with each other, in either container."""
+    rest, span = pool[4], width(pool)
+    for bottom in (rest - 40, rest + h / 2, rest + h, floor(pool)):
+        level, sub = surface(bottom, w, h, pool)
+        assert abs(level - water_level(w * h * sub, pool)) < 1e-9, bottom
+        assert abs(rise(bottom, w, h, pool) - w * h * sub / span) < 1e-9, bottom
         if 0.0 < sub < 1.0:
-            assert abs((bottom - level) / BOX_H - sub) < 1e-9, bottom
+            assert abs((bottom - level) / h - sub) < 1e-9, bottom
 
     # A box fully under raises it by its own volume over the width — small,
     # but the thing the bracket has to be able to show.
-    assert abs(rise(REST_LEVEL + 300, BOX_W, BOX_H)
-               - BOX_AREA / TANK_W) < 1e-9
+    assert abs(rise(floor(pool), w, h, pool) - w * h / span) < 1e-9
 
     # The floating depth is the one the densities ask for, and there the push
     # up equals the weight down.
-    bottom = floating_bottom(ICE_SUBMERGED, BOX_W, BOX_H)
-    _, sub = surface(bottom, BOX_W, BOX_H)
+    bottom = floating_bottom(ICE_SUBMERGED, w, h, pool)
+    _, sub = surface(bottom, w, h, pool)
     assert abs(sub - ICE_SUBMERGED) < 1e-9, sub
-    assert abs(buoyancy(BOX_AREA * sub) - weight(RHO_ICE, BOX_AREA)) < 1e-6
+    assert abs(buoyancy(w * h * sub) - weight(RHO_ICE, w * h)) < 1e-6
 
-    # The ship floats, fits the glass, and does not push the water over the
-    # top of the tank on its way.
-    ship = floating_bottom(SHIP_SUBMERGED, HULL_W, HULL_H)
-    assert ship < TANK[3], (ship, TANK[3])
-    assert surface(ship, HULL_W, HULL_H)[0] > TANK[1] + 20, "water over the rim"
-
-    # The longest arrow still lands inside the tank rather than in the caption.
-    deepest = floating_bottom(1.0, BOX_W, BOX_H)
-    assert deepest - BOX_H / 2 + ARROW_CAP < TANK[3] + 8, "weight arrow escapes"
-    return True
+    # Nothing overflows, and a sunk box still has water over the top of it.
+    assert water_level(w * h, pool) > pool[1] + 12, ("overflow", pool)
+    assert floor(pool) - h > water_level(w * h, pool) + 8, ("too shallow", pool)
 
 
 assert _the_physics_holds()
