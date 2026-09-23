@@ -150,6 +150,39 @@ in advance, because `text` has no newlines to wrap at — and, without a
 dictionary, nowhere safe to break a script that puts no spaces between its
 words.
 
+## The caption runs itself
+
+The subtitle sits on a rounded plate sized to the line it holds, and a mark
+runs along it a word at a time. Both are lifted from the `attention` example,
+which put it best: a plate of fixed width would look like chrome rather than
+like the narration having a place of its own.
+
+Three things make it work.
+
+**Each piece is its own item, keyed by its own text.** A word *arrives*, rather
+than one long string swapping its contents. The plate is keyed by the whole
+line for the same reason — keyed by place it tweens to the next line's width
+while the words change instantly, and for a quarter of a second the line hangs
+off both ends of its own plate.
+
+**The mark is one rect.** So the Engine slides and resizes it from word to
+word instead of blinking it out and in. That movement is the reading.
+
+**The section keeps the length it was tuned to.** Its time is *divided* by the
+word count, not added to: `reads()` registers a per-caption pace under its own
+event name, because `Timing` looks a duration up by name and a line of four
+words cannot share one with a line of forty. The film is the same 102 seconds
+it was before the mark existed.
+
+**Khmer needs to be told where its words are.** It does not separate them with
+spaces, and finding out needs a dictionary and a Viterbi search — far too much
+to carry into a render. So `segment.py` does it once, at authoring time, and
+writes the answer into the line itself as U+200B ZERO WIDTH SPACE, which is
+the character Khmer already uses for a word boundary. The video needs no
+segmenter and no model: the text arrives knowing where its own words end, and
+`chunks()` just splits on it. A line that has never been through the segmenter
+still runs, one orthographic cluster at a time — choppier, but not broken.
+
 ## Units are mathematics, not words
 
 `kg/m³` is typeset with `scene.formula` everywhere it appears — the swatches,
@@ -180,6 +213,7 @@ object would slide while the water it displaces jumped.
 | --- | --- |
 | `world.py` | densities, depths, the hull solve, the arrow scale. No Codimate; checks itself. |
 | `vocabulary.py` | every scene's title and subtitle, in English and Khmer, and the unit. No Codimate; checks itself. |
+| `segment.py` | marks Khmer word boundaries in `vocabulary.py`. Authoring-time only; never runs during a render. |
 | `main.py` | the trace and the view. |
 
 ## The Khmer one

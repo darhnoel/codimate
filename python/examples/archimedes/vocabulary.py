@@ -131,71 +131,71 @@ EN_LABELS = {
 # be subtitles by the rule at the top of this file.
 KM = {
     # titles
-    "hook": "ប៊ូឡុងដែកតូចមួយលិច តើហេតុអ្វីបានជានាវាដែកដ៏ធំសម្បើម"
-            "បែរជាអណ្ដែតទៅវិញ?",
-    "simpler": "យើងចាប់ផ្ដើមគិតពីរឿងងាយៗសិន",
-    "waterbox": "ស្រមៃថាយើងមានទឹកដែលមានទំហំទំហំមួយប្រអប់"
-                "ដែលសម្បកខាងក្រៅអាចចោលបានទំលាក់ចូលទៅក្នុងទឹក",
-    "neutral": "ដោយសារវាជារូបធាតុតែមួយ វាមិនអណ្ដែត ហើយក៏មិនលិចដែរ",
-    "ice": "ឥឡូវប្ដូរវាជាទឹកកកវិញ",
-    "push": "ជាមួយនឹងទំហំដដែលទាល់តែយើងប្រើកម្លាំងរុញសង្កត់បន្តិច"
-            "ទើបវាអាចលិចស្មើផ្ទៃទឹក",
-    "release": "យើងសម្រេចថាលែងដៃ",
-    "stop": "វានឹងឈប់ក្រោយពេលយើងលែងដៃបានមួយសន្ទុះ",
-    "steel": "ឥឡូវប្ដូរវាជាដែកវិញ",
-    "question": "តើនាវាដែកអាចអណ្ដែតបានដោយសារអ្វី?",
-    "spread": "យើងយកដែកដដែល ប៉ុន្តែពង្រីកមាឌរបស់វា",
-    "average": "មានទាំងដែកនិងខ្យល់រួមគ្នា",
-    "chart": "ឥទ្ធិពលនៃម៉ាសមាឌនៃអង្គធាតុដែលលិច ឬអណ្ដែតក្នុងទឹក",
+    "hook": "ប៊ូឡុង​ដែក​តូច​មួយ​លិច តើ​ហេតុអ្វីបានជា​នាវា​ដែក​ដ៏​ធំ​សម្បើម"
+            "បែរជា​អណ្ដែត​ទៅវិញ?",
+    "simpler": "យើង​ចាប់ផ្ដើម​គិត​ពី​រឿង​ងាយៗ​សិន",
+    "waterbox": "ស្រមៃ​ថា​យើង​មាន​ទឹកដែល​មាន​ទំហំ​ទំហំ​មួយ​ប្រអប់"
+                "ដែល​សម្បក​ខាងក្រៅ​អាច​ចោល​បាន​ទំលាក់​ចូល​ទៅ​ក្នុងទឹក",
+    "neutral": "ដោយសារ​វា​ជា​រូបធាតុ​តែមួយ វា​មិន​អណ្ដែត ហើយក៏​មិន​លិច​ដែរ",
+    "ice": "ឥឡូវ​ប្ដូរ​វា​ជា​ទឹកកក​វិញ",
+    "push": "ជាមួយនឹង​ទំហំ​ដដែល​ទាល់តែ​យើង​ប្រើ​កម្លាំង​រុញ​សង្កត់​បន្តិច"
+            "ទើប​វា​អាច​លិច​ស្មើ​ផ្ទៃ​ទឹក",
+    "release": "យើង​សម្រេច​ថា​លែងដៃ",
+    "stop": "វា​នឹង​ឈប់​ក្រោយពេល​យើង​លែងដៃ​បាន​មួយសន្ទុះ",
+    "steel": "ឥឡូវ​ប្ដូរ​វា​ជា​ដែក​វិញ",
+    "question": "តើ​នាវា​ដែក​អាច​អណ្ដែត​បាន​ដោយសារអ្វី?",
+    "spread": "យើង​យក​ដែក​ដដែល ប៉ុន្តែ​ពង្រីក​មាឌ​របស់​វា",
+    "average": "មាន​ទាំង​ដែក​និង​ខ្យល់​រួមគ្នា",
+    "chart": "ឥទ្ធិពល​នៃ​ម៉ាសមាឌ​នៃ​អង្គធាតុ​ដែល​លិច ឬ​អណ្ដែត​ក្នុងទឹក",
 
     # captions
-    "hook2": "លោហៈមានម៉ាសដូចគ្នា បាតុភូតមិនដូចគ្នា",
-    "one_box": "ប្រអប់មួយមានមាឌ V។",
-    "climbs": "មាឌទឹកកើនឡើងតាមមាឌប្រអប់ដែលលិចចូលទៅ",
-    "weighs": "ទឹកដែលវារុញចេញ មានទម្ងន់ស្មើនឹងទម្ងន់ប្រអប់",
-    "same_box": "ប្រអប់ដដែលហើយមានមាឌ V ដដែល",
-    "less_mass": "មាឌដដែល តែមានម៉ាសតិចជាងមុន",
-    "full_under": "រុញទឹកចេញពេញមាឌ តែទម្ងន់ត្រូវទ្រតិចជាង",
-    "shrink": "ពេលវាងើបផុតពីទឹក វារុញទឹកចេញតិចជាង "
-              " ដូច្នេះកម្លាំងរុញឡើងថយចុះ។",
-    "why": "នេះមិនមែនជាកម្ពស់ចៃដន្យទេ៖ "
-           "វាជាជម្រៅដែលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួនឯង",
-    "not_enough": "ទោះលិចទាំងស្រុង ក៏មិនអាចរុញទឹកចេញគ្រប់គ្រាន់",
-    "sinks_now": "ដូច្នេះវាក៏លិចចុះក្រោម",
+    "hook2": "លោហៈ​មាន​ម៉ាស​ដូចគ្នា បាតុភូត​មិន​ដូចគ្នា",
+    "one_box": "ប្រអប់​មួយ​មាន​មាឌ V។",
+    "climbs": "មាឌ​ទឹក​កើនឡើង​តាម​មាឌ​ប្រអប់​ដែល​លិច​ចូល​ទៅ",
+    "weighs": "ទឹកដែល​វា​រុញ​ចេញ មានទម្ងន់​ស្មើនឹង​ទម្ងន់​ប្រអប់",
+    "same_box": "ប្រអប់​ដដែល​ហើយ​មាន​មាឌ V ដដែល",
+    "less_mass": "មាឌ​ដដែល តែ​មាន​ម៉ាស​តិច​ជាង​មុន",
+    "full_under": "រុញ​ទឹក​ចេញ​ពេញ​មាឌ តែ​ទម្ងន់​ត្រូវ​ទ្រ​តិច​ជាង",
+    "shrink": "ពេល​វា​ងើប​ផុត​ពី​ទឹក វា​រុញ​ទឹក​ចេញ​តិច​ជាង "
+              " ដូច្នេះ​កម្លាំង​រុញ​ឡើង​ថយ​ចុះ។",
+    "why": "នេះ​មិនមែន​ជា​កម្ពស់​ចៃដន្យ​ទេ​៖ "
+           "វា​ជា​ជម្រៅ​ដែល​វា​រុញ​ទឹក​ចេញ​ស្មើនឹង​ទម្ងន់​ខ្លួនឯង",
+    "not_enough": "ទោះ​លិច​ទាំងស្រុង ក៏​មិន​អាច​រុញ​ទឹក​ចេញ​គ្រប់គ្រាន់",
+    "sinks_now": "ដូច្នេះ​វា​ក៏​លិច​ចុះក្រោម",
     "bigger": "this needs to be changed",
-    "spreading": "ដែកដដែល ប៉ុន្តែយើងពង្រីកមាឌវា",
-    "hollowing": "...ហើយចោះឲ្យប្រហោង ប៉ុន្តែរក្សាម៉ាសឲ្យនៅដដែល",
-    "unchanged": "ដែកមិនប្រែប្រួល។ ខាងក្រៅធំជាងមុន {spread:.0f} ដង។",
+    "spreading": "ដែក​ដដែល ប៉ុន្តែ​យើង​ពង្រីក​មាឌ​វា",
+    "hollowing": "...ហើយ​ចោះ​ឲ្យ​ប្រហោង ប៉ុន្តែ​រក្សា​ម៉ាស​ឲ្យ​នៅ​ដដែល",
+    "unchanged": "ដែក​មិន​ប្រែប្រួល។ ខាងក្រៅ​ធំជាង​មុន {spread:.0f} ដង។",
     # The unit is the one edit: it is typeset by `unit()` now, on its own
     # line under the ship, so the sentence no longer spells it out.
-    "density": "ដង់ស៊ីតេមធ្យមស្រាលជាងទឹក ដូច្នេះវាអណ្ដែត។",
-    "said": "វត្ថុមួយអណ្ដែត នៅពេលវារុញទឹកចេញស្មើនឹងទម្ងន់ខ្លួន "
-            "មុនពេលលិចអស់។",
+    "density": "ដង់ស៊ីតេ​មធ្យម​ស្រាល​ជាង​ទឹក ដូច្នេះ​វា​អណ្ដែត។",
+    "said": "វត្ថុ​មួយ​អណ្ដែត នៅពេល​វា​រុញ​ទឹក​ចេញ​ស្មើនឹង​ទម្ងន់​ខ្លួន "
+            "មុន​ពេល​លិច​អស់។",
 }
 
-KM_LABELS_CARD = "គោលការណ៍អាកស៊ីម៉ែត"     # the author's, same as the card
+KM_LABELS_CARD = "គោលការណ៍​អា​ក​ស៊ី​ម៉ែ​ត"     # the author's, same as the card
 
 # Mine, not the author's — short Khmer titles for the scenes where both of the
 # author's lines are verbose, and subtitles for the three that had none. Every
 # one of these is a placeholder to be replaced; nothing the author wrote is in
 # here. `untranslated()` and the render both leave the author's lines alone.
 DRAFT = {
-    "t_waterbox": "ប្រអប់ទឹក ក្នុងទឹក",
-    "t_neutral": "មិនអណ្ដែត មិនលិច",
-    "t_push": "សង្កត់ឲ្យលិច",
-    "t_chart": "ម៉ាសមាឌ ធៀបនឹងទឹក",
-    "s_question": "លោហៈមិនប្រែ ប្រែតែរូបរាង",
+    "t_waterbox": "ប្រអប់​ទឹក ក្នុងទឹក",
+    "t_neutral": "មិន​អណ្ដែត មិន​លិច",
+    "t_push": "សង្កត់​ឲ្យ​លិច",
+    "t_chart": "ម៉ាសមាឌ ធៀប​នឹង​ទឹក",
+    "s_question": "លោហៈ​មិន​ប្រែ ប្រែ​តែ​រូបរាង",
 
     # The reshape section. The four lines that used to be here were mine from
     # the first pass, not the author's, and they described a tank that grew
     # and a slab that balanced on the surface — neither of which happens now.
-    "t_hollow": "ធ្វើឲ្យប្រអប់ប្រហោង",
-    "s_hollowing": "ប្រអប់ដដែល មាឌ V ដដែល ជញ្ជាំងស្ដើង "
-                   "ហើយខាងក្នុងក្លាយជាខ្យល់",
-    "t_rising": "ឥឡូវវាអាចអណ្ដែត",
-    "s_rising": "ដែកបាត់ទៅច្រើនល្មម ទឹកអាចទ្រអ្វីដែលនៅសល់បាន",
-    "t_floats": "ដែកអណ្ដែត",
-    "s_floats": "ខាងក្រៅដូចប្រអប់ឯទៀត តែដែកនៅសល់ត្រឹម {left:.0f}%",
+    "t_hollow": "ធ្វើ​ឲ្យ​ប្រអប់​ប្រហោង",
+    "s_hollowing": "ប្រអប់​ដដែល មាឌ V ដដែល ជញ្ជាំង​ស្ដើង "
+                   "ហើយ​ខាងក្នុង​ក្លាយជា​ខ្យល់",
+    "t_rising": "ឥឡូវ​វា​អាច​អណ្ដែត",
+    "s_rising": "ដែក​បាត់​ទៅ​ច្រើន​ល្មម ទឹក​អាច​ទ្រ​អ្វី​ដែល​នៅសល់​បាន",
+    "t_floats": "ដែក​អណ្ដែត",
+    "s_floats": "ខាងក្រៅ​ដូច​ប្រអប់​ឯទៀត តែ​ដែក​នៅសល់​ត្រឹម {left:.0f}%",
 }
 
 # Which line each scene shows, in which slot. The title names what the scene
@@ -247,16 +247,16 @@ KM_LABELS = {
     "card": KM_LABELS_CARD,
 
     "water": "ទឹក", "ice_word": "ទឹកកក", "iron_word": "ដែក",
-    "displaced": "ទឹកដែលត្រូវបានរុញចេញ",
+    "displaced": "ទឹកដែល​ត្រូវ​បាន​រុញ​ចេញ",
     "of_v": "= {mark:.3g} V",
-    "under": "ផ្នែកលិចក្នុងទឹក {share:.1%}",
-    "above": "ផ្នែកលេចឡើង {share:.1%}",
-    "net": "កម្លាំងរុញឡើងសរុប",
+    "under": "ផ្នែក​លិច​ក្នុងទឹក {share:.1%}",
+    "above": "ផ្នែក​លេចឡើង {share:.1%}",
+    "net": "កម្លាំង​រុញ​ឡើង​សរុប",
     "hand": "ដៃ",
-    "submerged": "លិចក្នុងទឹក {share:.1%}",
+    "submerged": "លិច​ក្នុងទឹក {share:.1%}",
 
     "water_name": "ទឹក", "ice_name": "ទឹកកក",
-    "hollow_name": "ប្រអប់ដែកប្រហោង", "block_name": "ដុំដែកតាន់",
+    "hollow_name": "ប្រអប់​ដែក​ប្រហោង", "block_name": "ដុំដែក​តាន់",
     "floats": "អណ្ដែត", "even": "ស្មើ", "sinks": "លិច",
 }
 
@@ -288,6 +288,13 @@ def pick(lang="en"):
 
 
 TITLE_LIMIT = 40        # characters; past this a title is a subtitle
+
+ZWSP = "\u200b"          # where a Khmer word ends. Invisible, and not a letter
+
+
+def plain(line):
+    """`line` without the word marks, for counting or comparing."""
+    return line.replace(ZWSP, "")
 
 
 def untranslated(lang):
@@ -326,7 +333,8 @@ def _every_language_says_everything():
             # slots. So the shape is checked rather than remembered.
             assert title.strip(), (name, key, "no title")
             assert sub.strip(), (name, key, "no subtitle")
-            assert len(title) <= TITLE_LIMIT, (name, key, len(title), title)
+            # Word marks are invisible, so they do not count as length.
+            assert len(plain(title)) <= TITLE_LIMIT, (name, key, title)
     return True
 
 

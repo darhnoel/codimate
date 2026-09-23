@@ -12,6 +12,7 @@ float, how far the water rises, and how long every arrow is, from three real
 densities; this file only says where to look and when.
 """
 
+import re
 import sys
 
 import codimate as cm
@@ -35,6 +36,8 @@ PLATE = "#0b1018"
 # holds rather than a bar of fixed width, so the narration has a place of its
 # own instead of looking like chrome.
 CAPTION_BG = "#141a26"
+MARK = "#1d4e77"                 # the word the line has got to
+MARK_PAD = 13.0                  # how far it reaches past that word
 SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "iron": "#96a2b0"}
 RHO = {"water": W.RHO_WATER, "ice": W.RHO_ICE, "iron": W.RHO_IRON}
 SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
@@ -299,6 +302,91 @@ CARD_SIZE = 58
 CARD_Y = 330.0
 
 
+# One Khmer orthographic cluster: a base letter, any subscript consonants
+# hung under it with COENG, then its vowels and signs.
+_CLUSTER = re.compile(r"[\u1780-\u17B3](?:\u17D2[\u1780-\u17B3])*[\u17B6-\u17D3]*")
+
+
+def chunks(line):
+    """`line` split into the pieces the mark steps over, and their gaps.
+
+    Khmer does not separate words with spaces, so `segment.py` marks the real
+    boundaries with ZWSP ahead of time and this splits on them. The video
+    needs no dictionary: the text arrives knowing where its own words end.
+
+    A line that has never been through the segmenter still runs — one
+    orthographic cluster at a time, which is choppier but not broken.
+    """
+    pieces = []
+    for w, token in enumerate(line.split()):
+        first = True
+        if vocabulary.ZWSP in token:
+            for part in token.split(vocabulary.ZWSP):
+                if part:
+                    pieces.append((part, (w > 0) and first))
+                    first = False
+            continue
+        i = 0
+        while i < len(token):
+            found = _CLUSTER.match(token, i)
+            if found and found.end() > i:
+                piece, i = found.group(), found.end()
+            else:
+                # A run of anything else — "water", "0.917" — stays whole.
+                j = i
+                while j < len(token) and not _CLUSTER.match(token, j):
+                    j += 1
+                piece, i = token[i:j], j
+            pieces.append((piece, (w > 0) and first))
+            first = False
+    return pieces
+
+
+def create_caption(scene, line, said):
+    """The subtitle, with a mark running along it a word at a time.
+
+    Every piece is its own item keyed by its own text, so a word *arrives*
+    rather than one long string swapping its contents. The mark is ONE rect,
+    so the Engine slides and resizes it from word to word instead of blinking
+    it out and in — that movement is the reading.
+    """
+    pieces = chunks(line)
+    if not pieces:
+        return
+    size = _fits(vocabulary.plain(line), SAY_SIZE)
+    space = cm.measure(" ", size=size)[0]
+    widths = [cm.measure(piece, size=size)[0] for piece, _ in pieces]
+
+    # A boundary the segmenter found has no gap of its own, so give it a
+    # space; a real space in the source gets more, so phrasing still reads.
+    leads = [0.0] + [space * 1.7 if gap else space for _, gap in pieces[1:]]
+
+    # Positions computed once, so the mark cannot drift away from the word it
+    # is marking — two copies of this arithmetic is exactly how that happens.
+    centres, run = [], 0.0
+    for lead, wide in zip(leads, widths):
+        run += lead
+        centres.append(run + wide / 2)
+        run += wide
+    left = 640.0 - run / 2
+
+    # Keyed by the line, so the plate arrives and leaves with its own words
+    # rather than tweening to the next line's width while the words change.
+    scene.rect(("say_plate", line), w=run + 52, h=size + 30, at=(640, SAY_Y)) \
+         .fill(CAPTION_BG).round(15).on(layer=TEXT_LAYER - 2)
+
+    here = said - 1
+    if 0 <= here < len(pieces):
+        scene.rect("say_mark", w=widths[here] + MARK_PAD, h=size + 14,
+                   at=(left + centres[here], SAY_Y)).fill(MARK).round(7) \
+             .on(layer=TEXT_LAYER - 1)
+
+    for i, ((piece, _), centre) in enumerate(zip(pieces, centres)):
+        scene.text(("say", i, piece), piece, size=size,
+                   at=cm.at(x=left + centre, y=SAY_Y)).fill(INK) \
+             .on(layer=TEXT_LAYER)
+
+
 def clusters(line):
     """`line` split where a reader would say one character begins.
 
@@ -456,17 +544,7 @@ def view(frame):
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
     if state["say"]:
-        size = _fits(state["say"], SAY_SIZE)
-        wide, _ = cm.measure(state["say"], size=size)
-        # Both keyed by the line itself, so a caption *arrives* rather than
-        # one shape swapping its contents. Keyed by place instead, the plate
-        # tweens to its new width while the words change instantly, and for a
-        # quarter of a second the line hangs off both ends of its own plate.
-        scene.rect(("say_plate", state["say"]), w=wide + 52, h=size + 30,
-                   at=(640, SAY_Y)).fill(CAPTION_BG).round(15) \
-             .on(layer=TEXT_LAYER - 1)
-        scene.text(("say", state["say"]), state["say"], size=size,
-                   at=cm.at(x=640, y=SAY_Y)).fill(INK).on(layer=TEXT_LAYER)
+        create_caption(scene, state["say"], state["said"])
     if state["note"]:
         scene.formula("note", state["note"], size=31,
                       at=cm.at(x=640, y=598)).fill(INK) \
@@ -508,6 +586,7 @@ def view(frame):
 
 OPENING = {
     "title": "", "carding": True, "letters": 0, "rule": 0.0, "note": "",
+    "said": 0,
     "say": "", "stage": False, "material": "iron",
     "wall": W.SOLID,
     "bottom": 250.0, "label": False, "arrows": (),
@@ -516,6 +595,34 @@ OPENING = {
 }
 
 AFLOAT = W.settles(W.HOLLOW_RHO)
+
+
+# How long each section holds, before its caption is broken into words. The
+# trace reads these back so a line can run inside its own section's time
+# rather than stretching it.
+HOLDS = {"swap": 0.26,
+                "card": 0.25, "type": 0.06, "underline": 0.028, "held": 1.7,
+                "hook": 2.0, "sink": 0.05, "hook2": 2.0,
+                "simpler": 2.4, "waterbox": 0.8, "dip": 0.05,
+                "displace": 2.4, "neutral": 2.6, "why_neutral": 3.0,
+                "ice": 2.8, "lighter": 2.4,
+                "push": 3.0, "more": 2.8,
+                "release": 0.8, "rise": 0.045, "shrink": 2.8,
+                "stop": 2.2, "why": 2.6, "derive": 1.7, "percent": 3.4,
+                "steel": 2.6, "steelforce": 3.0, "sinks": 1.8,
+                "question": 2.6,
+                "hollowing": 1.6, "thin": 0.05,
+                "rising": 1.4, "lifts": 0.055,
+                "average": 3.2,
+                "floats": 3.0, "chart": 1.4, "draw": 0.04, "read": 1.0,
+                "law": 3.0, "said": 4.0}
+
+# One entry per caption, added as the trace goes: the pace its words run at,
+# which is the section's own time divided by how many words it has. Named per
+# caption because `Timing` looks a duration up by event name, and a line of
+# four words and a line of forty cannot share one.
+PACE = {}
+HOLDS.update(PACE)
 
 
 @cm.trace()
@@ -530,19 +637,39 @@ def story(state):
     """
 
     def beat(name, **change):
-        """One section: the picture changes, then it holds.
+        """One section: the picture changes, then the caption reads itself.
 
         The name is the scene's name, so the title and the subtitle come from
         the vocabulary rather than from the call. That is what keeps the two
         jobs apart — a beat cannot quietly acquire a sentence for a title, or
         a title with nothing said underneath it.
         """
-        title, say = SCENES[change.pop("scene", name)]
+        scene = change.pop("scene", name)
+        title, say = SCENES[scene]
         state.update(title=title.format(**change.pop("says", {})),
                      say=say.format(**change.pop("said", {})))
         state.update(change)
         cm.emit("swap")
-        cm.emit(name)
+        reads(name, state["say"])
+
+    def reads(name, line):
+        """Hold the section, with the mark stepping along the caption.
+
+        The section keeps the length it was tuned to: its time is divided by
+        the number of words rather than added to. A silent section is one
+        emit, exactly as before.
+        """
+        words = len(chunks(line))
+        if words < 1:
+            state["said"] = 0
+            cm.emit(name)
+            return
+        step = f"{name}.{words}"
+        PACE.setdefault(step, HOLDS.get(name, 0.6) / words)
+        HOLDS[step] = PACE[step]
+        for i in range(1, words + 1):
+            state["said"] = i
+            cm.emit(step)
 
     def walk(name, steps=26, **targets):
         """Move every named value to its target, sampled.
@@ -660,22 +787,7 @@ cm.explain(
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(
         default=0.1,
-        events={"swap": 0.26,
-                "card": 0.25, "type": 0.06, "underline": 0.028, "held": 1.7,
-                "hook": 2.0, "sink": 0.05, "hook2": 2.0,
-                "simpler": 2.4, "waterbox": 0.8, "dip": 0.05,
-                "displace": 2.4, "neutral": 2.6, "why_neutral": 3.0,
-                "ice": 2.8, "lighter": 2.4,
-                "push": 3.0, "more": 2.8,
-                "release": 0.8, "rise": 0.045, "shrink": 2.8,
-                "stop": 2.2, "why": 2.6, "derive": 1.7, "percent": 3.4,
-                "steel": 2.6, "steelforce": 3.0, "sinks": 1.8,
-                "question": 2.6,
-                "hollowing": 1.6, "thin": 0.05,
-                "rising": 1.4, "lifts": 0.055,
-                "average": 3.2,
-                "floats": 3.0, "chart": 1.4, "draw": 0.04, "read": 1.0,
-                "law": 3.0, "said": 4.0},
+        events=HOLDS,
         # The film opens on a masked title, which is a black frame — so the
         # opening hold is short. A second of it would read as a stall.
         opening=0.25, final_hold=1.8),
