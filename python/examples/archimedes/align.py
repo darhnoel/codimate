@@ -219,7 +219,45 @@ def main() -> int:
     print(f"\n{len(timing)} line(s) timed, {len(guessed)} left to the guess")
     for line in guessed:
         print(f"  ? {line}")
+
+    suspect(recordings)
     return 0
+
+
+def suspect(recordings) -> None:
+    """Name any recording that does not say what it was asked to say.
+
+    A speech model can stumble: one take here said its line, wandered into a
+    different caption, and then said the whole thing again — six point nine
+    seconds of audio for two and a half seconds of words. Nothing downstream
+    noticed. The mark ran to the end of the caption while the voice was still
+    on its first pass, and the only way to find out was to watch it.
+
+    The transcript is right here, so it costs nothing to check. `GROWN` is the
+    giveaway: a clip that comes back much longer than the line it was made
+    from is saying something it was not given.
+    """
+    GROWN, AGREES = 1.35, 0.55
+    bad = []
+    for entry in recordings:
+        got = json.loads(
+            (HEARD / f"{Path(entry['file']).stem}.json").read_text())
+        said = "".join(entry["text"].split())
+        back = "".join(got.get("text", "").split())
+        grew = len(back) / max(len(said), 1)
+        agrees = difflib.SequenceMatcher(None, said, back,
+                                         autojunk=False).ratio()
+        if grew > GROWN or agrees < AGREES:
+            bad.append((entry, grew, agrees))
+
+    if not bad:
+        return
+    print(f"\n{len(bad)} recording(s) do not say their line:")
+    for entry, grew, agrees in bad:
+        print(f"  ! x{grew:.2f} length, {agrees:.0%} agreement  "
+              f"{entry['text'][:46]}")
+    print("\nDelete those mp3s and their audio/heard/ entries, then run "
+          "narrate.py --write and align.py --write again.")
 
 
 if __name__ == "__main__":

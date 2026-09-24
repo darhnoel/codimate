@@ -425,26 +425,39 @@ def _pace(piece):
     return WORD + PER_LETTER * letters + rest
 
 
+PAGE = 10               # the most words the caption shows at once
+
+
 def create_caption(scene, line, said):
     """The subtitle, with a mark running along it a word at a time.
 
-    Every piece is its own item keyed by its own text, so a word *arrives*
-    rather than one long string swapping its contents. The mark is ONE rect,
-    so the Engine slides and resizes it from word to word instead of blinking
-    it out and in — that movement is the reading.
+    At most `PAGE` words are on screen. A whole sentence set in one line has
+    to be shrunk to fit, and the longest of these end up small enough to
+    squint at — so the line is turned a page at a time instead, following the
+    mark. Every piece is keyed by its own text and place, so turning a page
+    is the old words leaving and the new ones arriving.
+
+    The mark is ONE rect... one *colour*: the word the line has got to is
+    bright and the rest are dim. A plate behind the word was tried and is
+    wrong for Khmer, whose words are set flush and leave a highlight no gap
+    of its own to sit in.
     """
     pieces = chunks(line)
     if not pieces:
         return
-    size = _fits(vocabulary.spoken(line), SAY_SIZE)
+    page = max(said - 1, 0) // PAGE
+    shown = pieces[page * PAGE:(page + 1) * PAGE]
+    here = (said - 1) - page * PAGE
+
+    size = _fits(" ".join(piece for piece, _ in shown), SAY_SIZE)
     space = cm.measure(" ", size=size)[0]
-    widths = [cm.measure(piece, size=size)[0] for piece, _ in pieces]
+    widths = [cm.measure(piece, size=size)[0] for piece, _ in shown]
 
     # **Khmer does not put spaces between its words.** The segmenter's
     # boundaries are invisible ones and must stay invisible — a gap at every
     # one of them is not Khmer, it is Khmer with the spacing of English. Only
     # a space the author actually typed becomes a space.
-    leads = [0.0] + [space if gap else 0.0 for _, gap in pieces[1:]]
+    leads = [0.0] + [space if gap else 0.0 for _, gap in shown[1:]]
 
     # Positions computed once, so the mark cannot drift away from the word it
     # is marking — two copies of this arithmetic is exactly how that happens.
@@ -455,18 +468,14 @@ def create_caption(scene, line, said):
         run += wide
     left = 640.0 - run / 2
 
-    # Keyed by the line, so the plate arrives and leaves with its own words
-    # rather than tweening to the next line's width while the words change.
-    scene.rect(("say_plate", line), w=run + 52, h=size + 30, at=(640, SAY_Y)) \
-         .fill(CAPTION_BG).round(15).on(layer=TEXT_LAYER - 2)
+    # Keyed by the page, so a plate arrives and leaves with its own words
+    # rather than tweening to the next page's width while the words change.
+    scene.rect(("say_plate", line, page), w=run + 52, h=size + 30,
+               at=(640, SAY_Y)).fill(CAPTION_BG).round(15) \
+         .on(layer=TEXT_LAYER - 2)
 
-    # The word the line has got to is the bright one; the rest are dim. A
-    # plate behind the word was tried and is wrong for Khmer, where the words
-    # are set flush and a highlight has no gap of its own to sit in — it ends
-    # up under its neighbours.
-    here = said - 1
-    for i, ((piece, _), centre) in enumerate(zip(pieces, centres)):
-        scene.text(("say", i, piece), piece, size=size,
+    for i, ((piece, _), centre) in enumerate(zip(shown, centres)):
+        scene.text(("say", page * PAGE + i, piece), piece, size=size,
                    at=cm.at(x=left + centre, y=SAY_Y)) \
              .fill(READ if i == here else UNREAD).on(layer=TEXT_LAYER)
 
