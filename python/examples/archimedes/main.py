@@ -271,20 +271,6 @@ def animate_force_balance(scene, state):
                    at=cm.at(x=top[0] - 78, y=top[1] - 96)).fill(HAND) \
              .on(layer=TEXT_LAYER)
 
-    # An 8.3% difference is real and nearly invisible, so the gap between the
-    # two arrow tips gets its own mark rather than the arrows being fudged.
-    if state["net"]:
-        up_px, _ = W.arrow_length(push)
-        down_px, _ = W.arrow_length(pull)
-        if abs(up_px - down_px) > 2.0:
-            x = OBJ_X - 92
-            a, b = middle[1] - up_px, middle[1] - down_px
-            scene.line("net", start=(x, a), end=(x, b), w=3.0).fill(UP) \
-                 .on(layer=MARK_LAYER + 2)
-            scene.text(("net", "word"), SAY["net"], size=21,
-                       at=cm.at(x=x - 66, y=0.5 * (a + b))).fill(UP) \
-                 .on(layer=TEXT_LAYER)
-
 
 def set_submerged_bracket(scene, state, level):
     """How much of the object is under the water — outside the right wall.
@@ -689,7 +675,7 @@ OPENING = {
     "say": "", "stage": False, "material": "iron",
     "wall": W.SOLID,
     "bottom": 250.0, "label": False, "arrows": (),
-    "net": False, "brace": False, "rise": False, "compare": (),
+    "brace": False, "rise": False, "compare": (),
     "steps": 0, "big": "", "principle": False, "rows": 0, "grow": 0.0,
 }
 
@@ -872,7 +858,7 @@ def story(state):
     beat("lighter")
 
     # 5. Hold it under, and look at the two forces.
-    beat("push", compare=(), arrows=("up", "down", "hand"), net=True)
+    beat("push", compare=(), arrows=("up", "down", "hand"))
     beat("more")
 
     # 6. Let go. It rises; the push stays put until it breaks the surface.
@@ -882,7 +868,7 @@ def story(state):
     beat("shrink")
 
     # 7. The payoff, and only then the algebra.
-    beat("stop", net=False, brace=True)
+    beat("stop", brace=True)
     beat("why")
     # The brace comes off while the algebra is on screen: both want the right
     # hand side of the frame, and neither needs the other to be readable.

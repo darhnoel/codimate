@@ -110,7 +110,6 @@ EN_LABELS = {
     "of_v": "= {mark:.3g} V",
     "under": "{share:.1%} under",
     "above": "{share:.1%} above",
-    "net": "net push up",
     "hand": "hand",
     "submerged": "{share:.1%} SUBMERGED",
 
@@ -251,7 +250,6 @@ KM_LABELS = {
     "of_v": "= {mark:.3g} V",
     "under": "ផ្នែក​លិច​ក្នុងទឹក {share:.1%}",
     "above": "ផ្នែក​លេចឡើង {share:.1%}",
-    "net": "កម្លាំង​រុញ​ឡើង​សរុប",
     "hand": "ដៃ",
     "submerged": "លិច​ក្នុងទឹក {share:.1%}",
 
@@ -284,7 +282,11 @@ def pick(lang="en"):
     if lang not in VOCABULARIES:
         raise SystemExit(f"no words for {lang!r}; have {sorted(VOCABULARIES)}")
     labels, scenes = VOCABULARIES[lang]
-    return labels, scenes
+    # Labels never run word by word, so they never want the word marks —
+    # `segment.py` marks every Khmer literal in this file, and a label goes
+    # straight to `scene.text` where the shaper would be handed four
+    # zero-width characters it was never meant to see.
+    return {key: plain(line) for key, line in labels.items()}, scenes
 
 
 TITLE_LIMIT = 40        # characters; past this a title is a subtitle
