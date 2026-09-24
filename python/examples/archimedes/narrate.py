@@ -56,7 +56,7 @@ def captions(lang: str = "km") -> list[str]:
     _, scenes = vocabulary.pick(lang)
     seen, out = set(), []
     for _, subtitle in scenes.values():
-        spoken = vocabulary.plain(subtitle).format(**FILLINGS).strip()
+        spoken = vocabulary.spoken(subtitle).format(**FILLINGS)
         if spoken and spoken not in seen:
             seen.add(spoken)
             out.append(spoken)

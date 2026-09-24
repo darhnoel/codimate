@@ -419,7 +419,7 @@ def create_caption(scene, line, said):
     pieces = chunks(line)
     if not pieces:
         return
-    size = _fits(vocabulary.plain(line), SAY_SIZE)
+    size = _fits(vocabulary.spoken(line), SAY_SIZE)
     space = cm.measure(" ", size=size)[0]
     widths = [cm.measure(piece, size=size)[0] for piece, _ in pieces]
 
@@ -761,7 +761,7 @@ def story(state):
             return
 
         shares = [_pace(piece) for piece in pieces]
-        heard = VOICE.get(vocabulary.plain(line))
+        heard = VOICE.get(vocabulary.spoken(line))
         if heard:
             # Real speech has its own length, and it is not the one a reading
             # rate guessed. The section becomes the recording plus a moment,
