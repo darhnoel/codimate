@@ -431,7 +431,7 @@ def _pace(piece):
     return WORD + PER_LETTER * letters + rest
 
 
-PAGE = 10               # the most words the caption shows at once
+PAGE = 8                # the most words the caption shows at once
 
 
 def create_caption(scene, line, said):

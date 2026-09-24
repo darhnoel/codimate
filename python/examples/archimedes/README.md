@@ -204,7 +204,7 @@ line for the same reason — keyed by place it tweens to the next line's width
 while the words change instantly, and for a quarter of a second the line hangs
 off both ends of its own plate.
 
-**At most ten words are on screen.** A whole sentence set in one line has to
+**At most eight words are on screen.** A whole sentence set in one line has to
 be shrunk to fit, and the longest here — twenty-three words — ended up small
 enough to squint at. The caption turns a page instead, following the mark.
 
