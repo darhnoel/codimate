@@ -63,11 +63,12 @@ VOICE = ({entry["text"]: entry for entry in
           json.loads(_spoken.read_text())} if _spoken.exists() else {})
 CUES = []                        # one per line spoken: its file and its start
 
-# And if the narration has been transcribed (`align.py`), how fast each word
-# inside a line is actually said. Shares of the line, not seconds, so they
-# survive the film being re-timed — which it has been, a dozen times.
+# And if the recordings have been transcribed (`align.py`), the moment each
+# word is said, counted from the start of its own clip. From the clip's start
+# and not the film's, so they survive the film being re-timed — which it has
+# been, a dozen times.
 _timed = AUDIO / "timing.json"
-HEARD = json.loads(_timed.read_text()) if _timed.exists() else {}
+WHEN = json.loads(_timed.read_text()) if _timed.exists() else {}
 
 # `OPENING` is already the film's first state, so these are named for what
 # they are: the pause before anything, the fallback beat, and the last hold.
@@ -776,30 +777,35 @@ def story(state):
             tick(name)
             return
 
-        # Three sources, best first: what the voice was measured doing, what
-        # a guess at reading speed says, and — between them — what the voice
-        # was heard doing *inside* the line.
         said = vocabulary.spoken(line)
-        shares = HEARD.get(said) or [_pace(piece) for piece in pieces]
-        if len(shares) != len(pieces):
-            shares = [_pace(piece) for piece in pieces]
-        heard = VOICE.get(said)
-        if heard:
-            # Real speech has its own length, and it is not the one a reading
-            # rate guessed. The section becomes the recording plus a moment,
-            # and the words keep their proportions inside it — so the mark is
-            # on the word being said rather than near it.
-            if CUEING:
-                CUES.append({"file": heard["file"],
-                             "start": round(clock[0], 3)})
-            stretch = (heard["seconds"] + TAIL) / sum(shares)
-            shares = [share * stretch for share in shares]
+        heard, when = VOICE.get(said), WHEN.get(said)
+        if heard and CUEING:
+            CUES.append({"file": heard["file"], "start": round(clock[0], 3)})
 
-        for i, share in enumerate(shares):
-            step = f"{name}.{i}"
-            HOLDS[step] = share
+        if heard and when and len(when) == len(pieces):
+            # Measured. Each word is held until the voice reaches the next
+            # one, and the last until the clip ends — so the mark is *on* the
+            # word being said rather than near it.
+            steps = [later - now for now, later in zip(when, when[1:])]
+            steps.append(max(heard["seconds"] + TAIL - when[-1], 0.25))
+            if when[0] > 0.05:
+                # The clip opens on a breath. Nothing is marked through it,
+                # or the first word lights before it is spoken.
+                HOLDS[f"{name}.in"] = when[0]
+                state["said"] = 0
+                tick(f"{name}.in")
+        else:
+            # Guessed, and stretched onto the recording if there is one.
+            steps = [_pace(piece) for piece in pieces]
+            if heard:
+                stretch = (heard["seconds"] + TAIL) / sum(steps)
+                steps = [step * stretch for step in steps]
+
+        for i, step in enumerate(steps):
+            key = f"{name}.{i}"
+            HOLDS[key] = step
             state["said"] = i + 1
-            tick(step)
+            tick(key)
 
     def walk(name, steps=26, **targets):
         """Move every named value to its target, sampled.

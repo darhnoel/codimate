@@ -1,34 +1,36 @@
 #!/usr/bin/env python3
-"""Read a transcript of the narration and learn how fast each word is said.
+"""Hear where every word falls in its own recording. Authoring-time only.
 
     python python/examples/archimedes/align.py            # report only
-    python python/examples/archimedes/align.py --write    # write the shares
+    KIRI_API_KEY=... python .../align.py --write          # transcribe and write
 
-The film paces its running mark by *guessing*: a word costs a fixed moment
-plus a little per letter. That is a fair guess and it is still the fallback,
-but a transcript with timestamps knows better — it knows which word the voice
-lingers on.
+The film runs a mark along the caption as it is spoken. Where that mark goes
+was a *guess* — a word costs a fixed moment plus a little per letter — and a
+guess is audibly wrong on a word the voice lingers on.
 
-So this takes an SRT of the narration, lines the words up against the captions
-in `vocabulary.py`, and writes `audio/timing.json`: for each caption, what
-share of its own length each word is worth. Shares, not seconds, and that is
-the point — the film has been re-rendered a dozen times and every render moves
-the clock, so absolute times go stale immediately. A *share* survives, and the
-recording's own measured length is what it gets scaled onto.
+So each recording is sent back through Kiri, which returns the words it heard
+with millisecond timings, and those timings are lined up against the caption
+the recording was made from. The result is `audio/timing.json`: for each
+caption, the moment each of its words is said, counted from the start of its
+own clip.
 
-Two things make this harder than it sounds, and both are handled here.
+**From the start of its own clip** is the whole design. An SRT of the finished
+film was tried first and it goes stale the moment anything is re-timed — the
+transcript supplied was of an earlier cut and its clock had drifted by up to
+twenty-two seconds. A clip's own timings drift never: the film places the clip
+and the words follow it.
 
-**The transcript is not the script.** It is what a machine heard, so it spells
-things its own way — អណ្តែត for អណ្ដែត, សំបក for សម្បក. Matching word to word
-would fail on those; matching *characters* and letting the long agreeing runs
-carry the alignment does not. It currently agrees on about 96% of them.
+Two more things this has to survive.
 
-**The transcript's phrases straddle the captions.** An SRT of the finished
-film cuts where the speaker pauses, not where a caption ends, so one cue often
-holds the end of one line and the start of the next — with the film's silence
-between them, inside the cue. Left alone, that silence is read as a very slow
-word. Any gap longer than `GAP` is therefore clipped: it is the film's pause,
-not the voice's.
+**The transcript is not the script.** It is what a machine heard — ដូច្នេះវា
+came back as មិញនេះ វាគ — so words are matched by *character*, letting the long
+agreeing runs carry the alignment, and any word it never found is filled in
+between its neighbours. `custom_vocabulary` biases it toward the spellings the
+captions actually use.
+
+**Transcribing is not free.** Every answer is cached under `audio/heard/`, so
+re-running after editing one caption costs one request, the same way
+`narrate.py` does.
 """
 
 from __future__ import annotations
@@ -38,146 +40,185 @@ import difflib
 import json
 import re
 import sys
+import urllib.error
+import urllib.request
+import uuid
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 AUDIO = HERE / "audio"
+HEARD = AUDIO / "heard"
+ENDPOINT = "https://api.kiritts.com/v1/audio/transcriptions"
+MODEL = "kiristt"                # the transcriber; `kiritts` is the voice
 
 sys.path.insert(0, str(HERE))
+import narrate  # noqa: E402  — shares the key and the caption list
 import vocabulary  # noqa: E402
-import world as W  # noqa: E402
 
-FILLINGS = {"left": 100 * W.LEFT_OF_IT}
-
-GAP = 0.40          # longer than this between two words is the film's silence
-LEAST = 4           # fewer matched words than this and the guess is better
-
-# The order the film speaks its captions in. A line the film holds rather than
-# re-reads is spoken once, so it appears once.
-ORDER = ("hook hook2 simpler waterbox displace neutral why_neutral ice lighter "
-         "push more release shrink stop why derive percent steel steelforce "
-         "sinks question hollowing rising floats average chart law said").split()
+# A short list of the words that actually get misheard beats a glossary, but
+# we cannot know which those are until we have heard them. The longest words
+# are the ones a model is least likely to guess, so those go first.
+TERMS = 100
 
 
-def cues(path: Path):
-    """The SRT, as `(start, end, text)`, with silence and markup dropped."""
-    out = []
-    for block in re.split(r"\n\s*\n", path.read_text().lstrip("﻿").strip()):
-        lines = [ln for ln in block.splitlines() if ln.strip()]
-        if len(lines) < 3 or "-->" not in lines[1]:
-            continue
-        start, _, end = lines[1].partition(" --> ")
-        text = re.sub(r"<[^>]+>", "", " ".join(lines[2:])).strip()
-        if text and not text.startswith("["):
-            out.append((seconds(start), seconds(end), text))
+def worded(lang="km") -> dict:
+    """What each spoken line is, split into the words the mark steps over.
+
+    `narration.json` keys on the *spoken* form, which has no word marks in it
+    — they are invisible and a speech model should never see them. The marks
+    are what the film steps along, so they are looked back up here.
+    """
+    _, scenes = vocabulary.pick(lang)
+    out = {}
+    for _, subtitle in scenes.values():
+        line = subtitle.format(**narrate.FILLINGS)
+        out[vocabulary.spoken(line)] = line.replace(vocabulary.ZWSP, " ").split()
     return out
 
 
-def seconds(stamp: str) -> float:
-    hours, minutes, rest = stamp.strip().split(":")
-    return int(hours) * 3600 + int(minutes) * 60 + float(rest.replace(",", "."))
+def terms() -> str:
+    """The caption vocabulary, longest first, as a bias for the transcriber."""
+    words = {word for line in narrate.captions()
+             for word in vocabulary.plain(line).split()}
+    ordered = sorted(words, key=len, reverse=True)[:TERMS]
+    return ", ".join(ordered)
 
 
-def lettered(spans):
-    """Every character of the transcript, with the moment it is spoken.
+def multipart(fields: dict, name: str, blob: bytes) -> tuple[bytes, str]:
+    """One file and some plain fields, as multipart/form-data.
 
-    Character by character rather than word by word, because the alignment
-    that follows is a character alignment — a transcript that spells a word
-    differently still agrees on most of its letters.
+    Written out by hand rather than pulling in a dependency for it: this is a
+    boundary, some headers and a join, and the tool runs a handful of times.
+    """
+    edge = uuid.uuid4().hex
+    out = bytearray()
+    for key, value in fields.items():
+        out += (f"--{edge}\r\nContent-Disposition: form-data; "
+                f'name="{key}"\r\n\r\n{value}\r\n').encode()
+    out += (f"--{edge}\r\nContent-Disposition: form-data; name=\"file\"; "
+            f'filename="{name}"\r\n'
+            f"Content-Type: audio/mpeg\r\n\r\n").encode()
+    out += blob + f"\r\n--{edge}--\r\n".encode()
+    return bytes(out), f"multipart/form-data; boundary={edge}"
+
+
+def listen(clip: Path, token: str, bias: str) -> dict:
+    """What Kiri heard in `clip`, with a start and end for every word."""
+    body, kind = multipart(
+        {"model": MODEL, "language": "km", "response_format": "verbose_json",
+         "timestamp_granularities": "word", "custom_vocabulary": bias},
+        clip.name, clip.read_bytes())
+    request = urllib.request.Request(
+        ENDPOINT, data=body, method="POST",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": kind,
+                 "User-Agent": "codimate-align/1.0", "Accept": "*/*"})
+    try:
+        with urllib.request.urlopen(request, timeout=300) as reply:
+            return json.loads(reply.read())
+    except urllib.error.HTTPError as failure:
+        detail = failure.read()[:400].decode("utf8", "replace")
+        raise SystemExit(f"Kiri refused ({failure.code}): {detail}") from None
+
+
+def moments(words, said):
+    """When each word of `said` is spoken, from the transcript of its clip.
+
+    Matched by character, because the transcript spells what it heard rather
+    than what was written. A word the transcript never found is placed between
+    the two it did, which is where it was.
     """
     letters, clock = [], []
-    for start, end, text in spans:
-        words = text.split()
-        total = sum(len(word) for word in words) or 1
-        at = start
-        for word in words:
-            span = (end - start) * len(word) / total
-            for i, letter in enumerate(word):
-                letters.append(letter)
-                clock.append(at + span * i / max(len(word), 1))
-            at += span
-    return "".join(letters), clock
-
-
-def script(lang="km"):
-    """The captions the film speaks, in order, each as its list of words."""
-    _, scenes = vocabulary.pick(lang)
-    said, out = "", []
-    for key in ORDER:
-        line = scenes[key][1].format(**FILLINGS)
-        if out and line == out[-1][2]:
-            continue                                   # held, not said again
-        words = line.replace(vocabulary.ZWSP, " ").split()
-        out.append((key, words, line, len(said)))
-        said += "".join(words)
-    return out, said
-
-
-def shares(words, at, where, clock):
-    """What share of its caption's length each word is worth.
-
-    `None` when the transcript does not cover the line well enough to be
-    worth trusting over the guess.
-    """
-    marks, i = [], at
-    for word in words:
-        found = next((where[x] for x in range(i, i + len(word)) if x in where),
-                     None)
-        marks.append(None if found is None else clock[found])
-        i += len(word)
-
-    known = [(n, t) for n, t in enumerate(marks) if t is not None]
-    if len(known) < LEAST:
+    for heard in words:
+        text = re.sub(r"\s+", "", heard.get("word", ""))
+        start, end = float(heard["start"]), float(heard["end"])
+        for i, letter in enumerate(text):
+            letters.append(letter)
+            clock.append(start + (end - start) * i / max(len(text), 1))
+    if not letters:
         return None
 
-    # Start to start, with the film's own pauses clipped out of it.
-    steps = {a: min(t - was, GAP)
-             for (a, was), (_, t) in zip(known, known[1:])}
-    typical = sorted(steps.values())[len(steps) // 2] if steps else GAP
-    spread = [steps.get(n, typical) for n in range(len(words) - 1)] + [typical]
-    whole = sum(spread)
-    return [step / whole for step in spread]
+    script = "".join(said)
+    match = difflib.SequenceMatcher(None, script, "".join(letters),
+                                    autojunk=False)
+    where = {i + d: j + d
+             for i, j, n in match.get_matching_blocks() for d in range(n)}
+
+    at, marks = 0, []
+    for word in said:
+        found = next((where[x] for x in range(at, at + len(word))
+                      if x in where), None)
+        marks.append(None if found is None else clock[found])
+        at += len(word)
+    if sum(mark is not None for mark in marks) < max(2, len(said) // 3):
+        return None
+
+    # Fill the holes by sharing the gap between the neighbours that were found.
+    known = [i for i, mark in enumerate(marks) if mark is not None]
+    for i, mark in enumerate(marks):
+        if mark is not None:
+            continue
+        before = max((k for k in known if k < i), default=None)
+        after = min((k for k in known if k > i), default=None)
+        if before is None:
+            marks[i] = marks[after] * i / max(after, 1)
+        elif after is None:
+            marks[i] = marks[before]
+        else:
+            step = (marks[after] - marks[before]) / (after - before)
+            marks[i] = marks[before] + step * (i - before)
+    return [round(mark, 3) for mark in marks]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("srt", nargs="?",
-                        default=AUDIO / "meatika-archimedes-km.srt", type=Path)
-    parser.add_argument("--write", action="store_true")
+    parser.add_argument("--write", action="store_true",
+                        help="transcribe anything not already heard")
     args = parser.parse_args()
 
-    if not args.srt.exists():
-        raise SystemExit(f"no transcript at {args.srt}")
+    spoken = AUDIO / "narration.json"
+    if not spoken.exists():
+        raise SystemExit("no audio/narration.json — run narrate.py first")
+    recordings = json.loads(spoken.read_text())
+    HEARD.mkdir(parents=True, exist_ok=True)
 
-    letters, clock = lettered(cues(args.srt))
-    lines, said = script()
-    match = difflib.SequenceMatcher(None, said, letters, autojunk=False)
-    where = {i + d: j + d
-             for i, j, n in match.get_matching_blocks() for d in range(n)}
-
-    print(f"{args.srt.name}: {len(letters)} characters, "
-          f"{match.ratio():.0%} of the script agrees with it\n")
-
-    timing, guessed = {}, []
-    for key, words, line, at in lines:
-        got = shares(words, at, where, clock)
-        if got is None:
-            guessed.append(key)
-        else:
-            timing[vocabulary.spoken(line)] = [round(s, 5) for s in got]
-        print(f"  {'·' if got else '?'} {key:12} {len(words):3} words"
-              f"{'' if got else '   — guessed, too little matched'}")
-
-    if guessed:
-        print(f"\n{len(guessed)} line(s) keep the reading guess: "
-              f"{', '.join(guessed)}")
+    missing = [entry for entry in recordings
+               if not (HEARD / f"{Path(entry['file']).stem}.json").exists()]
     if not args.write:
-        print(f"\n{len(timing)} line(s) would be timed. Re-run with --write.")
+        print(f"{len(recordings)} recordings, {len(missing)} not yet heard.\n")
+        for entry in recordings:
+            known = (HEARD / f"{Path(entry['file']).stem}.json").exists()
+            print(f"  {'·' if known else '+'} {entry['seconds']:5.2f}s  "
+                  f"{entry['text'][:62]}")
+        print("\nRe-run with --write to transcribe the missing ones.")
         return 0
+
+    token = narrate.api_key() if missing else ""
+    bias = terms()
+    for i, entry in enumerate(missing, 1):
+        print(f"  [{i}/{len(missing)}] {entry['text'][:56]}")
+        got = listen(AUDIO / entry["file"], token, bias)
+        (HEARD / f"{Path(entry['file']).stem}.json").write_text(
+            json.dumps(got, ensure_ascii=False, indent=2) + "\n")
+
+    words = worded()
+    timing, guessed = {}, []
+    for entry in recordings:
+        got = json.loads((HEARD / f"{Path(entry['file']).stem}.json").read_text())
+        said = words.get(entry["text"])
+        if not said:
+            guessed.append(entry["text"][:40])
+            continue
+        marks = moments(got.get("words") or [], said)
+        if marks is None:
+            guessed.append(entry["text"][:40])
+        else:
+            timing[entry["text"]] = marks
 
     (AUDIO / "timing.json").write_text(
         json.dumps(timing, ensure_ascii=False, indent=2) + "\n")
-    print(f"\nwrote {AUDIO.name}/timing.json — {len(timing)} lines timed")
+    print(f"\n{len(timing)} line(s) timed, {len(guessed)} left to the guess")
+    for line in guessed:
+        print(f"  ? {line}")
     return 0
 
 

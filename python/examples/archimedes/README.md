@@ -291,29 +291,33 @@ so the mark is on the word being said rather than near it. Without the audio
 the film still runs, at the reading rate — the voice is an addition, never
 something the film depends on.
 
-**Where the mark goes inside a line is measured, not guessed.** `align.py`
-reads an SRT of the narration, lines its words up against the captions, and
-writes `audio/timing.json` — for each caption, what *share* of its own length
-each word is worth. Shares rather than seconds, because the film has been
-re-timed a dozen times and every render moves the clock; a share survives, and
-the recording's own measured length is what it gets scaled onto.
+**Where the mark goes is measured, not guessed.** Each recording is sent back
+through Kiri, which returns the words it heard with millisecond timings, and
+those are lined up against the caption the recording was made from.
+`align.py` writes `audio/timing.json`: for each caption, the moment each of its
+words is said, counted from the start of **its own clip**.
 
-Two things make that harder than it sounds.
+From the clip's start and not the film's — that is the whole design. An SRT of
+the finished film was tried first, and it goes stale the moment anything is
+re-timed: the transcript to hand was of an earlier cut and its clock had
+drifted by up to twenty-two seconds. A clip's own timings never drift, because
+the film places the clip and the words follow it.
 
-*The transcript is not the script.* It is what a machine heard, so it spells
-things its own way — `អណ្តែត` for `អណ្ដែត`, `សំបក` for `សម្បក`. Matching word to
-word fails on those; matching **characters**, and letting the long agreeing
-runs carry the alignment, does not. It agrees on 96% of them.
+Three things that had to be survived:
 
-*The transcript's phrases straddle the captions.* An SRT of the finished film
-cuts where the speaker pauses, not where a caption ends, so one cue often holds
-the end of one line and the start of the next — with the film's silence between
-them, inside the cue. Left alone that silence reads as one very slow word, and
-it inflated some lines by 3x. Any gap longer than `GAP` is clipped: it is the
-film's pause, not the voice's.
+- **The transcript is not the script.** It is what a machine heard — `ដូច្នេះវា`
+  came back as `មិញនេះ វាគ` — so words are matched by *character*, letting the
+  long agreeing runs carry the alignment, and a word it never found is placed
+  between the two it did. `custom_vocabulary` biases it toward the spellings
+  the captions actually use.
+- **A clip opens on a breath.** The first word is often a third of a second
+  in, so nothing is marked until the voice arrives; otherwise the first word
+  lights before it is spoken.
+- **Transcribing is not free.** Every answer is cached under `audio/heard/`,
+  so re-running after editing one caption costs one request.
 
-A line the transcript does not cover well keeps the reading guess, so the two
-sources mix line by line rather than all or nothing.
+All 21 lines are timed this way, none left to the guess — though the guess is
+still there, and a caption with no recording still runs on it.
 
 **The cues come from the same walk as the picture.** `main.py` keeps a running
 clock through every emit and writes `audio/cues.json` as it renders, so the
