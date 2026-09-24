@@ -26,16 +26,26 @@ import world as W
 # every layout decision are shared — only the vocabulary forks, so a fix to
 # the picture cannot land in one language and not the other.
 #
-# `--clean` renders the same film with no subtitle and no cues, so there is
-# nothing for `mix.py` to lay a voice onto. The *timing* is untouched: every
-# scene still lasts exactly as long as its line takes to say, so the clean cut
-# is frame for frame the narrated one with the words taken off — which is what
-# makes it worth having, whether to dub it yourself or to watch the picture
-# make its own case.
+# The words on the screen and the voice in the ear are separate switches, and
+# every combination of them is a film somebody wants:
+#
+#     --no-subtitle   the picture and the voice, with nothing written
+#     --silent        the picture and the words, with no cues to mix
+#     --clean         the picture alone
+#
+# The *timing* is the same in all four. Every scene lasts exactly as long as
+# its line takes to say, so the cuts are frame for frame each other with one
+# thing or another taken off — which is what makes them worth having, whether
+# to dub one yourself or to watch the picture make its own case.
 CLEAN = "--clean" in sys.argv
+CAPTIONS = not (CLEAN or "--no-subtitle" in sys.argv)
+CUEING = not (CLEAN or "--silent" in sys.argv)
+
 _args = [word for word in sys.argv[1:] if not word.startswith("-")]
 SAY, SCENES = vocabulary.pick(_args[0] if _args else "en")
-OUT = SAY["out"].replace(".mp4", "-clean.mp4") if CLEAN else SAY["out"]
+_cut = {(True, True): "", (False, False): "-clean",
+        (False, True): "-nosub", (True, False): "-silent"}[CAPTIONS, CUEING]
+OUT = SAY["out"].replace(".mp4", f"{_cut}.mp4")
 
 cm.canvas(1280, 720)
 
@@ -611,7 +621,7 @@ def view(frame):
 
     scene.text("title", state["title"], size=_fits(state["title"], TITLE_SIZE),
                at=cm.at(x=640, top=TITLE_Y)).fill(INK).on(layer=TEXT_LAYER)
-    if state["say"] and not CLEAN:
+    if state["say"] and CAPTIONS:
         create_caption(scene, state["say"], state["said"])
     if state["note"]:
         scene.formula("note", state["note"], size=31,
@@ -767,7 +777,7 @@ def story(state):
             # rate guessed. The section becomes the recording plus a moment,
             # and the words keep their proportions inside it — so the mark is
             # on the word being said rather than near it.
-            if not CLEAN:
+            if CUEING:
                 CUES.append({"file": heard["file"],
                              "start": round(clock[0], 3)})
             stretch = (heard["seconds"] + TAIL) / sum(shares)
@@ -909,9 +919,12 @@ cm.explain(
 
 if CUES:
     # Written as the trace was walked, so the sound cannot disagree with the
-    # picture: both came from the same events, in the same order.
+    # picture: both came from the same events, in the same order. The video's
+    # name goes in with them, because there is more than one cut now and
+    # `mix.py` must lay the voice onto the one these cues were walked for.
     (AUDIO / "cues.json").write_text(
-        json.dumps(CUES, ensure_ascii=False, indent=2) + "\n")
+        json.dumps({"video": OUT, "cues": CUES},
+                   ensure_ascii=False, indent=2) + "\n")
     print(f"wrote {AUDIO.name}/cues.json — run mix.py to lay the voice on")
 
 print(f"wrote {OUT}")

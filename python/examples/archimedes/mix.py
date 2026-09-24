@@ -3,10 +3,10 @@
 
     python python/examples/archimedes/mix.py
 
-Reads `audio/cues.json`, which `main.py` writes as it renders: one entry per
-caption, with the moment its recording should start. Those offsets come from
-walking the same events the renderer walks, so the sound cannot disagree with
-the picture.
+Reads `audio/cues.json`, which `main.py` writes as it renders: the cut it
+rendered, and one entry per caption with the moment its recording should
+start. Those offsets come from walking the same events the renderer walks, so
+the sound cannot disagree with the picture.
 
 Codimate has no audio channel yet (ADR 0007 is unbuilt), so this is a separate
 ffmpeg pass rather than part of the render. The video stream is copied, never
@@ -22,23 +22,28 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 AUDIO = HERE / "audio"
 ROOT = HERE.parents[2]
-VIDEO = ROOT / "results" / "archimedes-km.mp4"
-
-# Written back over the render, so there is one file to watch rather than a
-# silent one and a narrated one side by side with the same thumbnail. ffmpeg
-# cannot read and write the same path, hence the temporary.
-OUT = ROOT / "results" / ".archimedes-km-narrated.tmp.mp4"
 
 
 def main() -> int:
     cues_file = AUDIO / "cues.json"
     if not cues_file.exists():
         raise SystemExit("no audio/cues.json — render `main.py km` first")
-    cues = json.loads(cues_file.read_text())
-    if not VIDEO.exists():
-        raise SystemExit(f"no {VIDEO} — render `main.py km` first")
+    written = json.loads(cues_file.read_text())
+    cues = written["cues"]
 
-    command = ["ffmpeg", "-y", "-v", "error", "-i", str(VIDEO)]
+    # Which cut these cues were walked for. There is more than one — with the
+    # subtitle and without it — and laying a voice onto the wrong one would
+    # sound right while showing the other film.
+    video = ROOT / written["video"]
+    if not video.exists():
+        raise SystemExit(f"no {video} — render it first")
+
+    # Written back over the render, so there is one file to watch rather than
+    # a silent one and a narrated one side by side with the same thumbnail.
+    # ffmpeg cannot read and write the same path, hence the temporary.
+    out = video.with_name(f".{video.stem}-narrated.tmp.mp4")
+
+    command = ["ffmpeg", "-y", "-v", "error", "-i", str(video)]
     for cue in cues:
         command += ["-i", str(AUDIO / cue["file"])]
 
@@ -58,12 +63,12 @@ def main() -> int:
         "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
         # No `-shortest`: the picture runs past the last clip by design — the
         # final hold — and truncating to the audio would cut the ending.
-        str(OUT),
+        str(out),
     ]
     subprocess.run(command, check=True)
-    OUT.replace(VIDEO)
+    out.replace(video)
 
-    print(f"wrote {VIDEO.relative_to(ROOT)} — {len(cues)} clips of narration")
+    print(f"wrote {video.relative_to(ROOT)} — {len(cues)} clips of narration")
     return 0
 
 
