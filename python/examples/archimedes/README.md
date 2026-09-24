@@ -204,10 +204,26 @@ line for the same reason — keyed by place it tweens to the next line's width
 while the words change instantly, and for a quarter of a second the line hangs
 off both ends of its own plate.
 
+**At most ten words are on screen.** A whole sentence set in one line has to
+be shrunk to fit, and the longest here — twenty-three words — ended up small
+enough to squint at. The caption turns a page instead, following the mark.
+
+**A segmented line never falls back to clusters.** `chunks()` used to decide
+per token: no word mark inside it, so split it into orthographic clusters. But
+a word standing alone after a real space has no mark *inside* it and is still
+one word — `ដដែល` came apart into `ដ ដែ ល`. The decision belongs to the line,
+not the token, and getting it wrong also cost two lines their measured timings,
+because the word counts no longer agreed.
+
 **The mark is a colour, not a plate.** A highlight rectangle was tried first
 and is wrong for Khmer: its words are set flush, so a highlight has no gap of
 its own to sit in and ends up under its neighbours. The word the line has got
-to is simply the bright one, and the rest are dim.
+to is simply the bright one — manim's blue — and the rest are dim.
+
+It changes in a beat of its own, twenty milliseconds long. The Engine tweens a
+shape's fill across the whole beat it changes in, so one beat per word made the
+mark *glow* on and off over a fifth of a second rather than moving along the
+line.
 
 **Khmer does not put spaces between its words.** That is the rule the first
 attempt broke — it gave every segmenter boundary a space, which is Khmer with
@@ -315,6 +331,13 @@ Three things that had to be survived:
   lights before it is spoken.
 - **Transcribing is not free.** Every answer is cached under `audio/heard/`,
   so re-running after editing one caption costs one request.
+- **A speech model can stumble.** One take said its line, wandered into a
+  different caption, and said the whole thing again — 6.9 seconds of audio for
+  2.5 seconds of words. Nothing downstream noticed: the mark ran to the end of
+  the caption while the voice was still on its first pass, and the only way to
+  find out was to watch it. `align.py` has the transcript in hand, so it checks
+  now and names any clip that comes back much longer than the line it was made
+  from. Four of twenty-one were bad.
 
 All 21 lines are timed this way, none left to the guess — though the guess is
 still there, and a caption with no recording still runs on it.

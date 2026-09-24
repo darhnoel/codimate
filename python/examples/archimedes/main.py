@@ -73,6 +73,7 @@ WHEN = json.loads(_timed.read_text()) if _timed.exists() else {}
 # `OPENING` is already the film's first state, so these are named for what
 # they are: the pause before anything, the fallback beat, and the last hold.
 LEAD, DEFAULT, FINAL = 0.25, 0.1, 1.8
+SNAP = 0.02             # how long the running mark takes to change colour
 
 # ------------------------------------------------------------ the palette
 INK, DIM, AIR = "#e8eef7", "#93a0b2", "#161c25"
@@ -83,7 +84,7 @@ PLATE = "#0b1018"
 # holds rather than a bar of fixed width, so the narration has a place of its
 # own instead of looking like chrome.
 CAPTION_BG = "#141a26"
-READ, UNREAD = INK, "#5d6a7e"    # the word the line is on, and the rest
+READ, UNREAD = "#58C4DD", "#5d6a7e"   # manim's blue, and the rest
 SKIN = {"water": "#4aa8dd", "ice": "#cfefff", "iron": "#96a2b0"}
 RHO = {"water": W.RHO_WATER, "ice": W.RHO_ICE, "iron": W.RHO_IRON}
 SAYS = {"water": SAY["water"], "ice": SAY["ice_word"],
@@ -377,10 +378,15 @@ def chunks(line):
     A line that has never been through the segmenter still runs — one
     orthographic cluster at a time, which is choppier but not broken.
     """
+    # Decided once for the whole line, not per token. A line that has been
+    # through `segment.py` has its boundaries marked, so a token carrying no
+    # mark is simply one word — ដដែល standing alone after a real space is a
+    # word, and cluster-splitting shattered it into ដ ដែ ល.
+    marked = vocabulary.ZWSP in line
     pieces = []
     for w, token in enumerate(line.split()):
         first = True
-        if vocabulary.ZWSP in token:
+        if marked:
             for part in token.split(vocabulary.ZWSP):
                 if part:
                     pieces.append((part, (w > 0) and first))
@@ -810,11 +816,17 @@ def story(state):
                 stretch = (heard["seconds"] + TAIL) / sum(steps)
                 steps = [step * stretch for step in steps]
 
+        # Each word arrives in two beats: a very short one where the colour
+        # changes, and the rest of its time holding. The Engine tweens a
+        # shape's fill across the whole beat it changes in, so one beat per
+        # word made the mark *glow* on and off over a fifth of a second
+        # instead of moving. Twenty milliseconds reads as a switch.
         for i, step in enumerate(steps):
-            key = f"{name}.{i}"
-            HOLDS[key] = step
             state["said"] = i + 1
-            tick(key)
+            HOLDS[f"{name}.{i}!"] = SNAP
+            tick(f"{name}.{i}!")
+            HOLDS[f"{name}.{i}"] = max(step - SNAP, 0.01)
+            tick(f"{name}.{i}")
 
     def walk(name, steps=26, **targets):
         """Move every named value to its target, sampled.
