@@ -291,6 +291,30 @@ so the mark is on the word being said rather than near it. Without the audio
 the film still runs, at the reading rate — the voice is an addition, never
 something the film depends on.
 
+**Where the mark goes inside a line is measured, not guessed.** `align.py`
+reads an SRT of the narration, lines its words up against the captions, and
+writes `audio/timing.json` — for each caption, what *share* of its own length
+each word is worth. Shares rather than seconds, because the film has been
+re-timed a dozen times and every render moves the clock; a share survives, and
+the recording's own measured length is what it gets scaled onto.
+
+Two things make that harder than it sounds.
+
+*The transcript is not the script.* It is what a machine heard, so it spells
+things its own way — `អណ្តែត` for `អណ្ដែត`, `សំបក` for `សម្បក`. Matching word to
+word fails on those; matching **characters**, and letting the long agreeing
+runs carry the alignment, does not. It agrees on 96% of them.
+
+*The transcript's phrases straddle the captions.* An SRT of the finished film
+cuts where the speaker pauses, not where a caption ends, so one cue often holds
+the end of one line and the start of the next — with the film's silence between
+them, inside the cue. Left alone that silence reads as one very slow word, and
+it inflated some lines by 3x. Any gap longer than `GAP` is clipped: it is the
+film's pause, not the voice's.
+
+A line the transcript does not cover well keeps the reading guess, so the two
+sources mix line by line rather than all or nothing.
+
 **The cues come from the same walk as the picture.** `main.py` keeps a running
 clock through every emit and writes `audio/cues.json` as it renders, so the
 sound cannot disagree with the picture: both were walked from the same events
@@ -331,6 +355,7 @@ so editing one caption later costs one request rather than twenty-one.
 | `vocabulary.py` | every scene's title and subtitle, in English and Khmer, and the unit. No Codimate; checks itself. |
 | `segment.py` | marks Khmer word boundaries in `vocabulary.py`. Authoring-time only. |
 | `narrate.py` | speaks the Khmer captions with Kiri TTS, and measures them. Authoring-time only. |
+| `align.py` | reads a transcript of the narration and learns how fast each word is said. Authoring-time only. |
 | `mix.py` | lays the recordings onto the rendered video with ffmpeg. |
 | `main.py` | the trace and the view. |
 

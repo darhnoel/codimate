@@ -63,6 +63,12 @@ VOICE = ({entry["text"]: entry for entry in
           json.loads(_spoken.read_text())} if _spoken.exists() else {})
 CUES = []                        # one per line spoken: its file and its start
 
+# And if the narration has been transcribed (`align.py`), how fast each word
+# inside a line is actually said. Shares of the line, not seconds, so they
+# survive the film being re-timed — which it has been, a dozen times.
+_timed = AUDIO / "timing.json"
+HEARD = json.loads(_timed.read_text()) if _timed.exists() else {}
+
 # `OPENING` is already the film's first state, so these are named for what
 # they are: the pause before anything, the fallback beat, and the last hold.
 LEAD, DEFAULT, FINAL = 0.25, 0.1, 1.8
@@ -770,8 +776,14 @@ def story(state):
             tick(name)
             return
 
-        shares = [_pace(piece) for piece in pieces]
-        heard = VOICE.get(vocabulary.spoken(line))
+        # Three sources, best first: what the voice was measured doing, what
+        # a guess at reading speed says, and — between them — what the voice
+        # was heard doing *inside* the line.
+        said = vocabulary.spoken(line)
+        shares = HEARD.get(said) or [_pace(piece) for piece in pieces]
+        if len(shares) != len(pieces):
+            shares = [_pace(piece) for piece in pieces]
+        heard = VOICE.get(said)
         if heard:
             # Real speech has its own length, and it is not the one a reading
             # rate guessed. The section becomes the recording plus a moment,
