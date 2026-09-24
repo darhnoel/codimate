@@ -318,7 +318,7 @@ def create_body(scene, state):
     in the outline itself — a rounded rect could not morph.
     """
     middle = _middle(state)
-    scene.polygon("body", W.outline(middle, state["wall"])) \
+    scene.polygon("body", W.outline(middle)) \
          .fill(SKIN[state["material"]], edge=INK, edge_w=2.0) \
          .on(layer=BODY_LAYER)
 

@@ -35,10 +35,10 @@ except the two pools and the box:
 | number | where it comes from |
 | --- | --- |
 | 91.7% submerged | `917 / 1000`, not typed anywhere |
-| 8.6% of the iron left | what a 6px wall holds, over the box's area |
-| average density 672 kg/m³ | iron, times the fraction of it still there |
-| 67.2% draft | that density over water's |
-| lift-off at 90% | where the average first drops under 1,000 |
+| 10% of the iron left | what a 5px wall holds, over the box's area |
+| average density 783 kg/m³ | iron, times the fraction of it still there |
+| 78.3% draft | that density over water's |
+| lift-off at 92% | where the average first drops under 1,000 |
 
 The ship floating is therefore a consequence of the drawing, not a figure
 chosen to make the point come out. `world.py` checks it: at every floating
@@ -116,6 +116,16 @@ claims does not happen. So `thickness` solves
 at every instant instead of once for the finished hull. The walls thin as the
 outside grows, starting from a block where they meet in the middle and there is
 no cavity at all. `_the_reshape_conserves_steel` checks all forty steps.
+
+**The box is closed.** An open one was drawn first, and it cost an
+idealisation: a vessel open at the top, held under water, would fill, and the
+film had to take the air inside it for granted. A sealed box of thin iron
+around air simply floats, and there is nothing to excuse.
+
+It is also simpler to draw. The outline never changes — not its size and not
+its shape — because hollowing a closed box cuts no notch in it. The cavity is
+a second shape drawn inside, and the walls are what is left showing between
+the two. A polygon cannot have a hole in it, and it turns out not to need one.
 
 **The hollowing happens at the surface.** It used to happen on the tank floor,
 where the change was hard to see and the finished box sat in the dark. The box

@@ -135,7 +135,7 @@ KM = {
             "បែរជា​អណ្ដែត​ទៅវិញ?",
     "simpler": "យើង​ចាប់ផ្ដើម​គិត​ពី​រឿង​ងាយៗ​សិន",
     "waterbox": "ស្រមៃ​ថា​យើង​មាន​ទឹកដែល​មាន​ទំហំ​មួយ​ប្រអប់"
-                "ដែល​កម្រាស់​នៃ​សម្បក​ខាងក្រៅ​អាច​ចោល​បាន ទំលាក់​ចូល​ទៅ​ក្នុងទឹក",
+                " ដែល​កម្រាស់​នៃ​សម្បក​ខាងក្រៅ​អាច​ចោល​បាន ទំលាក់​ចូល​ទៅ​ក្នុងទឹក",
     "neutral": "ដោយសារ​វា​ជា​រូបធាតុ​តែមួយ វា​មិន​អណ្ដែត ហើយក៏​មិន​លិច​ដែរ",
     "ice": "ឥឡូវ​យើង​ប្ដូរ​វា​ជា​ទឹកកក​វិញ",
     "push": "ជាមួយនឹង​ទំហំ​ដដែល ទាល់តែ​យើង​ប្រើ​កម្លាំង​រុញ​សង្កត់​បន្តិច"
@@ -171,7 +171,16 @@ KM = {
     # The unit is the one edit: it is typeset by `unit()` now, on its own
     # line under the ship, so the sentence no longer spells it out.
     "density": "ដង់ស៊ីតេ​មធ្យម​ស្រាល​ជាង​ទឹក ដូច្នេះ​វា​អណ្ដែត។",
-    "said": "វត្ថុ​មួយ​អណ្ដែត​បាន នៅពេល​ទម្ងន់​ទឹកដែល​វា​រុញ​ចេញ ស្មើនឹង​ទម្ងន់​របស់​វា"
+    "said": "វត្ថុ​មួយ​អណ្ដែត​បាន នៅពេល​ទម្ងន់​ទឹកដែល​វា​រុញ​ចេញ ស្មើនឹង​ទម្ងន់​របស់​វា។",
+
+    # Written after the first pass, over drafts of mine that the
+    # reshape section had outgrown.
+    "s_question": "ឥលូវ​យើង​យក​លោហៈ​ដដែល ហើយ​កែ​ឆ្នៃ​រូបរាង​របស់​វា",
+    "t_hollow": "ដោយ​ចោះ​ប្រអប់​ឲ្យ​មាន​ប្រហោង​ខាងក្នុង",
+    "s_hollowing": "ប្រអប់​ដដែល​មាន​មាឌ V ដដែល​តែ​មាន​ជញ្ជាំង​ស្ដើង ហើយ​ខាងក្នុង​ក្លាយជា​ខ្យល់",
+    "s_rising": "ដោយសារ​ដែក​បាត់​ទៅ​មួយភាគធំ ទឹក​ក៏អាច​ទ្រ​អ្វី​ដែល​នៅសល់​បាន",
+    "t_floats": "ដែក​ក៏អាច​អណ្ដែត",
+    "s_floats": "ទំហំ​ប៉ុន​ប្រអប់​ឯទៀត​មែន ប៉ុន្តែ​ម៉ាស​របស់​ដែក​នៅសល់​ត្រឹម {left:.0f}% ប៉ុណ្ណោះ",
 }
 
 KM_LABELS_CARD = "គោលការណ៍​អា​ក​ស៊ី​ម៉ែ​ត"     # the author's, same as the card
@@ -185,18 +194,7 @@ DRAFT = {
     "t_neutral": "មិន​អណ្ដែត មិន​លិច",
     "t_push": "សង្កត់​ឲ្យ​លិច",
     "t_chart": "ម៉ាសមាឌ ធៀប​នឹង​ទឹក",
-    "s_question": "ឥលូវយើងយកលោហៈដដែល ហើយកែឆ្នៃរូបរាងរបស់វា",
-
-    # The reshape section. The four lines that used to be here were mine from
-    # the first pass, not the author's, and they described a tank that grew
-    # and a slab that balanced on the surface — neither of which happens now.
-    "t_hollow": "ដោយចោះប្រអប់ឲ្យមានប្រហោងខាងក្នុង",
-    "s_hollowing": "ប្រអប់​ដដែល​មាន​មាឌ V ដដែល​តែ​មាន​ជញ្ជាំង​ស្ដើង "
-                   "ហើយ​ខាងក្នុង​ក្លាយជា​ខ្យល់",
     "t_rising": "ឥឡូវ​វា​អាច​អណ្ដែត",
-    "s_rising": "ដោយសារដែក​បាត់​ទៅមួយភាគធំ ទឹក​ក៏អាច​ទ្រ​អ្វី​ដែល​នៅសល់​បាន",
-    "t_floats": "ដែកក៏អាច​អណ្ដែត",
-    "s_floats": "ទំហំប៉ុនប្រអប់​ឯទៀតមែន ប៉ុន្តែម៉ាសរបស់​ដែក​នៅសល់​ត្រឹម {left:.0f}% ប៉ុណ្ណោះ",
 }
 
 # Which line each scene shows, in which slot. The title names what the scene
@@ -231,10 +229,10 @@ KM_SCENES = {
     "steelforce": (KM["steel"], KM["not_enough"]),
     "sinks": (KM["steel"], KM["sinks_now"]),
 
-    "question": (KM["question"], DRAFT["s_question"]),
-    "hollowing": (DRAFT["t_hollow"], DRAFT["s_hollowing"]),
-    "rising": (DRAFT["t_rising"], DRAFT["s_rising"]),
-    "floats": (DRAFT["t_floats"], DRAFT["s_floats"]),
+    "question": (KM["question"], KM["s_question"]),
+    "hollowing": (KM["t_hollow"], KM["s_hollowing"]),
+    "rising": (DRAFT["t_rising"], KM["s_rising"]),
+    "floats": (KM["t_floats"], KM["s_floats"]),
     "average": (KM["average"], KM["density"]),
 
     "chart": (DRAFT["t_chart"], KM["chart"]),

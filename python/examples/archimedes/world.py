@@ -191,17 +191,23 @@ def _walk(corners, n, radius=CORNER):
 # The one number in this section chosen by eye, and it is a drawing choice:
 # how thick to leave the walls. Everything else — how much iron is left, what
 # the box then weighs, how deep it floats — follows from it.
-WALL = 6.0
-SOLID = BOX_W / 2.0             # walls meeting in the middle: no cavity at all
+WALL = 5.0
+SOLID = BOX_H / 2.0             # walls meeting in the middle: no cavity at all
 
 
 def metal(wall):
     """How much iron is left when the walls are `wall` thick.
 
-    A box is its outside less its inside. At `SOLID` the inside is nothing and
-    the answer is the whole of V; at `WALL` it is a few per cent of it.
+    A box is its outside less its inside, and the box is **closed** — walls on
+    all four sides, lid included. An open one was drawn first and cost an
+    idealisation: a vessel open at the top, held under water, would fill, and
+    the film had to take the air inside it for granted. A sealed box of thin
+    iron around air simply floats, and there is nothing to excuse.
+
+    At `SOLID` the inside is nothing and the answer is the whole of V; at
+    `WALL` it is a few per cent of it.
     """
-    inside = max(BOX_W - 2 * wall, 0.0) * max(BOX_H - wall, 0.0)
+    inside = max(BOX_W - 2 * wall, 0.0) * max(BOX_H - 2 * wall, 0.0)
     return BOX_AREA - inside
 
 
@@ -231,11 +237,11 @@ def thinning(along):
     density hardly moves; linear in the hole it is cutting, the number falls
     at a readable rate.
     """
-    inside = (BOX_W - 2 * WALL) * (BOX_H - WALL) * along
+    inside = (BOX_W - 2 * WALL) * (BOX_H - 2 * WALL) * along
     lo, hi = WALL, SOLID
     for _ in range(60):
         mid = 0.5 * (lo + hi)
-        if max(BOX_W - 2 * mid, 0.0) * max(BOX_H - mid, 0.0) > inside:
+        if max(BOX_W - 2 * mid, 0.0) * max(BOX_H - 2 * mid, 0.0) > inside:
             lo = mid
         else:
             hi = mid
@@ -263,30 +269,29 @@ def _lift_off():
 LIFTS_AT = _lift_off()
 
 
-def outline(middle, wall=SOLID):
-    """The body at any point in its hollowing, as `POINTS` points.
+def outline(middle):
+    """The body, as `POINTS` points. The same box in every scene of the film.
 
-    The outside never changes — it is the same box in every scene of the film.
-    Only the walls move, inward from meeting in the middle to `WALL`.
+    It never changes — not its size and not its shape. The box is closed, so
+    hollowing it cuts no notch in this outline: the cavity is a second shape
+    drawn inside it, and the walls are what is left showing between the two.
+    A polygon cannot have a hole in it, and it does not need one.
     """
     w, h = BOX_W, BOX_H
     x, y = middle[0] - w / 2, middle[1] - h / 2
-    if w - 2 * wall < 2.0:                         # walls still meeting: solid
-        return _walk([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], POINTS)
-    return _walk([(x, y), (x + wall, y), (x + wall, y + h - wall),
-                  (x + w - wall, y + h - wall), (x + w - wall, y), (x + w, y),
-                  (x + w, y + h), (x, y + h)], POINTS)
+    return _walk([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], POINTS)
 
 
 def cavity(middle, wall=SOLID):
     """The air inside the box: left, top, right, bottom in pixels.
 
-    Drawn over the water, because the Engine has no clipping — without it the
-    translucent water runs straight through the box and the inside looks
-    flooded, which is the opposite of what floats it.
+    Inset on all four sides, because the box has a lid. Drawn over the water,
+    because the Engine has no clipping — without it the translucent water runs
+    straight through the box and the inside looks flooded, which is the
+    opposite of what floats it.
     """
     x, y = middle[0] - BOX_W / 2, middle[1] - BOX_H / 2
-    return (x + wall, y, x + BOX_W - wall, y + BOX_H - wall)
+    return (x + wall, y + wall, x + BOX_W - wall, y + BOX_H - wall)
 
 
 # ------------------------------------------------------------- the arrows
@@ -328,7 +333,7 @@ def _the_physics_holds():
 
     # Every shape in the hollowing has the same point count, which is what
     # lets the box hollow itself a sampled step at a time instead of cutting.
-    assert len({len(outline((0, 0), thinning(i / 8))) for i in range(9)}) == 1
+    assert len(outline((0, 0))) == POINTS
 
     # Rounding does not move the outline off its own box: every point of a
     # rounded rectangle is still inside it, and the sides still reach the edge.
