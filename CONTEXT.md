@@ -131,6 +131,27 @@ Its styling mirrors `PathNode`: prefer `.style(...)`, allow `.fill(...)` and
 `.stroke(...)`, and let builder order decide overrides. Use `box_in(&slot)` for
 a Slot-sized Box, and `box_at(center, size)` for a moving center-positioned Box.
 
+**Title**: What a scene is *for*, in a few words, held still while the scene
+plays. A sentence in a Title is a Caption that got lost.
+
+**Caption**: The line of text at the bottom of the frame — what is *happening*,
+changing as it happens. [ADR 0007](docs/adr/0007-media-channel-audio-video-subtitle.md)
+calls the same thing a **Subtitle**; "Caption" is the canonical term and the two
+mean one thing. A Caption is drawn by a View like any other text: it is not a
+channel and not an Engine concept.
+
+**Narration**: The Caption's words, spoken. Narration and Caption are separate
+things that usually carry the same words — neither implies the other, and a
+film may have either, both or neither. Narration is audio and therefore lives
+beside the Scene rather than in it (ADR 0007), never breaking `f(t) → Scene`.
+
+**Previewer**: A window that shows a rendered Explanation and lets an author
+point at what is on screen to learn the name, the Trace Event and the State
+behind it, then attach a note. **The Previewer never writes.** It produces
+words about the film; changing the film remains an edit to the one Python file.
+This is what "preview window is viewer only" means, and it is why a Previewer
+is not the GUI editor that is out of scope.
+
 **Motion**: Timeless movement/styling choices used by a View, such as easing,
 paths, reveals, pulses, and style transitions. Motion has no duration.
 
@@ -338,6 +359,5 @@ Inline builder chains only for tiny one-offs where naming would add noise.
 ## Out of Scope (Do Not Implement)
 - Stateful particles (violates pure f(t))
 - Physics simulation (frame-dependent state)  
-- Audio synchronization (out of scope v1)
 - 3D rendering (Skia is 2D, keep it that way)
 - GUI editor (preview window is viewer only)
