@@ -134,7 +134,7 @@ def trace(fn=_MISSING, state=_MISSING, /, *, snapshot=None) -> "Trace":
     default copy.
 
     The older form — `@cm.trace()` on a function that calls the module-level
-    `cm.emit` — still works and warns. It will be removed.
+    `cm.emit` — still works and warns. It goes in 0.2.
     """
     if fn is _MISSING or state is _MISSING:
         return _decorator(snapshot) if fn is _MISSING else _decorator(snapshot)(fn)
@@ -157,12 +157,12 @@ def trace(fn=_MISSING, state=_MISSING, /, *, snapshot=None) -> "Trace":
 
 
 def _decorator(snapshot):
-    """The older `@cm.trace()`, kept working for one version."""
+    """The older `@cm.trace()`, kept working until 0.2."""
     import warnings
 
     def decorate(fn):
         warnings.warn(
-            "@cm.trace() and the ambient cm.emit are going away. Take `emit` "
+            "@cm.trace() and the ambient cm.emit are removed in 0.2. Take `emit` "
             "as an argument and call cm.trace(fn, state) instead:\n"
             f"    def {fn.__name__}(state, emit): ...\n"
             f"    cm.explain(trace=cm.trace({fn.__name__}, state), ...)",

@@ -60,7 +60,7 @@ arrives in the view as `frame.event.data`.
 ordinary Python: `bubble_sort(values, print)` runs it and prints the events.
 
 The older form — `@cm.trace()` on a function calling a module-level `cm.emit`
-— still works and warns. It will be removed.
+— still works and warns. It is removed in 0.2.
 
 ```python
 cm.items(values) -> list[Item]
