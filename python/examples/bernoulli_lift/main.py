@@ -31,12 +31,11 @@ from flow import DT
 # --- the algorithm ----------------------------------------------------------
 
 
-@cm.trace()
-def blow(air):
+def blow(air, emit):
     while not air.done():
         air.step()
-        cm.emit("tick")
-    cm.emit("settled")
+        emit("tick")
+    emit("settled")
 
 
 # --- the view ---------------------------------------------------------------
@@ -52,7 +51,7 @@ def flow_view(frame):
 
 # `linear`: every parcel is mid-flight at every tick.
 cm.explain(
-    trace=blow(flow.Flow()),
+    trace=cm.trace(blow, flow.Flow()),
     view=flow_view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=DT * 0.8, events={"settled": 1.0},

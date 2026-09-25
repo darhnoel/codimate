@@ -25,17 +25,16 @@ PINK, CHALK = "#d147a3", "#ffffff"
 STEPS = 48
 
 
-@cm.trace()
-def animated_square_to_circle(state):
+def animated_square_to_circle(state, emit):
     for step in range(1, STEPS + 1):        # Create(square)
         state["drawn"] = step / STEPS
-        cm.emit("draw")
+        emit("draw")
     state["tilt"] = 45.0                    # square.animate.rotate(PI / 4)
-    cm.emit("turn")
+    emit("turn")
     state["shape"] = "circle"               # Transform(square, circle)
-    cm.emit("morph")
+    emit("morph")
     state["filled"] = True                  # square.animate.set_fill(PINK, 0.5)
-    cm.emit("fill")
+    emit("fill")
 
 
 def view(frame):
@@ -60,7 +59,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=animated_square_to_circle({"shape": "square", "drawn": 0.0,
+    trace=cm.trace(animated_square_to_circle, {"shape": "square", "drawn": 0.0,
                                      "tilt": 0.0, "filled": False}),
     view=view,
     motion=[cm.Rule("*", position="linear")],

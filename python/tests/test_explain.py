@@ -4,10 +4,9 @@ import support  # noqa: F401  (puts `codimate` on the import path)
 import codimate as cm
 
 
-@cm.trace()
-def swap_once(values):
+def swap_once(values, emit):
     values[0], values[1] = values[1], values[0]
-    cm.emit("swap", items=[values[0], values[1]])
+    emit("swap", items=[values[0], values[1]])
 
 
 def view(frame):
@@ -18,7 +17,7 @@ def view(frame):
 
 
 def built():
-    return cm.explain(trace=swap_once(cm.items([3, 1])), view=view,
+    return cm.explain(trace=cm.trace(swap_once, cm.items([3, 1])), view=view,
                       timing=cm.Timing(default=0.5))
 
 
@@ -37,7 +36,7 @@ def test_the_opening_and_ending_are_held():
 
 
 def test_a_named_event_can_take_its_own_duration():
-    e = cm.explain(trace=swap_once(cm.items([3, 1])), view=view,
+    e = cm.explain(trace=cm.trace(swap_once, cm.items([3, 1])), view=view,
                    timing=cm.Timing(default=0.5, events={"swap": 1.25}))
     assert e.durations == [0.8, 1.25, 1.2], e.durations
 
@@ -119,12 +118,11 @@ def test_the_timeline_accounts_for_the_whole_video():
     with the video exactly — a second copy of the duration arithmetic would
     drift and send you looking at the wrong moment.
     """
-    @cm.trace()
-    def run(state):
-        cm.emit("one")
-        cm.emit("two")
+    def run(state, emit):
+        emit("one")
+        emit("two")
 
-    exp = cm.explain(trace=run({}), view=lambda f: cm.Scene(),
+    exp = cm.explain(trace=cm.trace(run, {}), view=lambda f: cm.Scene(),
                      timing=cm.Timing(default=1.5, opening=1.0, final_hold=2.0))
     beats = exp.timeline()
 

@@ -41,20 +41,26 @@ The folder is created if it does not exist. `ffmpeg` must be on your PATH.
 ## What happened
 
 ```python
-@cm.trace(*, snapshot=None)
+cm.trace(fn, state, *, snapshot=None) -> Trace
 ```
 
-Turns a state-mutating function into a `Trace`. `snapshot` receives the same
-arguments as your function and returns the data worth showing; it defaults to a
-deep copy of the first argument.
+Runs `fn(state, emit)` and records what happened. `snapshot(state)` returns the
+data worth showing; it defaults to a deep copy of the state.
 
 ```python
-cm.emit(name, **data) -> None
+emit(name, **data) -> None
 ```
 
-Records that a moment worth showing has happened. **Call it after changing your
-data** — Codimate snapshots the result. `name` is what you later give a
-duration to; `**data` arrives in the view as `frame.event.data`.
+The second argument your function is handed. Records that a moment worth
+showing has happened — **call it after changing your data**, and Codimate
+snapshots the result. `name` is what you later give a duration to; `**data`
+arrives in the view as `frame.event.data`.
+
+`emit` is an argument rather than something ambient, so your algorithm stays
+ordinary Python: `bubble_sort(values, print)` runs it and prints the events.
+
+The older form — `@cm.trace()` on a function calling a module-level `cm.emit`
+— still works and warns. It will be removed.
 
 ```python
 cm.items(values) -> list[Item]
@@ -432,4 +438,4 @@ view, it is in the wrong place.
 | `ValueError: two shapes share the name` | One name used twice in one Scene |
 | `ValueError: unknown path` | A `Rule` position that is not in the table above |
 | `ValueError: unknown color` | Not a name above or `#rrggbb` — raised at render |
-| `RuntimeError: emit() called outside a @trace function` | Missing the `@cm.trace()` decorator |
+| `RuntimeError: emit() called outside a @trace function` | The old `cm.emit` outside `@cm.trace()` — take `emit` as an argument instead |

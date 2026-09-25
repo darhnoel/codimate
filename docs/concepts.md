@@ -14,7 +14,7 @@ State → Algorithm → Trace → View → Scene → Timing → Video
 
 ```python
 cm.explain(
-    trace=merge_sort(cm.items([38, 27, 43, 3, 9, 82, 10, 15])),
+    trace=cm.trace(merge_sort, cm.items([38, 27, 43, 3, 9, 82, 10, 15])),
     view=merge_sort_view,
     motion=[cm.Rule("*", position="lift_carry_drop")],
     timing=cm.Timing(default=0.5, events={"merge": 0.9}),
@@ -133,14 +133,13 @@ Write the real logic. Call `emit()` after you change your data; the Trace
 records a snapshot of the result.
 
 ```python
-@cm.trace()
-def bubble_sort(values):
+def bubble_sort(values, emit):
     for i in range(len(values)):
         for j in range(len(values) - 1 - i):
-            cm.emit("compare", items=[values[j], values[j + 1]])
+            emit("compare", items=[values[j], values[j + 1]])
             if values[j] > values[j + 1]:
                 values[j], values[j + 1] = values[j + 1], values[j]
-                cm.emit("swap", items=[values[j], values[j + 1]])
+                emit("swap", items=[values[j], values[j + 1]])
 ```
 
 The View does not invent concept logic. If the picture needs to know something,

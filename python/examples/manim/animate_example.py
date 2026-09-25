@@ -33,14 +33,13 @@ RED, WHITE, PAPER = "#fc6255", "#ffffff", "#8b96a8"
 LIFT = 130.0
 
 
-@cm.trace()
-def animate_example(state):
+def animate_example(state, emit):
     state["colour"] = WHITE                  # .animate.set_fill(WHITE)
-    cm.emit("recolour")
-    cm.emit("wait")                          # .wait(1) — nothing differs
+    emit("recolour")
+    emit("wait")                          # .wait(1) — nothing differs
     state["lifted"], state["spin"] = True, 60.0   # .shift(UP).rotate(PI / 3)
-    cm.emit("move")
-    cm.emit("wait")
+    emit("move")
+    emit("wait")
 
 
 def view(frame):
@@ -67,7 +66,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=animate_example({"colour": RED, "lifted": False, "spin": 0.0}),
+    trace=cm.trace(animate_example, {"colour": RED, "lifted": False, "spin": 0.0}),
     view=view,
     timing=cm.Timing(default=1.0, events={"wait": 1.0},
                      opening=0.6, final_hold=0.4),

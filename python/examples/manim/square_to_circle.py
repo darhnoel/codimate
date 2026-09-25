@@ -26,15 +26,14 @@ STEPS = 48          # samples of the pen going round
 TILT = 45.0         # Manim rotates the square before it draws it
 
 
-@cm.trace()
-def square_to_circle(state):
+def square_to_circle(state, emit):
     for step in range(1, STEPS + 1):        # Create(square)
         state["drawn"] = step / STEPS
-        cm.emit("draw")
+        emit("draw")
     state["shape"] = "circle"               # Transform(square, circle)
-    cm.emit("morph")
+    emit("morph")
     state["shape"] = None                   # FadeOut(square)
-    cm.emit("gone")
+    emit("gone")
 
 
 def view(frame):
@@ -53,7 +52,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=square_to_circle({"shape": "square", "drawn": 0.0}),
+    trace=cm.trace(square_to_circle, {"shape": "square", "drawn": 0.0}),
     view=view,
     # The pen is already continuous by the time it reaches the Engine, so it
     # must not be eased again at every sample — `dharma_wheel` and `pendulum`

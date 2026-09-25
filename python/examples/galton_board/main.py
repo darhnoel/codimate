@@ -32,8 +32,7 @@ from physics import DT
 # --- the algorithm ----------------------------------------------------------
 
 
-@cm.trace()
-def drop(board):
+def drop(board, emit):
     """Run the simulation, sampling it at a fixed step of real time.
 
     One event per row instead would give every ball the same duration per row,
@@ -43,8 +42,8 @@ def drop(board):
     """
     while not board.done():
         board.step()
-        cm.emit("tick")
-    cm.emit("settled")
+        emit("tick")
+    emit("settled")
 
 
 # --- the view ---------------------------------------------------------------
@@ -62,7 +61,7 @@ def board_view(frame):
 # already in the samples. Easing between them would add a wobble physics never
 # asked for.
 cm.explain(
-    trace=drop(physics.Board()),
+    trace=cm.trace(drop, physics.Board()),
     view=board_view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=DT, events={"settled": 0.8},

@@ -70,11 +70,10 @@ class Wheel:
 # --- the algorithm ----------------------------------------------------------
 
 
-@cm.trace()
-def turn(wheel_state):
+def turn(wheel_state, emit):
     for step in range(SPOKES * PER_SPOKE):
         wheel_state.angle = (step + 1) * STEP
-        cm.emit("turn")
+        emit("turn")
 
 
 # --- the view ---------------------------------------------------------------
@@ -101,7 +100,7 @@ def wheel_view(frame):
 # `linear`, not the default `straight`: the wheel is mid-turn at every event,
 # so easing would make it accelerate and stop 24 times a revolution.
 cm.explain(
-    trace=turn(Wheel()),
+    trace=cm.trace(turn, Wheel()),
     view=wheel_view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=STEP_SECONDS, opening=1.2, final_hold=2.0),

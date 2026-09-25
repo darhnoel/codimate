@@ -90,8 +90,7 @@ class Pendulum:
 # --- the algorithm ----------------------------------------------------------
 
 
-@cm.trace()
-def swing(pendulum):
+def swing(pendulum, emit):
     inspected = False
     for _ in range(round(DURATION / DT)):
         previous_velocity = pendulum.angular_velocity
@@ -106,15 +105,15 @@ def swing(pendulum):
         )
         if reached_turning_point:
             pendulum.inspecting = True
-            cm.emit("zoom_in")
-            cm.emit("inspect_angle")
+            emit("zoom_in")
+            emit("inspect_angle")
             pendulum.inspecting = False
-            cm.emit("zoom_out")
+            emit("zoom_out")
             inspected = True
             continue
 
-        cm.emit("tick")
-    cm.emit("done")
+        emit("tick")
+    emit("done")
 
 
 # --- the view ---------------------------------------------------------------
@@ -190,7 +189,7 @@ def pendulum_view(frame):
 # The simulation already contains the acceleration and curved trajectory.
 # Linear motion joins its dense samples without adding stop-start easing.
 cm.explain(
-    trace=swing(Pendulum()),
+    trace=cm.trace(swing, Pendulum()),
     view=pendulum_view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(

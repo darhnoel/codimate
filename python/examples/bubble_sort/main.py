@@ -12,16 +12,15 @@ import codimate as cm
 # --- the algorithm: ordinary Python, with emit() where something happens ----
 
 
-@cm.trace()
-def bubble_sort(values):
+def bubble_sort(values, emit):
     n = len(values)
     for i in range(n):
         for j in range(n - 1 - i):
-            cm.emit("compare", items=[values[j], values[j + 1]])
+            emit("compare", items=[values[j], values[j + 1]])
             if values[j] > values[j + 1]:
                 values[j], values[j + 1] = values[j + 1], values[j]
-                cm.emit("swap", items=[values[j], values[j + 1]])
-    cm.emit("done")
+                emit("swap", items=[values[j], values[j + 1]])
+    emit("done")
 
 
 # --- the view: what one moment looks like ----------------------------------
@@ -48,7 +47,7 @@ def bars(frame):
 # --- motion and timing ------------------------------------------------------
 
 cm.explain(
-    trace=bubble_sort(cm.items([3, 1, 4, 2])),
+    trace=cm.trace(bubble_sort, cm.items([3, 1, 4, 2])),
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9, "done": 0.6}),

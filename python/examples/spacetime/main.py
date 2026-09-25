@@ -96,11 +96,10 @@ EDGE_LAYER = [_rank(lattice.look(p, _MID)[1]) for p in EDGE_MIDDLE]
 NODE_LAYER = [_rank(lattice.look(p, _MID)[1]) for p in NODES]
 
 
-@cm.trace()
-def orbit(state):
+def orbit(state, emit):
     for step in range(1, STEPS + 1):
         state["part"] = TURNS * step / STEPS
-        cm.emit("tick")
+        emit("tick")
 
 
 def _ramp(t):
@@ -176,7 +175,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=orbit({"part": 0.0}),
+    trace=cm.trace(orbit, {"part": 0.0}),
     view=view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=3.0 / PER_TURN, opening=0.3, final_hold=0.3),

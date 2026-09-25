@@ -60,8 +60,7 @@ def _nearest(t):
     return min(SHOWN, key=lambda k: abs(k - t))
 
 
-@cm.trace()
-def story(state):
+def story(state, emit):
     """The whole lesson, as a walk through one number and what is on screen.
 
     Every section is two beats: a short one where the panels change, and a long
@@ -76,8 +75,8 @@ def story(state):
 
     def beat(name, **change):
         state.update(change)
-        cm.emit("swap")         # a quarter second: the panels change here
-        cm.emit(name)           # and this holds, with nothing changing at all
+        emit("swap")         # a quarter second: the panels change here
+        emit(name)           # and this holds, with nothing changing at all
 
     def settle(target, steps=18):
         """Walk the threshold to `target` instead of jumping to it.
@@ -91,13 +90,13 @@ def story(state):
         was = state["t"]
         for k in range(1, steps + 1):
             state.update(t=round(was + (target - was) * k / steps))
-            cm.emit("settle")
+            emit("settle")
 
     # 1. The problem. Only the photograph.
     #
     # No `beat`: the film already opens on this, because the trace starts from
     # it. Emitting it as a change would make the opening a fade up from black.
-    cm.emit("intro")
+    emit("intro")
 
     # 2. One threshold, and what it does.
     beat("cut", title="Pick a threshold T",
@@ -109,7 +108,7 @@ def story(state):
     # cross-fade, it cuts (ADR 0013).
     for t in (60, 100, 160):
         state.update(t=t, say=f"T = {t}")
-        cm.emit("try")
+        emit("try")
     beat("which", title="But which T?",
          say="Every threshold gives a different answer. Which one is right?")
 
@@ -128,7 +127,7 @@ def story(state):
     beat("search", title="Try every threshold", say="")
     for t in SWEEP:
         state.update(t=t)
-        cm.emit("slide")
+        emit("slide")
 
     # 7. The idea, before any equation.
     settle(BEST_T)
@@ -139,7 +138,7 @@ def story(state):
     beat("score", title="Between-class variance", show=("shot", "hist", "eq"),
          say="w are the class sizes, mu their mean intensities.")
     state.update(say="Far apart and evenly sized scores high.")
-    cm.emit("score2")
+    emit("score2")
 
     # 9. The curve, and its peak.
     #
@@ -152,12 +151,12 @@ def story(state):
          show=("shot", "mask", "hist", "curve"))
     for t in SWEEP:
         state.update(t=t)
-        cm.emit("scan")
+        emit("scan")
     settle(BEST_T)
     state.update(title=f"Otsu threshold  T* = {BEST_T}", found=True,
                  say="The peak of the curve, found in one pass over 256 numbers.")
-    cm.emit("swap")
-    cm.emit("found")
+    emit("swap")
+    emit("found")
 
     # 10. What it gives you.
     beat("result", title="Foreground extracted", say="",
@@ -300,7 +299,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=story(dict(OPENING)),
+    trace=cm.trace(story, dict(OPENING)),
     view=view,
     # The threshold slide is already continuous by the time it reaches the
     # Engine, so it must not be eased again at every sample.

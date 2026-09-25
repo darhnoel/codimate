@@ -36,14 +36,13 @@ WALK = {"circle": shapes.circle, "square": shapes.square,
         "triangle": shapes.triangle}
 
 
-@cm.trace()
-def two_transforms(state):
+def two_transforms(state, emit):
     for shape in ("square", "triangle"):     # Transform, then Transform again
         state["shape"] = shape
         state["beat"] += 1
-        cm.emit("transform")
+        emit("transform")
     state["shape"] = None                    # FadeOut
-    cm.emit("gone")
+    emit("gone")
 
 
 def view(frame):
@@ -73,7 +72,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=two_transforms({"shape": "circle", "beat": 0}),
+    trace=cm.trace(two_transforms, {"shape": "circle", "beat": 0}),
     view=view,
     timing=cm.Timing(default=1.3, events={"gone": 1.0},
                      opening=0.8, final_hold=1.0),

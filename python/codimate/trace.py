@@ -99,15 +99,75 @@ def emit(name: str, **data: Any) -> None:
     rec.events.append(Event(name=name, state=rec.snapshot(), data=data))
 
 
-def trace(*, snapshot: Callable[..., Any] = None):
-    """Turn a normal, state-mutating function into a Trace.
+_MISSING = object()
 
-    ``snapshot`` receives the same arguments as your function and returns a
-    copy of the data worth showing. Defaults to a deep copy of the first
-    argument — Items keep their identity through it.
+
+def _emitter(rec: "_Recorder") -> Callable[..., None]:
+    """The `emit` handed to an algorithm: record that something happened."""
+
+    def emit(name: str, **data: Any) -> None:
+        rec.events.append(Event(name=name, state=rec.snapshot(), data=data))
+
+    emit.__doc__ = globals()["emit"].__doc__
+    return emit
+
+
+def trace(fn=_MISSING, state=_MISSING, /, *, snapshot=None) -> "Trace":
+    """Run `fn` over `state` and record what happened.
+
+        def bubble_sort(values, emit):
+            ...
+            emit("compare", items=[a, b])
+
+        cm.explain(trace=cm.trace(bubble_sort, cm.items([3, 1, 4, 2])), ...)
+
+    Your function is handed the state and an `emit`. Call `emit` *after*
+    changing the state — Codimate snapshots the result for you.
+
+    `emit` is an argument rather than something ambient, so the answer to
+    "where did that come from?" is the line above it, and so the function
+    stays ordinary Python: `bubble_sort(values, print)` runs it and prints the
+    events.
+
+    `snapshot(state)` returns the part worth showing, if a deep copy of the
+    whole state is not what you want. Items keep their identity through the
+    default copy.
+
+    The older form — `@cm.trace()` on a function that calls the module-level
+    `cm.emit` — still works and warns. It will be removed.
     """
+    if fn is _MISSING or state is _MISSING:
+        return _decorator(snapshot) if fn is _MISSING else _decorator(snapshot)(fn)
 
-    def decorator(fn):
+    def capture():
+        return snapshot(state) if snapshot is not None else copy.deepcopy(state)
+
+    rec = _Recorder(snapshot=capture, events=[])
+    initial = capture()
+
+    # The ContextVar is still set, so a helper that has not been moved over
+    # yet and still calls `cm.emit` keeps working during the transition.
+    token = _recorder.set(rec)
+    try:
+        fn(state, _emitter(rec))
+    finally:
+        _recorder.reset(token)
+
+    return Trace(initial=initial, events=tuple(rec.events))
+
+
+def _decorator(snapshot):
+    """The older `@cm.trace()`, kept working for one version."""
+    import warnings
+
+    def decorate(fn):
+        warnings.warn(
+            "@cm.trace() and the ambient cm.emit are going away. Take `emit` "
+            "as an argument and call cm.trace(fn, state) instead:\n"
+            f"    def {fn.__name__}(state, emit): ...\n"
+            f"    cm.explain(trace=cm.trace({fn.__name__}, state), ...)",
+            DeprecationWarning, stacklevel=3)
+
         def run(*args, **kwargs) -> Trace:
             def capture():
                 if snapshot is not None:
@@ -116,20 +176,30 @@ def trace(*, snapshot: Callable[..., Any] = None):
 
             rec = _Recorder(snapshot=capture, events=[])
             initial = capture()
-
             token = _recorder.set(rec)
             try:
                 fn(*args, **kwargs)
             finally:
                 _recorder.reset(token)
-
             return Trace(initial=initial, events=tuple(rec.events))
 
         run.__name__ = fn.__name__
         run.__doc__ = fn.__doc__
         return run
 
-    return decorator
+    return decorate
+
+
+    def items(self, key: str = "items") -> list:
+        """The things this event named, e.g. ``frame.items()``.
+
+        Use it when you emitted a list: ``cm.emit("compare", items=[a, b])``.
+        Empty for the opening moment.
+        """
+        if self.event is None:
+            return []
+        return list(self.event.data.get(key, ()))
+
 
 @dataclass(frozen=True)
 class Frame:

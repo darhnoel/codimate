@@ -29,11 +29,10 @@ from space import YEARS
 # --- the algorithm ----------------------------------------------------------
 
 
-@cm.trace()
-def travel(system):
+def travel(system, emit):
     while system.years < YEARS:
         system.step()
-        cm.emit("tick")
+        emit("tick")
 
 
 # --- the view ---------------------------------------------------------------
@@ -50,7 +49,7 @@ def helical_view(frame):
 # `linear`: every body is mid-orbit at every tick, so easing would make the
 # whole system surge and stall once per sample.
 cm.explain(
-    trace=travel(orbits.System()),
+    trace=cm.trace(travel, orbits.System()),
     view=helical_view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=0.055, opening=0.8, final_hold=2.0),

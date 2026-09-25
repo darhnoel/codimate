@@ -15,14 +15,13 @@ Codimate works out the motion, the timing, and every frame.
 ```python
 import codimate as cm
 
-@cm.trace()
-def bubble_sort(values):
+def bubble_sort(values, emit):
     for i in range(len(values)):
         for j in range(len(values) - 1 - i):
-            cm.emit("compare", items=[values[j], values[j + 1]])
+            emit("compare", items=[values[j], values[j + 1]])
             if values[j] > values[j + 1]:
                 values[j], values[j + 1] = values[j + 1], values[j]
-                cm.emit("swap", items=[values[j], values[j + 1]])
+                emit("swap", items=[values[j], values[j + 1]])
 
 def bars(frame):
     scene = cm.Scene()
@@ -37,7 +36,7 @@ def bars(frame):
     return scene
 
 cm.explain(
-    trace=bubble_sort(cm.items([3, 1, 4, 2])),
+    trace=cm.trace(bubble_sort, cm.items([3, 1, 4, 2])),
     view=bars,
     motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
     timing=cm.Timing(default=0.55, events={"swap": 0.9}),

@@ -119,11 +119,10 @@ ROAD, SPAN = 560.0, (120.0, 1160.0)
 WHEEL_R, STEPS = 28.0, 40
 
 
-@cm.trace()
-def drive(car):
+def drive(car, emit):
     for step in range(STEPS):
         car["x"] = SPAN[0] + (SPAN[1] - SPAN[0]) * step / (STEPS - 1)
-        cm.emit("roll")
+        emit("roll")
 
 
 def view(frame):
@@ -154,7 +153,7 @@ def view(frame):
     return scene
 
 
-cm.explain(trace=drive({"x": SPAN[0]}), view=view,
+cm.explain(trace=cm.trace(drive, {"x": SPAN[0]}), view=view,
            motion=[cm.Rule("*", position="linear")],
            timing=cm.Timing(default=0.09, opening=0.5, final_hold=1.2),
            ).render("results/car.mp4", fps=60, scale=1.5)

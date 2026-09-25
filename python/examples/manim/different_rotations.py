@@ -37,10 +37,9 @@ BLUE, GREEN, PAPER = "#58c4dd", "#83c167", "#e8eef7"
 LEFT, RIGHT = (400.0, 380.0), (880.0, 380.0)
 
 
-@cm.trace()
-def different_rotations(state):
+def different_rotations(state, emit):
     state["spin"] = 180.0
-    cm.emit("turn")
+    emit("turn")
 
 
 def _turned(centre, degrees):
@@ -76,7 +75,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=different_rotations({"spin": 0.0}),
+    trace=cm.trace(different_rotations, {"spin": 0.0}),
     view=view,
     timing=cm.Timing(default=2.0, opening=0.6, final_hold=1.2),   # run_time=2
 ).render("results/manim_different_rotations.mp4", fps=60, scale=1.5)

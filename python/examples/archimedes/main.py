@@ -708,8 +708,7 @@ HOLDS = {"swap": 0.26,
 # event name and no two words are worth the same length of time.
 
 
-@cm.trace()
-def story(state):
+def story(state, emit):
     """Every section is a short beat that changes the picture, then a long one
     that holds it.
 
@@ -729,7 +728,7 @@ def story(state):
         walked from the same events the renderer walks rather than worked out
         a second time and allowed to drift.
         """
-        cm.emit(name)
+        emit(name)
         clock[0] += HOLDS.get(name, DEFAULT)
 
     def beat(name, **change):
@@ -929,7 +928,7 @@ def story(state):
 
 
 cm.explain(
-    trace=story(dict(OPENING)),
+    trace=cm.trace(story, dict(OPENING)),
     view=view,
     # Everything that moves was already sampled by the trace, so it must not be
     # eased a second time at every step.

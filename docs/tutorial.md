@@ -32,9 +32,8 @@ Type this into `coins.py`:
 import codimate as cm
 
 
-@cm.trace()
-def flip(tally):
-    cm.emit("start")
+def flip(tally, emit):
+    emit("start")
 
 
 def view(frame):
@@ -44,7 +43,7 @@ def view(frame):
     return scene
 
 
-cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
+cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
 Then run it:
@@ -58,11 +57,11 @@ see two seconds of the words "nothing yet" in the middle of a black frame. If
 that plays, everything is working.
 
 There isn't much on screen, but every part of a Codimate program is already
-here. `flip` is the **algorithm**: ordinary Python, marked with `@cm.trace()`
+here. `flip` is the **algorithm**: ordinary Python, handed an `emit`
 so Codimate can watch it run. `view` is the **view**: it receives one moment
 and returns one picture. And `cm.explain` gathers them together and renders.
 
-The call to `cm.emit` is how you tell Codimate that something worth showing has
+The call to `emit` is how you tell Codimate that something worth showing has
 happened. Your view is asked for a picture once for each one. Right now there
 is a single moment, so you get a single unchanging picture.
 
@@ -72,7 +71,7 @@ Our program has the right shape but nothing happens in it. Let's write the
 actual logic.
 
 The important thing here is that you write it the way you always would. There
-is no Codimate-shaped way to flip a coin. You add one line, calling `cm.emit`
+is no Codimate-shaped way to flip a coin. You add one line, calling `emit`
 **after** you change your data, because Codimate takes a snapshot of the
 result:
 
@@ -81,13 +80,12 @@ import codimate as cm
 import random
 
 
-@cm.trace()
-def flip(tally):
+def flip(tally, emit):
     coin = random.Random(4)
     for toss in range(20):
         side = "heads" if coin.random() < 0.5 else "tails"
         tally[side] += 1
-        cm.emit("flip", side=side)
+        emit("flip", side=side)
 
 
 def view(frame):
@@ -97,7 +95,7 @@ def view(frame):
     return scene
 
 
-cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
+cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
 Run it again, and this time the numbers count upward on screen.
@@ -126,13 +124,12 @@ import random
 SIDES = ("heads", "tails")
 
 
-@cm.trace()
-def flip(tally):
+def flip(tally, emit):
     coin = random.Random(4)
     for toss in range(20):
         side = "heads" if coin.random() < 0.5 else "tails"
         tally[side] += 1
-        cm.emit("flip", side=side)
+        emit("flip", side=side)
 
 
 def view(frame):
@@ -145,7 +142,7 @@ def view(frame):
     return scene
 
 
-cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
+cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
 Run it and you'll see two bars rising, each labelled underneath.
@@ -180,7 +177,7 @@ Our bars grow, but they don't tell you which flip caused which growth. The view
 can know that, because it receives more than your data. It also receives the
 event that produced the moment.
 
-Anything you pass to `cm.emit` arrives as `frame.event.data`:
+Anything you pass to `emit` arrives as `frame.event.data`:
 
 ```python
 import codimate as cm
@@ -189,14 +186,13 @@ import random
 SIDES = ("heads", "tails")
 
 
-@cm.trace()
-def flip(tally):
+def flip(tally, emit):
     coin = random.Random(4)
     for toss in range(20):
         side = "heads" if coin.random() < 0.5 else "tails"
         tally[side] += 1
-        cm.emit("flip", side=side)
-    cm.emit("done")
+        emit("flip", side=side)
+    emit("done")
 
 
 def view(frame):
@@ -215,7 +211,7 @@ def view(frame):
     return scene
 
 
-cm.explain(trace=flip({"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
+cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
 ```
 
 Run it. Now the bar that just grew turns orange, then fades back as the next
@@ -245,14 +241,13 @@ import random
 SIDES = ("heads", "tails")
 
 
-@cm.trace()
-def flip(tally):
+def flip(tally, emit):
     coin = random.Random(4)
     for toss in range(20):
         side = "heads" if coin.random() < 0.5 else "tails"
         tally[side] += 1
-        cm.emit("flip", side=side)
-    cm.emit("done")
+        emit("flip", side=side)
+    emit("done")
 
 
 def view(frame):
@@ -274,7 +269,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=flip({"heads": 0, "tails": 0}),
+    trace=cm.trace(flip, {"heads": 0, "tails": 0}),
     view=view,
     timing=cm.Timing(default=0.35, events={"done": 1.0}, opening=0.8, final_hold=2.0),
 ).render("results/coins.mp4", fps=60, scale=1.5)

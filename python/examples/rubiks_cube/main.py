@@ -53,10 +53,9 @@ STEPS = 9          # samples per quarter turn
 PACE = 0.065
 
 
-@cm.trace()
-def solve(state):
+def solve(state, emit):
     """Open on a mixed cube and put it back, one sampled turn at a time."""
-    cm.emit("settle")
+    emit("settle")
     for move in cube.reverse(SCRAMBLE).split():
         # A prime move is one quarter the other way, not three this way — the
         # model only knows clockwise, so the state still takes three steps, but
@@ -69,7 +68,7 @@ def solve(state):
             state["face"], state["turns"] = face, turns
             for step in range(1, STEPS + 1):
                 state["part"] = step / STEPS
-                cm.emit("spin")
+                emit("spin")
             for _ in range(turns % 4):
                 # The turn also carries each sticker's corner list round,
                 # which the view has to know or the reconciler spins every
@@ -81,9 +80,9 @@ def solve(state):
                                   for sticker, k in enumerate(state["order"])]
                 state["where"] = cube.turn(state["where"], face)
         state["face"], state["part"], state["turns"] = None, 0.0, 0
-        cm.emit("land")
+        emit("land")
     state["move"] = ""
-    cm.emit("done")
+    emit("done")
 
 
 def _along(here, there, middle, part, way=None):
@@ -237,7 +236,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=solve({"where": cube.apply(cube.solved(), SCRAMBLE),
+    trace=cm.trace(solve, {"where": cube.apply(cube.solved(), SCRAMBLE),
                  "order": [0] * 54, "turns": 0,
                  "face": None, "part": 0.0, "move": ""}),
     view=view,
