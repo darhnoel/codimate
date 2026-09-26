@@ -499,6 +499,37 @@ class Group:
         return Group(self._scene, self._path + (key,), self._ox + gx, self._oy + gy, gw)
 
 
+def box(shape) -> "tuple[float, float, float, float] | None":
+    """Where a shape sits: `(left, top, width, height)`.
+
+    `None` for a **formula**, and only for a formula: it is typeset by Typst
+    when the video is built (ADR 0005), so until then nothing on this side of
+    the boundary knows how wide it is. Everything else is derivable from the
+    payload, which is flat by design.
+    """
+    kind, x, y = shape.kind, shape.x, shape.y
+    if kind in ("rect", "image", "svg"):
+        return (x - shape.w / 2, y - shape.h / 2, shape.w, shape.h)
+    if kind in ("circle", "arc"):
+        return (x - shape.r, y - shape.r, shape.r * 2, shape.r * 2)
+    if kind == "line":
+        left, top = min(x, shape.x2), min(y, shape.y2)
+        return (left, top, abs(shape.x2 - x), abs(shape.y2 - y))
+    if kind in ("polygon", "curve"):
+        # Flat by the time it is here — x, y, x, y — because that is the shape
+        # the Engine diffs (ADR 0008), not pairs.
+        flat = shape.points
+        if len(flat) < 2:
+            return None
+        xs, ys = flat[0::2], flat[1::2]
+        return (min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+    if kind == "text":
+        from .layout import measure
+        w, h = measure(str(shape.text), shape.size)
+        return (x - w / 2, y - h / 2, w, h)
+    return None
+
+
 class Scene(Group):
     """The picture at one moment. No animation, no timing, no memory of the
     frame before.

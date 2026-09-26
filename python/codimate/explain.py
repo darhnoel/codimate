@@ -90,6 +90,30 @@ def ease(t: float) -> float:
     return _codimate.ease(float(t))
 
 
+def _plain(value, depth: int = 0):
+    """`value` as something JSON can hold, without pretending to be complete.
+
+    An Item keeps its id, because that is its identity. Anything this does not
+    recognise becomes its `repr` rather than raising — an index that refuses to
+    be written for one odd object in the State is no use to anybody.
+    """
+    from .trace import Item
+
+    if depth > 6:
+        return repr(value)
+    if isinstance(value, Item):
+        return {"value": _plain(value.value, depth + 1), "id": value.id}
+    if isinstance(value, dict):
+        return {str(k): _plain(v, depth + 1) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_plain(v, depth + 1) for v in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if hasattr(value, "__dict__"):
+        return {k: _plain(v, depth + 1) for k, v in vars(value).items()}
+    return repr(value)
+
+
 class Explanation:
     """A trace, a view and a timing, ready to render.
 
@@ -128,7 +152,8 @@ class Explanation:
     def duration(self) -> float:
         return sum(self.durations)
 
-    def render(self, output: str, *, fps: float = 30, scale: float = 1.0) -> str:
+    def render(self, output: str, *, fps: float = 30, scale: float = 1.0,
+               index: bool = True) -> str:
         """Draw every frame and write the video.
 
         Coordinates always mean what `cm.canvas()` says — `scale` only changes
@@ -160,6 +185,61 @@ class Explanation:
             fps=float(fps),
             scale=float(scale),
         )
+
+        if index:
+            self.write_index(output)
+        return output
+
+    def write_index(self, output: str) -> str:
+        """Write :meth:`index` beside `output`, as `<name>.index.json`."""
+        import json
+        from pathlib import Path
+
+        video = Path(output)
+        beside = video.with_name(f"{video.stem}.index.json")
+        beside.parent.mkdir(parents=True, exist_ok=True)
+        beside.write_text(
+            json.dumps(self.index(), ensure_ascii=False, indent=2) + "\n")
+        return str(beside)
+
+    def sheet(self, times, output: str = "sheet.png", *,
+              columns: int = 3, scale: float = 0.5) -> str:
+        """Several moments at once, tiled into one picture.
+
+            cm.explain(...).sheet([8, 22, 54, 96], "look.png")
+
+        `frame_at` answers "what does 0:54 look like"; this answers "does the
+        whole thing hang together", which is the question actually being asked
+        when somebody renders a film and scrubs through it. The tiling is done
+        by the ffmpeg that rendering already needs.
+
+        `scale` shrinks the sheet, and does the shrinking in ffmpeg rather
+        than in the Engine, which will not rasterize below 1:1 — so a whole
+        film fits on a screen instead of arriving four thousand pixels wide.
+        """
+        import shutil
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        _find_encoder()
+        import os
+        ffmpeg = os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg")
+        if not ffmpeg:
+            raise RuntimeError("sheet() needs ffmpeg to tile the frames")
+
+        times = list(times)
+        rows = -(-len(times) // columns)
+        with tempfile.TemporaryDirectory() as folder:
+            for i, at in enumerate(times):
+                self.frame_at(at, f"{folder}/f{i:03d}.png")
+            Path(output).expanduser().resolve().parent.mkdir(
+                parents=True, exist_ok=True)
+            subprocess.run(
+                [ffmpeg, "-y", "-v", "error", "-i", f"{folder}/f%03d.png",
+                 "-vf", f"scale=iw*{scale}:ih*{scale},tile={columns}x{rows}",
+                 output],
+                check=True)
         return output
 
     def frame_at(self, seconds: float, output: str = "frame.png",
@@ -193,6 +273,58 @@ class Explanation:
             scale=float(scale),
         )
         return output
+
+    def index(self) -> "list[dict]":
+        """Every beat, as data: when, what happened, and what was on screen.
+
+            for beat in cm.explain(...).index():
+                print(beat["at"], beat["event"], len(beat["shapes"]))
+
+        One entry per beat, in step with :meth:`timeline`, carrying the State
+        behind it — so a question like "what is at 0:55, and what put it
+        there?" has an answer without rendering a frame and squinting at it.
+
+        **Shapes are a difference, not a list.** Each beat carries only what
+        changed: `shapes["set"]` is the ones that arrived or moved, and
+        `shapes["gone"]` the names that left. Apply them in order from the
+        first beat to know what is on screen at any of them. A whole list per
+        beat is the obvious format and it is 94% repetition — in a hundred
+        second film that is seven megabytes of the same rectangle.
+
+        A shape's box is `None` only for a formula, which Typst has not
+        typeset yet (ADR 0005).
+
+        `render` writes this beside the video by default. See
+        [ADR 0018](../../docs/adr/0018-a-previewer-that-reads-an-index.md).
+        """
+        from .scene import box
+
+        states = ([self.trace.initial]
+                  + [e.state for e in self.trace.events]
+                  + [self.trace.events[-1].state if self.trace.events
+                     else self.trace.initial])
+        out, before = [], {}
+        for i, (at, secs, name) in enumerate(self.timeline()):
+            # Beat `i` travels from scenes[i] to scenes[i + 1]; what it
+            # arrives at is what the event named here produced.
+            scene = self.scenes[min(i + 1, len(self.scenes) - 1)]
+            now = {
+                shape.item: {"name": shape.item, "kind": shape.kind,
+                             "layer": shape.layer, "box": box(shape)}
+                for shape in scene._shapes.values()
+            }
+            out.append({
+                "at": at,
+                "secs": round(secs, 3),
+                "event": name,
+                "state": _plain(states[min(i, len(states) - 1)]),
+                "shapes": {
+                    "set": [s for n, s in now.items() if before.get(n) != s],
+                    "gone": [n for n in before if n not in now],
+                },
+            })
+            before = now
+        return out
 
     def timeline(self) -> "list[tuple[float, float, str]]":
         """Every beat as ``(start, duration, event name)``, in seconds.

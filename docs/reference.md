@@ -396,6 +396,8 @@ exp = cm.explain(trace=..., view=..., timing=...)
 
 exp.timeline()                       # [(start, length, event), ...] in seconds
 exp.frame_at(12.5, "check.png")      # one moment, without rendering the video
+exp.sheet([8, 22, 54], "look.png")   # several moments, tiled into one picture
+exp.index()                          # every beat as data: state, shapes, boxes
 ```
 
 `frame_at` uses the same scenes, timing and arithmetic as `render`, resolved at
@@ -403,8 +405,35 @@ one instant — checking a frame by rendering the whole video and seeking into i
 costs a minute to look at one second. Pass the same `scale` you render with
 when you are checking text.
 
+`sheet` answers the question you actually have after a render — does the whole
+thing hang together — instead of the one frame at a time `frame_at` answers.
+Its `scale` shrinks in ffmpeg rather than in the Engine, which will not
+rasterize below 1:1, so a whole film fits on a screen.
+
 `timeline` answers the two questions you have when a video feels wrong: what is
 on screen at 0:42, and how long each beat actually lasts.
+
+`index` answers the third: *what put it there*. One entry per beat, in step
+with `timeline`, carrying the State behind it.
+
+```python
+{"at": 3.5, "secs": 2.0, "event": "swap",
+ "state": [{"value": 1, "id": 7}, ...],
+ "shapes": {"set":  [{"name": "7", "kind": "rect", "layer": 0,
+                      "box": [107.5, 78.5, 40, 20]}],
+            "gone": []}}
+```
+
+**Shapes are a difference, not a list.** `set` is what arrived or moved, `gone`
+the names that left; apply them in order from the first beat to know what is on
+screen at any of them. A whole list per beat is the obvious format and it is
+94% repetition — on a hundred-second film, seven megabytes of the same
+rectangle against one and a bit.
+
+A `box` is `null` only for a **formula**, which Typst has not typeset yet.
+`render` writes this beside the video as `<name>.index.json` unless you pass
+`index=False`; `write_index(output)` writes it without rendering. See
+[ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).
 
 ## Timing
 

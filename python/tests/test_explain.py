@@ -134,5 +134,79 @@ def test_the_timeline_accounts_for_the_whole_video():
         assert abs(start + length - next_start) < 1e-6, beats
 
 
+def test_the_index_answers_what_was_on_screen_and_why():
+    """One entry per beat, carrying the State and every shape's box.
+
+    The question a film provokes is "what is at 0:55, and what put it there?".
+    Answering it by rendering a frame and squinting is how a whole session
+    goes by; the index answers it as data (ADR 0018).
+    """
+    def swap(values, emit):
+        values[0], values[1] = values[1], values[0]
+        emit("swap")
+
+    def view(frame):
+        scene = cm.Scene()
+        for slot, item in cm.row(frame.state, gap=10):
+            scene.rect(item.id, w=40, h=20, at=slot)
+        return scene
+
+    values = cm.items([3, 1])
+    names = {str(item.id) for item in values}
+    exp = cm.explain(trace=cm.trace(swap, values), view=view,
+                     timing=cm.Timing(default=1.0))
+    index = exp.index()
+
+    assert len(index) == len(exp.timeline()), "one entry per beat"
+    assert [b["event"] for b in index] == ["(opening)", "swap", "(final hold)"]
+
+    beat = index[1]
+    assert beat["at"] == exp.timeline()[1][0], "the clock agrees with timeline"
+    assert [i["value"] for i in beat["state"]] == [1, 3], "the state after the swap"
+    assert {s["name"] for s in index[0]["shapes"]["set"]} == names, \
+        "named by Item, not by slot"
+    assert all(s["box"] for s in index[0]["shapes"]["set"])
+
+    # Only what changed. The two bars swap places, so both move and both are
+    # written; nothing is "gone", because neither left.
+    assert {s["name"] for s in beat["shapes"]["set"]} == names
+    assert beat["shapes"]["gone"] == []
+    assert index[2]["shapes"]["set"] == [], "the final hold changes nothing"
+
+
+def test_only_a_formula_has_no_box():
+    """Typst types a formula when the video is built, so until then nothing
+    on this side of the boundary knows how wide it is (ADR 0005)."""
+    def once(state, emit):
+        emit("one")
+
+    def view(frame):
+        scene = cm.Scene()
+        scene.text("said", "hello", size=20, at=(100, 100))
+        scene.formula("maths", r"a^2", size=20, at=(200, 100))
+        return scene
+
+    shapes = {s["name"]: s for s in cm.explain(
+        trace=cm.trace(once, {}), view=view).index()[0]["shapes"]["set"]}
+    assert shapes["said"]["box"] is not None
+    assert shapes["maths"]["box"] is None
+
+
+def test_the_index_survives_a_state_it_does_not_understand():
+    """An index that refused to be written for one odd object in the State
+    would be no use at all, so anything unrecognised becomes its repr."""
+    class Odd:
+        def __repr__(self):
+            return "<odd>"
+
+    def once(state, emit):
+        emit("one")
+
+    written = cm.explain(trace=cm.trace(once, {"thing": Odd(), "n": 2}),
+                         view=lambda f: cm.Scene()).index()[1]["state"]
+    assert written["n"] == 2
+    assert written["thing"] == {} or written["thing"] == "<odd>"
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
