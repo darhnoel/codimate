@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import threading
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -96,8 +97,9 @@ def test_the_note_names_the_shape_the_event_and_the_state():
     assert text.endswith("> too thin")
 
 
-def test_the_window_serves_frames_and_answers_clicks():
-    """The server end to end: a frame is a PNG drawn on request."""
+def test_the_window_serves_frames_and_its_own_page():
+    """The server end to end: a frame is a PNG drawn on request, and the page
+    gets the whole index so pointing is answered in the browser."""
     from http.server import ThreadingHTTPServer
 
     film = preview.Film(folder() / "film.py", ["1.0"])
@@ -112,11 +114,22 @@ def test_the_window_serves_frames_and_answers_clicks():
         png = urllib.request.urlopen(f"{base}/frame?t=0.5").read()
         assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
-        found = json.load(urllib.request.urlopen(f"{base}/at?t=0.1&x=5&y=700"))
-        assert found["shapes"][0]["name"] == "floor"
-        assert found["note"].startswith("0:00.10  floor")
+        assert listing["beats"] == json.loads(json.dumps(film.index["beats"])), "the whole index"
+        assert listing["title"] == "film.py 1.0"
 
         assert urllib.request.urlopen(f"{base}/").read().startswith(b"<!doctype html>")
+        for page in ("app.js", "state.js", "style.css", "vendor/preact.js"):
+            assert urllib.request.urlopen(f"{base}/viewer/{page}").status == 200
+
+        # Nothing outside the page's own folder, however it is asked for.
+        for sneaky in ("/viewer/../preview.py", "/viewer/../../codimate/preview.py",
+                       "/viewer/vendor/README.md", "/viewer/"):
+            try:
+                urllib.request.urlopen(base + sneaky)
+            except urllib.error.HTTPError as e:
+                assert e.code == 404, sneaky
+            else:
+                raise AssertionError(f"served {sneaky}")
     finally:
         server.shutdown()
         server.server_close()
@@ -149,6 +162,24 @@ cm.explain(trace=cm.trace(grow, {}), view=view,
     assert film.explanation.covered() == [(2.8, "arrow", "label")]
 
 
+def test_chapters_reach_the_window_with_their_start():
+    here = Path(tempfile.mkdtemp())
+    (here / "film.py").write_text('''
+import codimate as cm
+
+def story(state, emit):
+    emit("open", chapter="Water")
+    emit("more")
+    emit("next", chapter="Ice")
+
+cm.explain(trace=cm.trace(story, {}), view=lambda f: cm.Scene(),
+           timing=cm.Timing(default=1.0, opening=0.5)).render("never.mp4")
+''')
+    film = preview.Film(here / "film.py")
+    assert film.listing()["chapters"] == [[0.5, "Water"], [2.5, "Ice"]]
+    assert film.explanation.chapters() == [(0.5, "Water"), (2.5, "Ice")]
+
+
 def test_a_broken_edit_keeps_the_last_good_film():
     here = folder()
     film = preview.Film(here / "film.py", ["1.0"])
@@ -176,6 +207,7 @@ def test_an_mp4_is_served_in_ranges():
         assert got.status == 206
         assert got.headers["Content-Range"] == "bytes 10-19/1024"
         assert got.read() == bytes(range(10, 20))
+        assert json.load(urllib.request.urlopen(f"{base}/index"))["duration"] == 0
     finally:
         server.shutdown()
         server.server_close()

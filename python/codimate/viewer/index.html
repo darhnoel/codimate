@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codimate Previewer</title>
+<!-- No build step: the vendored libraries are plain ES modules, and this map
+     is what lets them import each other by name. See vendor/README.md. -->
+<script type="importmap">
+{ "imports": {
+    "preact": "/viewer/vendor/preact.js",
+    "preact/hooks": "/viewer/vendor/hooks.js",
+    "@preact/signals-core": "/viewer/vendor/signals-core.js",
+    "@preact/signals": "/viewer/vendor/signals.js",
+    "htm": "/viewer/vendor/htm.js"
+} }
+</script>
+<link rel="stylesheet" href="/viewer/style.css">
+<script type="module" src="/viewer/app.js"></script>
+</head>
+<body></body>
+</html>

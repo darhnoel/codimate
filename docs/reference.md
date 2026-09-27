@@ -485,17 +485,36 @@ python -m codimate.preview python/examples/archimedes/main.py km
 python -m codimate.preview results/archimedes-km.mp4
 ```
 
-A window on a film, in the browser. Scrub to a moment, click anything, and it
-tells you the shape's name, the event that drew it and the State behind it.
-Write a note against it; **Copy notes** gives plain text a person or an agent
-can act on:
+A window on a film, in the browser, laid out as Figma lays out a file:
+chapters down the left, the picture in the middle, and what you have selected
+on the right.
+
+**Point at things.** Paused, the shape under the cursor is outlined with its
+name. Click to select it: the panel shows its kind, layer and box, the event
+that drew it, and the State behind it as a tree. Click the same spot again to
+reach the shape beneath — a word, then the plate under it.
+
+**Write notes.** Type what is wrong and press Enter. Notes are kept in this
+browser, per film, so a refresh does not lose them; **Copy all** gives plain
+text a person or an agent can act on:
 
 ```text
 0:55.00  say/12/ជាង
   event    more.15
+  chapter  សង្កត់ឲ្យលិច
+  under    say_plate/…
   state    title=សង្កត់​ឲ្យ​លិច  said=16  …
 > this word is too close to the next one
 ```
+
+**Issues** lists every covered label (above); click one to jump to it with the
+pair outlined.
+
+**Chapters** are where you say a part of the film begins —
+`emit("water", chapter="Water")` — and each gets a picture in the strip down
+the left. A film has hundreds of events, one per highlighted word, so nothing
+could work these out for you. `exp.chapters()` lists `(start, name)`. A film
+without chapters has no strip.
 
 **Given a script**, it runs the script up to its `render` call and keeps the
 film in memory — no video is drawn. Arguments after the script go to it, as
@@ -507,11 +526,17 @@ edit shows its error and keeps the last good film. Clips given with
 **Given an mp4**, it plays the finished film, with sound, against the index
 written beside it.
 
-Either way, **Covered labels** lists every collision the check found; click
-one to jump to it with the pair outlined.
+| key | |
+| --- | --- |
+| space | play, pause |
+| ← → | a tenth of a second; with shift, a second |
+| `[` `]` | the previous, the next chapter |
+| esc | deselect |
+| `n` | write a note |
 
 **It never writes.** No save, no edit — changing the film stays an edit to your
-script. The lookup it uses is plain Python, for asking without a window:
+script, and notes never leave the browser until you copy them. The lookup it
+uses is plain Python too, for asking without a window:
 
 ```python
 from codimate import preview
@@ -520,7 +545,11 @@ print(preview.note(preview.at(index, 55.0, (640, 640))))
 ```
 
 `--no-open` prints the address instead of opening a browser; `--port` picks
-one. A click in the middle of a transition reports the nearer of its two ends.
+one. Mid-transition, what is reported is the nearer of the transition's two
+ends.
+
+The page is Preact, with no build step: its libraries are vendored under
+`python/codimate/viewer/vendor/` and loaded as plain modules.
 
 ## Timing
 

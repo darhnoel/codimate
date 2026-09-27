@@ -145,6 +145,11 @@ things that usually carry the same words — neither implies the other, and a
 film may have either, both or neither. Narration is audio and therefore lives
 beside the Scene rather than in it (ADR 0007), never breaking `f(t) → Scene`.
 
+**Chapter**: A part of a film, named, beginning where the author says so on
+a Trace Event. Many Trace Events make one Chapter — a highlighted word is an
+event, a scene about ice is a Chapter — and only the author knows where one
+ends, so Chapters are declared, never inferred.
+
 **Previewer**: A window that shows an Explanation — rendered, or not yet — and lets an author
 point at what is on screen to learn the name, the Trace Event and the State
 behind it, then attach a note. **The Previewer never writes.** It produces

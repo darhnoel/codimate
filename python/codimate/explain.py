@@ -250,6 +250,19 @@ class Explanation:
             found.append((round(beats[k + 1][0], 3), str(clip)))
         return found
 
+    def chapters(self) -> "list[tuple[float, str]]":
+        """Where each part of the film starts, as `(start, name)`:
+        `emit("water", chapter="Water")` starts one as that beat begins.
+
+        A film is hundreds of events — a highlighted word is one — so the
+        Previewer cannot show a picture of each. A chapter is the author saying
+        where a part begins, which nothing downstream could work out.
+        """
+        beats = self.timeline()
+        return [(round(beats[k + 1][0], 3), str(event.data["chapter"]))
+                for k, event in enumerate(self.trace.events)
+                if event.data.get("chapter")]
+
     def mix_sound(self, output: str) -> "str | None":
         """Every clip laid at its start and summed, as one audio file —
         what `render` puts under the picture, without the picture. `None` if
@@ -416,7 +429,8 @@ class Explanation:
         second film that is seven megabytes of the same rectangle.
 
         `covered` lists the `[above, below]` pairs where something is drawn
-        on a label at that beat (ADR 0017).
+        on a label at that beat (ADR 0017), and `chapter` is there only on a
+        beat that starts one (:meth:`chapters`).
 
         A shape's box is `None` only for a formula on a machine without
         Typst, which is what measures one (ADR 0005).
@@ -440,7 +454,7 @@ class Explanation:
                              "layer": shape.layer, "box": box(shape)}
                 for shape in scene._shapes.values()
             }
-            out.append({
+            entry = {
                 "at": at,
                 "secs": round(secs, 3),
                 "event": name,
@@ -450,7 +464,12 @@ class Explanation:
                     "gone": [n for n in before if n not in now],
                 },
                 "covered": [list(pair) for pair in covered(scene)],
-            })
+            }
+            # Beat 0 is the opening hold; beat i + 1 is event i.
+            event = self.trace.events[i - 1] if 0 < i <= len(self.trace.events) else None
+            if event is not None and event.data.get("chapter"):
+                entry["chapter"] = str(event.data["chapter"])
+            out.append(entry)
             before = now
         return out
 

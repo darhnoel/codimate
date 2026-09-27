@@ -720,19 +720,22 @@ def story(state, emit):
 
     spoken = [""]                  # the line the caption is already showing
     voice = [None]                 # a recording waiting for the next event
+    part = [None, ""]              # a chapter waiting to start, and the last one
 
     def tick(name):
-        """Emit, carrying the recording if one is waiting to start here.
+        """Emit, carrying the recording and the chapter if one is waiting to
+        start here.
 
         The sound goes on the event rather than at a time worked out beside
         it, so it starts when that beat starts — timed by the same events
         the picture is, with nothing to keep in step by hand.
         """
+        data = {}
         if voice[0]:
-            emit(name, sound=voice[0])
-            voice[0] = None
-        else:
-            emit(name)
+            data["sound"], voice[0] = voice[0], None
+        if part[0]:
+            data["chapter"], part[0] = part[0], None
+        emit(name, **data)
 
     def beat(name, **change):
         """One section: the picture changes, then the caption reads itself.
@@ -747,6 +750,10 @@ def story(state, emit):
         line = say.format(**change.pop("said", {}))
         state.update(title=title.format(**change.pop("says", {})))
         state.update(change)
+        # A new title is a new part of the film: the Previewer's filmstrip
+        # shows one picture per chapter.
+        if state["title"] and state["title"] != part[1]:
+            part[0] = part[1] = state["title"]
 
         # The old line leaves *before* the new one arrives. Left to overlap,
         # a subtitle reads as handed over from the scene before rather than

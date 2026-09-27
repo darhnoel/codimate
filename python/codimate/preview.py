@@ -254,21 +254,35 @@ class Film:
             return self._mixed[1]
 
     def frame(self, seconds: float) -> bytes:
+        """The picture at `seconds`, as PNG: drawn from the script, or
+        decoded out of the video — the filmstrip needs one either way."""
+        import subprocess
         import tempfile
         with self.lock, tempfile.TemporaryDirectory() as folder:
-            out = self.explanation.frame_at(seconds, f"{folder}/frame.png")
+            out = f"{folder}/frame.png"
+            if self.video:
+                from .explain import _ffmpeg
+                subprocess.run([_ffmpeg(), "-v", "error", "-ss", f"{seconds:.3f}",
+                                "-i", str(self.video), "-frames:v", "1", out],
+                               check=True)
+            else:
+                self.explanation.frame_at(seconds, out)
             return Path(out).read_bytes()
 
     def listing(self) -> dict:
-        return {"title": self.path.name, "video": bool(self.video),
+        """Everything the page needs, in one answer — the whole index
+        included, so pointing at the picture is answered in the browser."""
+        beats = self.index["beats"]
+        return {"title": " ".join([self.path.name, *self.args]),
+                "key": str(self.path) + "|" + " ".join(self.args),
+                "video": bool(self.video),
                 "canvas": self.index["canvas"], "built": self.built,
                 "error": self.error,
                 "covered": covered(self.index),
+                "chapters": [[b["at"], b["chapter"]] for b in beats if "chapter" in b],
                 "sound": bool(self.explanation and self.explanation.sounds()),
-                "duration": (self.explanation.duration
-                             if self.explanation else None),
-                "beats": [[b["at"], b["secs"], b["event"]]
-                          for b in self.index["beats"]]}
+                "duration": (beats[-1]["at"] + beats[-1]["secs"]) if beats else 0,
+                "beats": beats}
 
 
 # ------------------------------------------------------------------ serving
@@ -277,8 +291,8 @@ class Film:
 def serve(path, args=(), port: int = 0, show: bool = True) -> None:
     """Open the Previewer on a script or an mp4 and wait until interrupted.
 
-    Bound to 127.0.0.1 and serving a handful of fixed routes, so nothing else
-    on the disk is reachable.
+    Bound to 127.0.0.1 and serving a handful of fixed routes and the page's own
+    folder, so nothing else on the disk is reachable.
     """
     import webbrowser
     from http.server import ThreadingHTTPServer
@@ -301,7 +315,9 @@ def _handler(film: Film):
     from http.server import BaseHTTPRequestHandler
     from urllib.parse import parse_qs, urlparse
 
-    page = Path(__file__).with_name("viewer.html").read_bytes()
+    viewer = Path(__file__).with_name("viewer").resolve()
+    kinds = {".html": "text/html; charset=utf-8", ".js": "text/javascript",
+             ".css": "text/css"}
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):          # quiet: this is a local tool
@@ -310,15 +326,20 @@ def _handler(film: Film):
         def do_GET(self):
             url = urlparse(self.path)
             query = parse_qs(url.query)
-            if url.path == "/":
-                self._send(200, "text/html; charset=utf-8", page)
+            if url.path == "/" or url.path.startswith("/viewer/"):
+                # The page's own files, and nothing outside their folder.
+                asked = url.path[len("/viewer/"):] if url.path != "/" else "index.html"
+                path = (viewer / asked).resolve()
+                if viewer not in path.parents or not path.is_file() \
+                        or path.suffix not in kinds:
+                    self._send(404, "text/plain", b"not here")
+                    return
+                self._send(200, kinds[path.suffix], path.read_bytes())
             elif url.path == "/index":
                 # Polled by the page: this is also how a saved edit arrives.
                 film.refresh(force="force" in query)
                 self._json(film.listing())
-            elif url.path == "/at":
-                self._at(query)
-            elif url.path == "/frame" and film.explanation:
+            elif url.path == "/frame" and (film.explanation or film.video):
                 try:
                     seconds = float(query["t"][0])
                 except (KeyError, ValueError):
@@ -331,19 +352,6 @@ def _handler(film: Film):
                 self._file(film.sound(), "audio/wav")
             else:
                 self._send(404, "text/plain", b"not here")
-
-        def _at(self, query):
-            try:
-                seconds = float(query["t"][0])
-                point = None
-                if "x" in query and "y" in query:
-                    point = (float(query["x"][0]), float(query["y"][0]))
-            except (KeyError, ValueError):
-                self._send(400, "text/plain", b"give t, and x and y together")
-                return
-            found = at(film.index, seconds, point)
-            found["note"] = note(found)
-            self._json(found)
 
         def _file(self, video, kind):
             # Range requests, because a browser will not seek media it was
