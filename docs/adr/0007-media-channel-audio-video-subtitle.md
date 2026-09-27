@@ -74,3 +74,27 @@ source frame. The timeline reconciles seconds against normalized `t`. Media is
 - The visual core, `Scene`, and `ConcreteScene` are untouched by sound. If a
   future reviewer proposes putting audio into `Scene` for "one unified tree," the
   bar is: does the One Law survive? It does not. Keep the sibling channel.
+
+## Amended 2026-09-27: sound rides on the Trace Event
+
+Audio was built, for the case that needed it — narration — and more narrowly
+than decided above. What stands is the principle: **sound is never part of a
+Scene**, and `f(t) → Scene` is untouched.
+
+What changed:
+
+- **A clip is placed by event, not by absolute seconds.** `emit("said",
+  sound="said.mp3")` starts the clip as that event's beat begins. The first
+  narrated film placed clips in seconds, and to do it kept a second clock that
+  re-added every hold `Timing` already knew — the same arithmetic, twice, free
+  to drift. An event is where an author decides something, so it is where a
+  voice starts; the seconds follow from the timeline.
+- **The mix is ffmpeg's, after the picture, in Python.** The frames are
+  encoded as before, then the clips are delayed to their starts, summed at
+  their recorded levels, and muxed under the stream without re-encoding it.
+  `Movie`, `AudioTrack` and `Clip` in the Engine were not needed for this: the
+  Engine never has to *sample* sound at `t`, only to have its picture's
+  timeline agree with the sound's, and both are read off the same events.
+- **Trim and rate are not built.** Nothing has asked for them. When something
+  does — a clip cut short, or video with its own sound — that is the point to
+  revisit an audio channel in the Engine, as decided above.

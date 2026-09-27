@@ -203,6 +203,7 @@ class Explanation:
 
         from . import _codimate  # imported here so the pure Python is testable
 
+        sounds = self.sounds()      # a missing clip fails now, not after the picture
         _find_encoder()
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
@@ -216,6 +217,8 @@ class Explanation:
             scale=float(scale),
         )
 
+        if sounds:
+            self._lay_sound(output, sounds)
         if index:
             self.write_index(output)
         report = self.report()
@@ -223,6 +226,62 @@ class Explanation:
             import sys
             print(report, file=sys.stderr)
         return output
+
+    def sounds(self) -> "list[tuple[float, str]]":
+        """Every clip, as `(start, path)`: `emit("said", sound="said.wav")`
+        starts `said.wav` as the beat for "said" begins.
+
+        The start is read off :meth:`timeline`, so a sound cannot disagree
+        with the picture: both are timed by the same events. Sound is never
+        part of a Scene (ADR 0007) — it rides on the event, beside it.
+        """
+        from pathlib import Path
+
+        beats = self.timeline()
+        found = []
+        for k, event in enumerate(self.trace.events):
+            clip = event.data.get("sound")
+            if clip is None:
+                continue
+            clip = Path(clip).expanduser().resolve()
+            if not clip.exists():
+                raise FileNotFoundError(f"no sound {clip} (emitted by {event.name!r})")
+            # Beat 0 is the opening hold; event k is beat k + 1.
+            found.append((round(beats[k + 1][0], 3), str(clip)))
+        return found
+
+    def mix_sound(self, output: str) -> "str | None":
+        """Every clip laid at its start and summed, as one audio file —
+        what `render` puts under the picture, without the picture. `None` if
+        nothing makes a sound."""
+        import subprocess
+
+        sounds = self.sounds()
+        if not sounds:
+            return None
+        inputs, graph = _mixing(sounds, first=0)
+        subprocess.run([_ffmpeg(), "-y", "-v", "error", *inputs,
+                        "-filter_complex", graph, "-map", "[a]", output],
+                       check=True)
+        return output
+
+    def _lay_sound(self, output: str, sounds) -> None:
+        """Mux the clips under a rendered video. The picture is copied, not
+        re-encoded; ffmpeg cannot write where it reads, hence the temporary."""
+        import subprocess
+        from pathlib import Path
+
+        video = Path(output)
+        out = video.with_name(f".{video.stem}.sound.tmp{video.suffix}")
+        inputs, graph = _mixing(sounds, first=1)
+        subprocess.run(
+            [_ffmpeg(), "-y", "-v", "error", "-i", str(video), *inputs,
+             "-filter_complex", graph, "-map", "0:v", "-map", "[a]",
+             # No -shortest: the picture runs past the last clip by design,
+             # into the final hold, and truncating would cut the ending.
+             "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", str(out)],
+            check=True)
+        out.replace(video)
 
     def covered(self) -> "list[tuple[float, str, str]]":
         """Every label something was drawn on: `(seconds, above, below)`.
@@ -289,16 +348,11 @@ class Explanation:
         than in the Engine, which will not rasterize below 1:1 — so a whole
         film fits on a screen instead of arriving four thousand pixels wide.
         """
-        import shutil
         import subprocess
         import tempfile
         from pathlib import Path
 
-        _find_encoder()
-        import os
-        ffmpeg = os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg")
-        if not ffmpeg:
-            raise RuntimeError("sheet() needs ffmpeg to tile the frames")
+        ffmpeg = _ffmpeg()
 
         times = list(times)
         rows = -(-len(times) // columns)
@@ -419,6 +473,31 @@ class Explanation:
             out.append((round(at, 3), length, name))
             at += length
         return out
+
+
+def _mixing(sounds, first: int):
+    """ffmpeg inputs and a filter graph that lays each clip at its start and
+    sums them. `first` is the input number of the first clip. `normalize=0`
+    keeps every clip at its recorded level — amix otherwise divides by the
+    number of inputs, and the voice fades as the film gets longer."""
+    inputs = [arg for _, clip in sounds for arg in ("-i", clip)]
+    ids = range(first, first + len(sounds))
+    delays = "".join(f"[{i}:a]adelay={round(start * 1000)}:all=1[d{i}];"
+                     for i, (start, _) in zip(ids, sounds))
+    summed = "".join(f"[d{i}]" for i in ids)
+    return inputs, f"{delays}{summed}amix=inputs={len(sounds)}:normalize=0[a]"
+
+
+def _ffmpeg() -> str:
+    """The ffmpeg the render uses, for the jobs done around it."""
+    import os
+    import shutil
+
+    _find_encoder()
+    found = os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg")
+    if not found:
+        raise RuntimeError("this needs ffmpeg — install it, or set CODIMATE_FFMPEG")
+    return found
 
 
 def _find_encoder() -> None:

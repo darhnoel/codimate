@@ -241,6 +241,18 @@ class Film:
                 self.stamp = stamp
                 self._build()
 
+    def sound(self) -> "Path | None":
+        """The film's clips mixed into one file, made once per build."""
+        import tempfile
+        with self.lock:
+            if self.explanation is None or not self.explanation.sounds():
+                return None
+            if getattr(self, "_mixed", (None, None))[0] != self.built:
+                folder = Path(tempfile.mkdtemp(prefix="codimate-preview-"))
+                mixed = self.explanation.mix_sound(str(folder / "sound.wav"))
+                self._mixed = (self.built, Path(mixed))
+            return self._mixed[1]
+
     def frame(self, seconds: float) -> bytes:
         import tempfile
         with self.lock, tempfile.TemporaryDirectory() as folder:
@@ -252,6 +264,7 @@ class Film:
                 "canvas": self.index["canvas"], "built": self.built,
                 "error": self.error,
                 "covered": covered(self.index),
+                "sound": bool(self.explanation and self.explanation.sounds()),
                 "duration": (self.explanation.duration
                              if self.explanation else None),
                 "beats": [[b["at"], b["secs"], b["event"]]
@@ -313,7 +326,9 @@ def _handler(film: Film):
                     return
                 self._send(200, "image/png", film.frame(seconds))
             elif url.path == "/video" and film.video:
-                self._video(film.video)
+                self._file(film.video, "video/mp4")
+            elif url.path == "/sound" and film.sound():
+                self._file(film.sound(), "audio/wav")
             else:
                 self._send(404, "text/plain", b"not here")
 
@@ -330,8 +345,8 @@ def _handler(film: Film):
             found["note"] = note(found)
             self._json(found)
 
-        def _video(self, video):
-            # Range requests, because a browser will not seek an mp4 it was
+        def _file(self, video, kind):
+            # Range requests, because a browser will not seek media it was
             # not allowed to fetch in pieces — Safari will not even play it.
             size = video.stat().st_size
             start, end = 0, size - 1
@@ -347,7 +362,7 @@ def _handler(film: Film):
                 self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
             else:
                 self.send_response(200)
-            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Content-Type", kind)
             self.send_header("Accept-Ranges", "bytes")
             self.send_header("Content-Length", str(end - start + 1))
             self.end_headers()

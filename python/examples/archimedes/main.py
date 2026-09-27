@@ -30,7 +30,7 @@ import world as W
 # every combination of them is a film somebody wants:
 #
 #     --no-subtitle   the picture and the voice, with nothing written
-#     --silent        the picture and the words, with no cues to mix
+#     --silent        the picture and the words, with no voice
 #     --clean         the picture alone
 #
 # The *timing* is the same in all four. Every scene lasts exactly as long as
@@ -52,16 +52,16 @@ cm.canvas(1280, 720)
 # ------------------------------------------------------------ the narration
 #
 # If the captions have been spoken (`narrate.py`), the film paces itself off
-# the recordings rather than off a guess at reading speed, and writes out when
-# each one should start. Without them it runs silent at the reading rate — the
-# voice is an addition to the film, never a thing it depends on.
+# the recordings rather than off a guess at reading speed, and each recording
+# rides on the event its line starts at — `render` lays it there. Without them
+# it runs silent at the reading rate — the voice is an addition to the film,
+# never a thing it depends on.
 AUDIO = Path(__file__).resolve().parent / "audio"
 TAIL = 0.5                       # a moment after the voice stops, before the cut
 
 _spoken = AUDIO / "narration.json"
 VOICE = ({entry["text"]: entry for entry in
           json.loads(_spoken.read_text())} if _spoken.exists() else {})
-CUES = []                        # one per line spoken: its file and its start
 
 # And if the recordings have been transcribed (`align.py`), the moment each
 # word is said, counted from the start of its own clip. From the clip's start
@@ -719,17 +719,20 @@ def story(state, emit):
     """
 
     spoken = [""]                  # the line the caption is already showing
-    clock = [LEAD]                 # where we are in the finished film
+    voice = [None]                 # a recording waiting for the next event
 
     def tick(name):
-        """Emit, and keep the running time — which is what a cue is.
+        """Emit, carrying the recording if one is waiting to start here.
 
-        Every emit goes through here, so the offsets handed to `mix.py` are
-        walked from the same events the renderer walks rather than worked out
-        a second time and allowed to drift.
+        The sound goes on the event rather than at a time worked out beside
+        it, so it starts when that beat starts — timed by the same events
+        the picture is, with nothing to keep in step by hand.
         """
-        emit(name)
-        clock[0] += HOLDS.get(name, DEFAULT)
+        if voice[0]:
+            emit(name, sound=voice[0])
+            voice[0] = None
+        else:
+            emit(name)
 
     def beat(name, **change):
         """One section: the picture changes, then the caption reads itself.
@@ -780,7 +783,7 @@ def story(state, emit):
         said = vocabulary.spoken(line)
         heard, when = VOICE.get(said), WHEN.get(said)
         if heard and CUEING:
-            CUES.append({"file": heard["file"], "start": round(clock[0], 3)})
+            voice[0] = AUDIO / heard["file"]
 
         if heard and when and len(when) == len(pieces):
             # Measured. Each word is held until the voice reaches the next
@@ -940,15 +943,5 @@ cm.explain(
         # opening hold is short. A second of it would read as a stall.
         opening=LEAD, final_hold=FINAL),
 ).render(OUT, fps=60, scale=1.5)
-
-if CUES:
-    # Written as the trace was walked, so the sound cannot disagree with the
-    # picture: both came from the same events, in the same order. The video's
-    # name goes in with them, because there is more than one cut now and
-    # `mix.py` must lay the voice onto the one these cues were walked for.
-    (AUDIO / "cues.json").write_text(
-        json.dumps({"video": OUT, "cues": CUES},
-                   ensure_ascii=False, indent=2) + "\n")
-    print(f"wrote {AUDIO.name}/cues.json — run mix.py to lay the voice on")
 
 print(f"wrote {OUT}")

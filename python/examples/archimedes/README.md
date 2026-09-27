@@ -292,8 +292,8 @@ object would slide while the water it displaces jumped.
 ```bash
 python python/examples/archimedes/narrate.py           # what would be said
 KIRI_API_KEY=... python .../narrate.py --write         # record the missing
-.venv/bin/python python/examples/archimedes/main.py km # render, writing cues
-python python/examples/archimedes/mix.py               # lay the voice on
+.venv/bin/python python/examples/archimedes/main.py km # render, voice and all
+.venv/bin/python -m codimate.preview python/examples/archimedes/main.py km  # hear it without rendering
 ```
 
 The Khmer film is narrated; the English one is silent and keeps the reading
@@ -342,10 +342,12 @@ Three things that had to be survived:
 All 21 lines are timed this way, none left to the guess — though the guess is
 still there, and a caption with no recording still runs on it.
 
-**The cues come from the same walk as the picture.** `main.py` keeps a running
-clock through every emit and writes `audio/cues.json` as it renders, so the
-sound cannot disagree with the picture: both were walked from the same events
-in the same order. 21 lines, 86.6 seconds of speech, and no two overlap.
+**The voice rides on the events, like the picture.** Each recording goes on
+the event its line starts at — `emit(name, sound=clip)` — and `render` lays it
+where that beat begins. There is no second clock to keep in step: an earlier
+version kept one, adding up every hold by hand to write a cue file for a
+separate mixing pass, and it was the same arithmetic as `Timing`, done twice.
+21 lines, 86.6 seconds of speech, and no two overlap.
 
 **Only subtitles are spoken.** Titles are labels on the picture, not
 narration, and a line the film *holds* rather than re-reads is recorded once.
@@ -366,10 +368,6 @@ dub your own voice over a picture whose pauses are already the right length,
 show the narrated film to someone who does not want to read, or watch the tank
 make its own case without being told.
 
-`cues.json` carries the name of the cut it was walked for, so `mix.py` lays the
-voice onto that one. Laying it onto the wrong cut would sound right while
-showing the other film.
-
 The recordings are not committed — 8MB from a paid API, and not ours to
 publish. `narrate.py` caches by a hash of the text, the voice and the speed,
 so editing one caption later costs one request rather than twenty-one.
@@ -383,7 +381,6 @@ so editing one caption later costs one request rather than twenty-one.
 | `segment.py` | marks Khmer word boundaries in `vocabulary.py`. Authoring-time only. |
 | `narrate.py` | speaks the Khmer captions with Kiri TTS, and measures them. Authoring-time only. |
 | `align.py` | reads a transcript of the narration and learns how fast each word is said. Authoring-time only. |
-| `mix.py` | lays the recordings onto the rendered video with ffmpeg. |
 | `main.py` | the trace and the view. |
 
 ## The Khmer one

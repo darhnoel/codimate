@@ -264,3 +264,97 @@ def test_the_index_survives_a_state_it_does_not_understand():
 
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
+
+
+def tone(path, seconds=0.2):
+    """A short clip to lay down, made by the ffmpeg the render uses."""
+    import subprocess
+    from codimate.explain import _ffmpeg
+    subprocess.run([_ffmpeg(), "-y", "-v", "error", "-f", "lavfi", "-i",
+                    f"sine=frequency=440:duration={seconds}", str(path)], check=True)
+    return str(path)
+
+
+def length(path):
+    """How long a media file is, as ffmpeg reads it."""
+    import re
+    import subprocess
+    from codimate.explain import _ffmpeg
+    said = subprocess.run([_ffmpeg(), "-i", str(path)], capture_output=True, text=True).stderr
+    h, m, s = re.search(r"Duration: (\d+):(\d+):([\d.]+)", said).groups()
+    return int(h) * 3600 + int(m) * 60 + float(s)
+
+
+def test_a_sound_starts_as_the_beat_of_its_event_begins():
+    """ADR 0007: sound rides on the event, and the timeline says when."""
+    import tempfile
+    from pathlib import Path
+    here = Path(tempfile.mkdtemp()).resolve()
+    hello, bye = tone(here / "hello.wav"), tone(here / "bye.wav")
+
+    def talk(state, emit):
+        emit("quiet")
+        emit("hello", sound=hello)
+        emit("bye", sound=bye)
+
+    exp = cm.explain(trace=cm.trace(talk, {}), view=lambda f: cm.Scene(),
+                     timing=cm.Timing(default=1.0, opening=0.5))
+    starts = {name: at for at, _, name in exp.timeline()}
+    assert exp.sounds() == [(starts["hello"], hello), (starts["bye"], bye)]
+    assert exp.sounds()[0][0] == 1.5, "after the opening and one quiet beat"
+
+
+def test_a_missing_sound_fails_before_the_picture_is_drawn():
+    def talk(state, emit):
+        emit("hello", sound="/nowhere/hello.wav")
+
+    import tempfile
+    exp = cm.explain(trace=cm.trace(talk, {}), view=lambda f: cm.Scene())
+    out = f"{tempfile.mkdtemp()}/never.mp4"
+    try:
+        exp.render(out)
+    except FileNotFoundError as e:
+        assert "hello.wav" in str(e) and "'hello'" in str(e)
+    else:
+        raise AssertionError("expected FileNotFoundError")
+    from pathlib import Path
+    assert not Path(out).exists()
+
+
+def test_the_mix_lays_every_clip_at_its_start():
+    """The last clip starts at 2.5s and lasts 0.2s: the mix is 2.7s long."""
+    import tempfile
+    from pathlib import Path
+    here = Path(tempfile.mkdtemp())
+    clip = tone(here / "a.wav")
+
+    def talk(state, emit):
+        emit("one", sound=clip)
+        emit("two", sound=clip)
+
+    exp = cm.explain(trace=cm.trace(talk, {}), view=lambda f: cm.Scene(),
+                     timing=cm.Timing(default=2.0, opening=0.5))
+    out = exp.mix_sound(str(here / "mix.wav"))
+    assert abs(length(out) - 2.7) < 0.05
+
+
+def test_sound_is_laid_under_a_video_without_redrawing_it():
+    import subprocess
+    import tempfile
+    from pathlib import Path
+    from codimate.explain import _ffmpeg
+    here = Path(tempfile.mkdtemp())
+    video = here / "v.mp4"
+    subprocess.run([_ffmpeg(), "-y", "-v", "error", "-f", "lavfi", "-i",
+                    "color=c=black:s=64x36:d=1", "-pix_fmt", "yuv420p", str(video)],
+                   check=True)
+
+    def talk(state, emit):
+        emit("one", sound=tone(here / "a.wav"))
+
+    exp = cm.explain(trace=cm.trace(talk, {}), view=lambda f: cm.Scene())
+    exp._lay_sound(str(video), exp.sounds())
+    streams = subprocess.run([_ffmpeg(), "-i", str(video)],
+                             capture_output=True, text=True).stderr
+    assert "Video:" in streams and "Audio:" in streams
+    assert not list(here.glob(".*tmp*")), "the temporary is gone"

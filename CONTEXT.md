@@ -145,7 +145,7 @@ things that usually carry the same words — neither implies the other, and a
 film may have either, both or neither. Narration is audio and therefore lives
 beside the Scene rather than in it (ADR 0007), never breaking `f(t) → Scene`.
 
-**Previewer**: A window that shows a rendered Explanation and lets an author
+**Previewer**: A window that shows an Explanation — rendered, or not yet — and lets an author
 point at what is on screen to learn the name, the Trace Event and the State
 behind it, then attach a note. **The Previewer never writes.** It produces
 words about the film; changing the film remains an edit to the one Python file.

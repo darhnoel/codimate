@@ -63,6 +63,7 @@
   <div class="stage">
     <video id="video" preload="auto" playsinline hidden></video>
     <img id="still" alt="the film at this moment" hidden>
+    <audio id="sound" preload="auto"></audio>
     <canvas id="over"></canvas>
   </div>
   <div class="bar">
@@ -109,6 +110,8 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const video = $("video"), still = $("still"), over = $("over"), scrub = $("scrub");
+const sound = $("sound");
+let heard = false;        // whether the script's film makes a sound
 let index = { canvas: [1280, 720], beats: [], built: 0 };
 let last = null;          // the last /at answer, for the note
 const notes = [];
@@ -118,7 +121,11 @@ const stamp = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0
 // from a script held in memory. Everything below asks `clock`, not either.
 const frames = {
   t: 0, duration: 0, paused: true, want: null, busy: false, url: null,
-  seek(t) { this.t = Math.max(0, Math.min(this.duration, t)); this.fetch(); tick(); },
+  seek(t) {
+    this.t = Math.max(0, Math.min(this.duration, t));
+    if (heard && !this.paused) sound.currentTime = this.t;
+    this.fetch(); tick();
+  },
   fetch() {
     // One request in flight; a fast drag skips to wherever it ends up.
     this.want = this.t;
@@ -135,16 +142,23 @@ const frames = {
     });
   },
   advance() {
-    // Playing is "as fast as frames arrive", timed by the wall clock so it
-    // runs at the film's speed with frames dropped rather than in slow motion.
+    // Playing is "as fast as frames arrive", timed by the sound if there is
+    // one and the wall clock if not — so it runs at the film's speed with
+    // frames dropped, never in slow motion, and the voice leads.
     const now = performance.now() / 1000;
-    this.t = Math.min(this.duration, this.t + (now - (this.from ?? now)));
+    // Past the last clip the film still has its final hold: back to the wall clock.
+    this.t = heard && !sound.ended ? sound.currentTime
+                   : Math.min(this.duration, this.t + (now - (this.from ?? now)));
     this.from = now;
     if (this.t >= this.duration) this.paused = true;
     this.fetch(); tick();
   },
-  play() { this.paused = false; this.from = performance.now() / 1000; this.advance(); },
-  pause() { this.paused = true; this.from = null; tick(); },
+  play() {
+    this.paused = false; this.from = performance.now() / 1000;
+    if (heard) { sound.currentTime = this.t; sound.play(); }
+    this.advance();
+  },
+  pause() { this.paused = true; this.from = null; sound.pause(); tick(); },
 };
 const media = {
   get t() { return video.currentTime; }, get duration() { return video.duration || 0; },
@@ -186,7 +200,7 @@ async function refresh(force) {
   const changed = got.built !== index.built;
   index = got;
   if (!changed) return;
-  last = null; draw(); problems();
+  last = null; draw(); problems(); listen(got);
   frames.duration = got.duration; scrub.max = got.duration;
   frames.seek(frames.t);
 }
@@ -202,10 +216,19 @@ fetch("/index").then((r) => r.json()).then((got) => {
     still.hidden = false; $("reload").hidden = false;
     $("how").textContent += " Save the script and the film here follows.";
     frames.duration = got.duration; scrub.max = got.duration;
+    listen(got);
     frames.seek(0);
     setInterval(() => refresh(false), 1500);
   }
 });
+
+function listen(got) {
+  // A new build may have new clips; fetch the mix afresh rather than cached.
+  frames.pause();
+  heard = got.sound;
+  if (heard) sound.src = `/sound?built=${got.built}`;
+  else sound.removeAttribute("src");
+}
 
 function beatAt(t) {
   let found = null;

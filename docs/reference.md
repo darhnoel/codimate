@@ -59,6 +59,21 @@ arrives in the view as `frame.event.data`.
 `emit` is an argument rather than something ambient, so your algorithm stays
 ordinary Python: `bubble_sort(values, print)` runs it and prints the events.
 
+**`sound=` is the one piece of data Codimate reads itself.** A path to an
+audio file starts it as that event's beat begins:
+
+```python
+emit("said", sound="audio/said.mp3")
+```
+
+`render` lays every clip at its start and muxes them under the picture — the
+video is not redrawn, and a missing file fails before the render starts rather
+than after it. The start is read off the same timeline the picture uses, so the
+two cannot drift; there is no clock to keep by hand. Clips may overlap, and each
+keeps its recorded level. `exp.sounds()` lists `(start, path)`, and
+`exp.mix_sound("x.wav")` writes the mix alone. Sound never enters a Scene
+(ADR 0007).
+
 The older form — `@cm.trace()` on a function calling a module-level `cm.emit`
 — still works and warns. It is removed in 0.2.
 
@@ -486,7 +501,8 @@ can act on:
 film in memory — no video is drawn. Arguments after the script go to it, as
 they would under `python`. Each moment is drawn when you scrub to it (about
 60ms), and saving the script, or any `.py` beside it, runs it again; a broken
-edit shows its error and keeps the last good film. It cannot play sound.
+edit shows its error and keeps the last good film. Clips given with
+`emit(..., sound=)` play in step with it.
 
 **Given an mp4**, it plays the finished film, with sound, against the index
 written beside it.
