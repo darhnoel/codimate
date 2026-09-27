@@ -89,6 +89,27 @@ def index_of(explanation) -> dict:
             "beats": explanation.index()}
 
 
+def on_screen(index: dict, beat: int) -> "list[dict]":
+    """Every shape on screen once `beat` has arrived, topmost first.
+
+    Shapes are stored as differences, so this replays them from the start —
+    from the nearest checkpoint, kept every 32 beats on the index itself, so a
+    film of a thousand beats of a thousand shapes is not replayed per ask.
+    """
+    marks = index.setdefault("_checkpoints", {})
+    start = max((k for k in marks if k <= beat), default=-1)
+    now = dict(marks[start]) if start >= 0 else {}
+    for k in range(start + 1, beat + 1):
+        changed = index["beats"][k]["shapes"]
+        for shape in changed["set"]:
+            now[shape["name"]] = shape
+        for name in changed["gone"]:
+            now.pop(name, None)
+        if k % 32 == 31:
+            marks[k] = dict(now)
+    return _under(now.values(), None)
+
+
 def at(index: dict, seconds: float, point=None) -> dict:
     """What is on screen at `seconds`, and what put it there.
 
@@ -101,23 +122,22 @@ def at(index: dict, seconds: float, point=None) -> dict:
     what was clicked, and honest about being an approximation.
     """
     beats = index["beats"]
-    before: dict = {}
-    for i, beat in enumerate(beats):
-        now = dict(before)
-        for shape in beat["shapes"]["set"]:
-            now[shape["name"]] = shape
-        for name in beat["shapes"]["gone"]:
-            now.pop(name, None)
+    if not beats:
+        raise ValueError("the index has no beats")
+    i = shown_beat = beat_at(index, seconds)
+    beat = beats[i]
+    if i > 0 and seconds < beat["at"] + beat["secs"] / 2:
+        shown_beat = i - 1
+    return {"seconds": round(seconds, 3), "beat": i,
+            "event": beat["event"], "state": beat["state"],
+            "shapes": _under(on_screen(index, shown_beat), point)}
 
-        last = i == len(beats) - 1
-        if seconds < beat["at"] + beat["secs"] or last:
-            early = i > 0 and seconds < beat["at"] + beat["secs"] / 2
-            shown = before if early else now
-            return {"seconds": round(seconds, 3), "beat": i,
-                    "event": beat["event"], "state": beat["state"],
-                    "shapes": _under(shown.values(), point)}
-        before = now
-    raise ValueError("the index has no beats")
+
+def beat_at(index: dict, seconds: float) -> int:
+    """The beat `seconds` falls in: the last one to have started."""
+    import bisect
+    starts = [b["at"] for b in index["beats"]]
+    return max(bisect.bisect_right(starts, seconds) - 1, 0)
 
 
 def covered(index: dict) -> "list[list]":
@@ -229,6 +249,9 @@ class Film:
             return
         self.explanation, self.index, self.error = explanation, index, None
         self.built += 1
+        # The Engine builds the film on the first frame asked for — seconds,
+        # on a big one. Ask now, in the background, rather than on first scrub.
+        threading.Thread(target=self.frame, args=(0.0,), daemon=True).start()
 
     def refresh(self, force=False):
         """Run the script again if it changed since the last run."""
@@ -272,6 +295,9 @@ class Film:
         """Everything the page needs, in one answer — the whole index
         included, so pointing at the picture is answered in the browser."""
         beats = self.index["beats"]
+        # Shapes stay here and are asked for a beat at a time: a film where
+        # everything moves every beat has an index of hundreds of megabytes.
+        light = [{k: v for k, v in b.items() if k != "shapes"} for b in beats]
         return {"title": " ".join([self.path.name, *self.args]),
                 "key": str(self.path) + "|" + " ".join(self.args),
                 "video": bool(self.video),
@@ -281,7 +307,7 @@ class Film:
                 "chapters": [[b["at"], b["chapter"]] for b in beats if "chapter" in b],
                 "sound": bool(self.explanation and self.explanation.sounds()),
                 "duration": (beats[-1]["at"] + beats[-1]["secs"]) if beats else 0,
-                "beats": beats}
+                "beats": light}
 
 
 # ------------------------------------------------------------------ serving
@@ -296,6 +322,7 @@ def serve(path, args=(), port: int = 0, show: bool = True) -> None:
     import webbrowser
     from http.server import ThreadingHTTPServer
 
+    print(f"running {Path(path).name} up to its render call…", flush=True)
     film = Film(path, args)
     server = ThreadingHTTPServer(("127.0.0.1", port), _handler(film))
     address = f"http://127.0.0.1:{server.server_address[1]}/"
@@ -336,8 +363,22 @@ def _handler(film: Film):
                 self._send(200, kinds[path.suffix], path.read_bytes())
             elif url.path == "/index":
                 # Polled by the page: this is also how a saved edit arrives.
+                # Asked with the build it has, it gets a few bytes back until
+                # there is a new one.
                 film.refresh(force="force" in query)
-                self._json(film.listing())
+                since = query.get("since", [None])[0]
+                if since == str(film.built) and "force" not in query:
+                    self._json({"same": True, "error": film.error})
+                else:
+                    self._json(film.listing())
+            elif url.path == "/shapes":
+                try:
+                    beat = int(query["beat"][0])
+                    shapes = on_screen(film.index, beat)
+                except (KeyError, ValueError, IndexError):
+                    self._send(400, "text/plain", b"give a beat in the index")
+                    return
+                self._json({"built": film.built, "beat": beat, "shapes": shapes})
             elif url.path == "/frame" and (film.explanation or film.video):
                 try:
                     seconds = float(query["t"][0])

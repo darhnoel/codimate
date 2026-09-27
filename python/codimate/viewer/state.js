@@ -36,41 +36,40 @@ export const chapter = computed(() => {
   return found.length ? found[found.length - 1][1] : null;
 });
 
-// Shapes are stored as differences (see Explanation.index), so what is on
-// screen after beat i is every beat up to i applied in order. Checkpoints
-// every 32 beats keep a lookup from replaying a thousand of them.
-let checkpoints = [];
-effect(() => { film.value; checkpoints = []; });
+// What is on screen at a beat is asked of the server, a beat at a time, and
+// kept: a film where everything moves every beat has an index of hundreds of
+// megabytes, far too much to send whole. Mid-beat, the nearer end of the
+// beat is what is reported, as `preview.at` does in Python.
+const shown = new Map();              // beat → shapes, topmost first
+export const shapesReady = signal(0); // bumped as answers arrive, to redraw
+let asking = null;
+effect(() => { film.value?.built; shown.clear(); shapesReady.value = shapesReady.peek() + 1; });
 
-function after(i) {
-  const beats = film.value.beats;
-  let from = Math.min(Math.floor(i / 32), checkpoints.length) - 1;
-  while (from >= 0 && !checkpoints[from]) from--;
-  const now = new Map(from >= 0 ? checkpoints[from] : []);
-  for (let k = from >= 0 ? from * 32 + 32 : 0; k <= i; k++) {
-    for (const s of beats[k].shapes.set) now.set(s.name, s);
-    for (const n of beats[k].shapes.gone) now.delete(n);
-    if (k % 32 === 31 && !checkpoints[(k - 31) / 32]) checkpoints[(k - 31) / 32] = new Map(now);
-  }
-  return now;
-}
-
-// Every shape on screen at `t`, topmost first — the Engine draws in
-// (layer, name) order. Mid-beat, the nearer end of the beat is reported,
-// as `preview.at` does in Python.
-let memo = { key: null, shapes: [] };
-export function shapesAt(t) {
-  if (!film.value) return [];
+function shownBeat(t) {
   const i = beatAt(t), b = film.value.beats[i];
-  const early = i > 0 && t < b.at + b.secs / 2;
-  const key = `${film.value.built}:${early ? i - 1 : i}`;
-  if (memo.key !== key) {
-    const shapes = [...after(early ? i - 1 : i).values()];
-    shapes.sort((a, b) => b.layer - a.layer || (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
-    memo = { key, shapes };
-  }
-  return memo.shapes;
+  return i > 0 && t < b.at + b.secs / 2 ? i - 1 : i;
 }
+
+async function ask(k) {
+  if (asking === k) return;
+  asking = k;
+  try {
+    const got = await (await fetch(`/shapes?beat=${k}`)).json();
+    if (got.built === film.value?.built) { shown.set(k, got.shapes); shapesReady.value++; }
+  } finally { if (asking === k) asking = null; }
+}
+
+// Every shape on screen at `t`, topmost first — or nothing yet, while it is
+// being asked for.
+export function shapesAt(t) {
+  if (!film.value?.beats.length) return [];
+  const k = shownBeat(t);
+  if (!shown.has(k)) { ask(k); return []; }
+  return shown.get(k);
+}
+
+// Paused is when pointing happens, so ask ahead of the cursor.
+effect(() => { if (!playing.value && film.value) shapesAt(time.value); });
 
 // The shapes under a point, topmost first. A line is given a few pixels so
 // it can be pointed at at all.
@@ -159,9 +158,13 @@ async function fetchFrame() {
 
 // Polled: this is also how a saved edit to the script arrives.
 export async function load(force = false) {
-  const got = await (await fetch("/index" + (force ? "?force" : ""))).json();
-  const changed = !film.value || got.built !== film.value.built || got.error !== film.value.error;
-  if (!changed) return;
+  const asked = force ? "?force" : film.value ? `?since=${film.value.built}` : "";
+  const got = await (await fetch("/index" + asked)).json();
+  if (got.same) {
+    // Nothing new built; a failed edit is still worth showing.
+    if (got.error !== film.value.error) film.value = { ...film.value, error: got.error };
+    return;
+  }
   batch(() => {
     const first = !film.value;
     film.value = got;

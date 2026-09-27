@@ -3,7 +3,7 @@
 import { html } from "./html.js";
 import { useState } from "preact/hooks";
 import { film, time, beat, chapter, picked, tab, notes, stamp, shapeNamed,
-         addNote, noteText, jumpTo } from "./state.js";
+         addNote, noteText, jumpTo, shapesReady } from "./state.js";
 
 export function Panel() {
   const issues = film.value?.covered ?? [];
@@ -26,6 +26,7 @@ export function Panel() {
 
 function Inspect() {
   const p = picked.value, b = beat.value;
+  shapesReady.value;               // redraw once the shapes at this beat arrive
   const shape = p && shapeNamed(p.name);
   return html`
     ${p ? html`

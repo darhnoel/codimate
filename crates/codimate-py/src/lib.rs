@@ -162,26 +162,62 @@ fn render_frame_png(
     height: f32,
     scale: f32,
 ) -> PyResult<()> {
-    use codimate_animation::Playable;
+    Frames::new(scenes, cameras, rules, durations, width, height)?.png(seconds, output, scale)
+}
 
-    let scenes: Vec<Vec<Shape>> = scenes
-        .into_iter()
-        .map(|scene| scene.into_iter().map(Shape::from).collect())
-        .collect();
-    let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
-    let explanation = reconcile::explanation(scenes, &cameras, &rules, &durations, (width, height))
-        .map_err(py)?;
+/// A film built once, to draw any moment of on request.
+///
+/// `render_frame_png` hands every Scene over and reconciles them all to draw
+/// one frame. That is fine for a sheet of twelve and ruinous for a window
+/// scrubbing a film of a thousand scenes of a thousand shapes, where building
+/// the film is seconds and drawing a frame of it is milliseconds.
+#[pyclass(module = "codimate._codimate")]
+struct Frames {
+    explanation: reconcile::Explanation,
+    viewport: Viewport,
+}
 
-    let viewport = Viewport::new(width, height);
-    let scene = explanation.resolve_at(seconds);
-    let layout = codimate_layout::layout_scene(scene, viewport);
-    let frame = codimate_render::render_frame(explanation.name(), seconds, &layout);
-    // Scaled the same way the video is, so a debug frame is not a different
-    // picture from the one that ships — text placement in particular used to
-    // differ, which is exactly the kind of bug this is for finding.
-    let bitmap = codimate_render::rasterize_scaled(&frame, scale.max(1.0));
+#[pymethods]
+impl Frames {
+    #[new]
+    #[pyo3(signature = (scenes, cameras, rules, durations, width=1280.0, height=720.0))]
+    fn new(
+        scenes: Vec<Vec<PyShape>>,
+        cameras: Vec<Option<PyFocus>>,
+        rules: Vec<reconcile::Rule>,
+        durations: Vec<f32>,
+        width: f32,
+        height: f32,
+    ) -> PyResult<Self> {
+        let scenes: Vec<Vec<Shape>> = scenes
+            .into_iter()
+            .map(|scene| scene.into_iter().map(Shape::from).collect())
+            .collect();
+        let cameras: Vec<Option<Focus>> = cameras.into_iter().map(|c| c.map(Focus::from)).collect();
+        let explanation =
+            reconcile::explanation(scenes, &cameras, &rules, &durations, (width, height))
+                .map_err(py)?;
+        Ok(Frames {
+            explanation,
+            viewport: Viewport::new(width, height),
+        })
+    }
 
-    write_png(&output, &bitmap).map_err(|e| PyValueError::new_err(format!("{e}")))
+    /// Draw the moment at `seconds` to a PNG at `output`.
+    #[pyo3(signature = (seconds, output, scale=1.0))]
+    fn png(&self, seconds: f32, output: String, scale: f32) -> PyResult<()> {
+        use codimate_animation::Playable;
+
+        let scene = self.explanation.resolve_at(seconds);
+        let layout = codimate_layout::layout_scene(scene, self.viewport);
+        let frame = codimate_render::render_frame(self.explanation.name(), seconds, &layout);
+        // Scaled the same way the video is, so a debug frame is not a different
+        // picture from the one that ships — text placement in particular used to
+        // differ, which is exactly the kind of bug this is for finding.
+        let bitmap = codimate_render::rasterize_scaled(&frame, scale.max(1.0));
+
+        write_png(&output, &bitmap).map_err(|e| PyValueError::new_err(format!("{e}")))
+    }
 }
 
 /// The easing the Engine applies between two moments.
@@ -220,5 +256,6 @@ fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ease, m)?)?;
     m.add_function(wrap_pyfunction!(measure, m)?)?;
     m.add_function(wrap_pyfunction!(measure_formula, m)?)?;
+    m.add_class::<Frames>()?;
     Ok(())
 }

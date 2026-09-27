@@ -400,15 +400,14 @@ class Explanation:
         from . import _codimate
 
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
-        _codimate.render_frame_png(
-            **self._payloads(),
-            durations=self.durations,
-            seconds=float(seconds),
-            output=output,
-            width=width(),
-            height=height(),
-            scale=float(scale),
-        )
+        # Built once and kept: building the film is most of a frame's cost —
+        # seconds, on a thousand scenes of a thousand shapes — and drawing one
+        # moment of it is milliseconds.
+        if getattr(self, "_frames", None) is None:
+            self._frames = _codimate.Frames(
+                **self._payloads(), durations=self.durations,
+                width=width(), height=height())
+        self._frames.png(float(seconds), output, float(scale))
         return output
 
     def index(self) -> "list[dict]":

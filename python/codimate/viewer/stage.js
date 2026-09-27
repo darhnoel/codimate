@@ -5,7 +5,7 @@
 import { html } from "./html.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { film, time, playing, frame, hover, picked, attachVideo, hitsAt,
-         shapeNamed, pickAt } from "./state.js";
+         shapeNamed, pickAt, shapesReady } from "./state.js";
 
 const BLUE = "#0d99ff", RED = "#f24822";
 
@@ -39,7 +39,7 @@ export function Stage() {
 
   // Redraw the outlines whenever anything they depend on changes.
   useEffect(() => draw(canvas.current, size, W), [
-    size, time.value, hover.value, picked.value, playing.value, f]);
+    size, time.value, hover.value, picked.value, playing.value, f, shapesReady.value]);
 
   const toCanvas = (e) => {
     const r = canvas.current.getBoundingClientRect();

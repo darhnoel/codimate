@@ -90,6 +90,19 @@ def test_a_click_finds_the_topmost_shape_first():
     assert preview.at(index, 0.1, (5, 5))["shapes"] == []
 
 
+def test_checkpoints_give_the_same_answer_as_replaying():
+    """Beats past a checkpoint are answered from it, not from the start."""
+    def one(k, n):
+        return {"at": k, "secs": 1, "event": "e", "state": None, "covered": [],
+                "shapes": {"set": [{"name": f"s{k}", "layer": 0, "kind": "rect",
+                                    "box": [k, 0, 1, 1]}],
+                           "gone": [f"s{k - 2}"] if k >= 2 else []}}
+    index = {"beats": [one(k, 0) for k in range(100)]}
+    for beat in (0, 31, 32, 70, 99, 40):      # out of order, after checkpoints
+        names = {s["name"] for s in preview.on_screen(index, beat)}
+        assert names == {f"s{k}" for k in (beat - 1, beat) if k >= 0}, beat
+
+
 def test_the_note_names_the_shape_the_event_and_the_state():
     exp = preview.build(folder() / "film.py", ["1.0"])
     found = preview.at(preview.index_of(exp), 1.5, (5, 700))
@@ -116,8 +129,20 @@ def test_the_window_serves_frames_and_its_own_page():
         png = urllib.request.urlopen(f"{base}/frame?t=0.5").read()
         assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
-        whole = json.loads(json.dumps(film.index["beats"]))
-        assert listing["beats"] == whole, "the whole index"
+        assert all("shapes" not in b for b in listing["beats"]), \
+            "shapes are asked for a beat at a time"
+
+        # Unchanged since the build the page has: a few bytes, not the index.
+        same = json.load(urllib.request.urlopen(
+            f"{base}/index?since={listing['built']}"))
+        assert same == {"same": True, "error": None}
+
+        # What is on screen at a beat, topmost first — the floor is lowest.
+        shown = json.load(urllib.request.urlopen(f"{base}/shapes?beat=1"))
+        names = [s["name"] for s in shown["shapes"]]
+        assert names[-1] == "floor" and len(names) == 3
+        everything = preview.at(film.index, 1.0)["shapes"]
+        assert [s["name"] for s in everything] == names
         assert listing["title"] == "film.py 1.0"
 
         assert urllib.request.urlopen(f"{base}/").read().startswith(b"<!doctype html>")
