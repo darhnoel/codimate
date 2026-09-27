@@ -432,8 +432,50 @@ rectangle against one and a bit.
 
 A `box` is `null` only for a **formula**, which Typst has not typeset yet.
 `render` writes this beside the video as `<name>.index.json` unless you pass
-`index=False`; `write_index(output)` writes it without rendering. See
-[ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).
+`index=False`; `write_index(output)` writes it without rendering. The file
+wraps the beats as `{"version": 1, "canvas": [w, h], "beats": [...]}` — the
+canvas is what turns a click on a scaled video back into these coordinates.
+See [ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).
+
+## The Previewer
+
+```bash
+python -m codimate.preview python/examples/archimedes/main.py km
+python -m codimate.preview results/archimedes-km.mp4
+```
+
+A window on a film, in the browser. Scrub to a moment, click anything, and it
+tells you the shape's name, the event that drew it and the State behind it.
+Write a note against it; **Copy notes** gives plain text a person or an agent
+can act on:
+
+```text
+0:55.00  say/12/ជាង
+  event    more.15
+  state    title=សង្កត់​ឲ្យ​លិច  said=16  …
+> this word is too close to the next one
+```
+
+**Given a script**, it runs the script up to its `render` call and keeps the
+film in memory — no video is drawn. Arguments after the script go to it, as
+they would under `python`. Each moment is drawn when you scrub to it (about
+60ms), and saving the script, or any `.py` beside it, runs it again; a broken
+edit shows its error and keeps the last good film. It cannot play sound.
+
+**Given an mp4**, it plays the finished film, with sound, against the index
+written beside it.
+
+**It never writes.** No save, no edit — changing the film stays an edit to your
+script. The lookup it uses is plain Python, for asking without a window:
+
+```python
+from codimate import preview
+index = preview.load("results/archimedes-km.mp4")   # or preview.index_of(explanation)
+print(preview.note(preview.at(index, 55.0, (640, 640))))
+```
+
+`--no-open` prints the address instead of opening a browser; `--port` picks
+one. A click in the middle of a transition reports the nearer of its two ends.
 
 ## Timing
 

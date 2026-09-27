@@ -102,3 +102,23 @@ the index. Rejected because it makes the window a second driver of the Engine.
 
 **An identity buffer.** Exact, and a per-frame cost for everyone to make
 clicking exact.
+
+## Amended: a script, not only a video
+
+Two of the rejections above were reversed once the window existed, because
+needing a rendered video first turned out to be the larger cost: a film had to
+be rendered in full before any of it could be looked at, and rendered again to
+look at an edit.
+
+So the Previewer also takes a **script**. It runs it up to `render` and keeps
+the Explanation in memory, draws each moment with `frame_at` as it is scrubbed
+to, and runs the script again when it is saved. Measured on a 929-scene,
+162-second film: 0.8s to build, about 60ms a frame once the scene payloads are
+built once rather than per frame.
+
+What the rejections protected still holds. The note is plain text and outlives
+the process; the index is the same data either way, so an agent can still ask
+about a finished film with no Python running; and the window is still not a
+second driver in any sense that matters — it calls the one `frame_at`, never
+the Engine directly, and never writes. Given an mp4 it works as first
+described, which is also the only way to hear the film.

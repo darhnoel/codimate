@@ -13,6 +13,15 @@ View = Callable[[Frame], Scene]
 
 PATHS = ("straight", "linear", "fall", "lift_carry_drop")
 
+# Set by the Previewer while it runs a script: `render` hands the Explanation
+# here and stops the script, instead of drawing a video nobody asked for yet.
+_capture: "Callable[[Explanation], None] | None" = None
+
+
+class _Captured(BaseException):
+    """Stops a script at its render call. BaseException, so a script's own
+    `except Exception` cannot swallow it."""
+
 
 class Rule:
     """How things matching ``pattern`` travel. First matching rule wins.
@@ -152,6 +161,21 @@ class Explanation:
     def duration(self) -> float:
         return sum(self.durations)
 
+    def _payloads(self) -> dict:
+        """The scenes as the Engine takes them, built once.
+
+        Building them is most of what a single frame costs — 100ms of 157 on
+        a 929-scene film — so a Previewer drawing frame after frame, or a
+        sheet of twelve, pays it once rather than every time.
+        """
+        if getattr(self, "_built", None) is None:
+            self._built = {
+                "scenes": [s._payload() for s in self.scenes],
+                "cameras": [s._camera() for s in self.scenes],
+                "rules": [r._payload() for r in self.motion],
+            }
+        return self._built
+
     def render(self, output: str, *, fps: float = 30, scale: float = 1.0,
                index: bool = True) -> str:
         """Draw every frame and write the video.
@@ -169,15 +193,17 @@ class Explanation:
         """
         from pathlib import Path
 
+        if _capture is not None:
+            _capture(self)
+            raise _Captured
+
         from . import _codimate  # imported here so the pure Python is testable
 
         _find_encoder()
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
         _codimate.render(
-            scenes=[s._payload() for s in self.scenes],
-            cameras=[s._camera() for s in self.scenes],
-            rules=[r._payload() for r in self.motion],
+            **self._payloads(),
             durations=self.durations,
             output=output,
             width=width(),
@@ -191,15 +217,21 @@ class Explanation:
         return output
 
     def write_index(self, output: str) -> str:
-        """Write :meth:`index` beside `output`, as `<name>.index.json`."""
+        """Write :meth:`index` beside `output`, as `<name>.index.json`.
+
+        The file wraps the beats with the canvas size — without it a click on
+        the video cannot be turned back into the coordinates the boxes are in
+        — and a version, because other tools read this and it will change.
+        """
         import json
         from pathlib import Path
 
         video = Path(output)
         beside = video.with_name(f"{video.stem}.index.json")
         beside.parent.mkdir(parents=True, exist_ok=True)
-        beside.write_text(
-            json.dumps(self.index(), ensure_ascii=False, indent=2) + "\n")
+        written = {"version": 1, "canvas": [width(), height()],
+                   "beats": self.index()}
+        beside.write_text(json.dumps(written, ensure_ascii=False, indent=2) + "\n")
         return str(beside)
 
     def sheet(self, times, output: str = "sheet.png", *,
@@ -262,9 +294,7 @@ class Explanation:
 
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
         _codimate.render_frame_png(
-            scenes=[s._payload() for s in self.scenes],
-            cameras=[s._camera() for s in self.scenes],
-            rules=[r._payload() for r in self.motion],
+            **self._payloads(),
             durations=self.durations,
             seconds=float(seconds),
             output=output,
