@@ -187,6 +187,12 @@ def test_a_formula_has_a_box_centred_on_its_point():
 
     shapes = {s["name"]: s for s in cm.explain(
         trace=cm.trace(once, {}), view=view).index()[0]["shapes"]["set"]}
+    if shapes["maths"]["box"] is None:
+        # Nothing to measure it with — no box rather than a guessed one — and
+        # only then: with typst here, or its answer cached, there is a box.
+        import shutil
+        assert not shutil.which("typst")
+        return
     left, top, w, h = shapes["maths"]["box"]
     assert (left + w / 2, top + h / 2) == (200, 100)
     assert (w, h) == cm.measure_math(r"a^2", 20)
