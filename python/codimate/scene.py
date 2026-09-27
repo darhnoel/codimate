@@ -531,7 +531,7 @@ def box(shape) -> "tuple[float, float, float, float] | None":
         from .layout import measure_math
         try:
             w, h = measure_math(str(shape.text), shape.size)
-        except Exception:        # no typst on this machine: say nothing rather than guess
+        except Exception:   # no typst here: say nothing rather than guess
             return None
         return (x - w / 2, y - h / 2, w, h)
     return None
@@ -587,14 +587,17 @@ def _touches(shape, outer, label, slack: float = 2.0) -> bool:
         # A diagonal line's box covers a lot the line does not; clip the
         # segment itself against the label, grown by half the stroke.
         grow = shape.w / 2
-        return _crosses(shape.x, shape.y, shape.x2, shape.y2,
-                        lx - grow, ly - grow, lx + lw + grow, ly + lh + grow)
+        return _crosses((shape.x, shape.y), (shape.x2, shape.y2),
+                        (lx - grow, ly - grow, lx + lw + grow, ly + lh + grow))
     ox, oy, ow, oh = outer
     return ox < lx + lw and lx < ox + ow and oy < ly + lh and ly < oy + oh
 
 
-def _crosses(x0, y0, x1, y1, left, top, right, bottom) -> bool:
-    """Liang–Barsky: does the segment enter the rectangle at all?"""
+def _crosses(start, end, rect) -> bool:
+    """Liang–Barsky: does the segment enter the rectangle
+    `(left, top, right, bottom)` at all?"""
+    (x0, y0), (x1, y1) = start, end
+    left, top, right, bottom = rect
     dx, dy, lo, hi = x1 - x0, y1 - y0, 0.0, 1.0
     for p, q in ((-dx, x0 - left), (dx, right - x0),
                  (-dy, y0 - top), (dy, bottom - y0)):

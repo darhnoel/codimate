@@ -435,8 +435,7 @@ class Explanation:
         A shape's box is `None` only for a formula on a machine without
         Typst, which is what measures one (ADR 0005).
 
-        `render` writes this beside the video by default. See
-        [ADR 0018](../../docs/adr/0018-a-previewer-that-reads-an-index.md).
+        `render` writes this beside the video by default (ADR 0018).
         """
         from .scene import box, covered
 
@@ -466,7 +465,8 @@ class Explanation:
                 "covered": [list(pair) for pair in covered(scene)],
             }
             # Beat 0 is the opening hold; beat i + 1 is event i.
-            event = self.trace.events[i - 1] if 0 < i <= len(self.trace.events) else None
+            events = self.trace.events
+            event = events[i - 1] if 0 < i <= len(events) else None
             if event is not None and event.data.get("chapter"):
                 entry["chapter"] = str(event.data["chapter"])
             out.append(entry)

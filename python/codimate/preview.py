@@ -13,8 +13,7 @@ it and the State behind it. Attach a note, copy the notes out.
 
 **It never writes.** There is no save, no edit, no path back into your Python.
 It produces words about the film; changing the film stays an edit to the one
-file, made by you or by an agent acting on the note. See
-[ADR 0018](../../docs/adr/0018-a-previewer-that-reads-an-index.md).
+file, made by you or by an agent acting on the note (ADR 0018).
 
 The lookup lives here rather than in the page, so the question it answers does
 not need a window at all:

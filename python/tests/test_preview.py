@@ -59,7 +59,9 @@ def test_an_edit_to_a_sibling_module_is_seen_on_the_next_run():
     first = preview.index_of(preview.build(here / "film.py", ["1.0"]))
     (here / "sibling.py").write_text("WIDE = 90\n")
     second = preview.index_of(preview.build(here / "film.py", ["1.0"]))
-    width = lambda index: index["beats"][0]["shapes"]["set"][0]["box"][2]
+
+    def width(index):
+        return index["beats"][0]["shapes"]["set"][0]["box"][2]
     assert (width(first), width(second)) == (40, 90)
 
 
@@ -114,7 +116,8 @@ def test_the_window_serves_frames_and_its_own_page():
         png = urllib.request.urlopen(f"{base}/frame?t=0.5").read()
         assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
-        assert listing["beats"] == json.loads(json.dumps(film.index["beats"])), "the whole index"
+        whole = json.loads(json.dumps(film.index["beats"]))
+        assert listing["beats"] == whole, "the whole index"
         assert listing["title"] == "film.py 1.0"
 
         assert urllib.request.urlopen(f"{base}/").read().startswith(b"<!doctype html>")
@@ -202,7 +205,8 @@ def test_an_mp4_is_served_in_ranges():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
-        asked = urllib.request.Request(f"{base}/video", headers={"Range": "bytes=10-19"})
+        asked = urllib.request.Request(f"{base}/video",
+                                       headers={"Range": "bytes=10-19"})
         got = urllib.request.urlopen(asked)
         assert got.status == 206
         assert got.headers["Content-Range"] == "bytes 10-19/1024"

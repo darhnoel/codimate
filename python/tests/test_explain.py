@@ -209,40 +209,52 @@ def the_covered(*draw):
 
 def test_an_arrow_over_a_label_is_reported_and_its_plate_is_not():
     """ADR 0017: what is drawn above a label hides it; below it holds it up."""
-    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
-    plate = lambda s: s.rect("plate", w=120, h=40, at=(200, 100)).on(layer=-1)
-    arrow = lambda s: s.line("arrow", start=(200, 40), end=(200, 160), w=4).on(layer=11)
+    def label(s):
+        s.text("name", "iron", size=24, at=(200, 100))
+    def plate(s):
+        s.rect("plate", w=120, h=40, at=(200, 100)).on(layer=-1)
+    def arrow(s):
+        s.line("arrow", start=(200, 40), end=(200, 160), w=4).on(layer=11)
     assert the_covered(plate, label) == []
     assert the_covered(plate, label, arrow) == [("arrow", "name")]
 
 
 def test_any_opacity_counts_and_invisible_does_not():
     """No threshold: 46% water over a caption is still unreadable."""
-    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
-    water = lambda s: s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0.46)
-    gone = lambda s: s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0)
+    def label(s):
+        s.text("name", "iron", size=24, at=(200, 100))
+    def water(s):
+        s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0.46)
+    def gone(s):
+        s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0)
     assert the_covered(label, water) == [("water", "name")]
     assert the_covered(label, gone) == []
 
 
 def test_two_labels_in_one_place_are_reported_once():
-    a = lambda s: s.text("a", "force", size=24, at=(200, 100))
-    b = lambda s: s.text("b", "weight", size=24, at=(210, 104))
+    def a(s):
+        s.text("a", "force", size=24, at=(200, 100))
+    def b(s):
+        s.text("b", "weight", size=24, at=(210, 104))
     assert the_covered(a, b) == [("b", "a")]
 
 
 def test_words_set_edge_to_edge_do_not_collide():
     """A running subtitle is words laid side by side, touching exactly."""
     w, _ = cm.measure("one", 24)
-    a = lambda s: s.text("a", "one", size=24, at=(200, 100))
-    b = lambda s: s.text("b", "one", size=24, at=(200 + w, 100))
+    def a(s):
+        s.text("a", "one", size=24, at=(200, 100))
+    def b(s):
+        s.text("b", "one", size=24, at=(200 + w, 100))
     assert the_covered(a, b) == []
 
 
 def test_a_diagonal_line_near_a_label_misses_it():
     """Its box covers the label; the line itself does not."""
-    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
-    line = lambda s: s.line("edge", start=(150, 180), end=(300, 60), w=2).on(layer=11)
+    def label(s):
+        s.text("name", "iron", size=24, at=(200, 100))
+    def line(s):
+        s.line("edge", start=(150, 180), end=(300, 60), w=2).on(layer=11)
     assert the_covered(label, line) == []
 
 
@@ -280,7 +292,8 @@ def length(path):
     import re
     import subprocess
     from codimate.explain import _ffmpeg
-    said = subprocess.run([_ffmpeg(), "-i", str(path)], capture_output=True, text=True).stderr
+    said = subprocess.run([_ffmpeg(), "-i", str(path)],
+                          capture_output=True, text=True).stderr
     h, m, s = re.search(r"Duration: (\d+):(\d+):([\d.]+)", said).groups()
     return int(h) * 3600 + int(m) * 60 + float(s)
 
