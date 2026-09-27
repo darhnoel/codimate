@@ -146,8 +146,14 @@ async function fetchFrame() {
     const [t] = wanted; wanted = null;
     try {
       const blob = await (await fetch(`/frame?t=${t}`)).blob();
+      const url = URL.createObjectURL(blob);
+      // Decoded before it is shown: swapping in an undecoded picture can
+      // leave the frame empty for a moment, which reads as flicker.
+      const next = new Image();
+      next.src = url;
+      await next.decode();
       const old = frame.value;
-      frame.value = URL.createObjectURL(blob);
+      frame.value = url;
       if (old) URL.revokeObjectURL(old);
     } catch { /* the next request will do */ }
   }

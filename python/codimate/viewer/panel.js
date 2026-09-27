@@ -3,7 +3,7 @@
 import { html } from "./html.js";
 import { useState } from "preact/hooks";
 import { film, time, beat, chapter, picked, tab, notes, stamp, shapeNamed,
-         addNote, noteText, jumpTo, shapesReady } from "./state.js";
+         addNote, noteText, jumpTo, shapesReady, playing } from "./state.js";
 
 export function Panel() {
   const issues = film.value?.covered ?? [];
@@ -27,7 +27,10 @@ export function Panel() {
 function Inspect() {
   const p = picked.value, b = beat.value;
   shapesReady.value;               // redraw once the shapes at this beat arrive
-  const shape = p && shapeNamed(p.name);
+  // Playing, the shapes are not asked for: that would be every beat, and
+  // on a big film hundreds of kilobytes each. Pause, and they are back.
+  const moving = playing.value;
+  const shape = p && !moving && shapeNamed(p.name);
   return html`
     ${p ? html`
       <section>
@@ -39,8 +42,9 @@ function Inspect() {
               ${["x", "y", "w", "h"].map((k, i) => html`
                 <div><dt>${k.toUpperCase()}</dt><dd>${round(shape.box[i])}</dd></div>`)}
             </dl>`}`
-        : html`<p class="quiet">not on screen at this moment</p>`}
-        ${p.stack.length > 1 && html`
+        : html`<p class="quiet">${moving ? "playing — pause to inspect"
+                                          : "not on screen at this moment"}</p>`}
+        ${!moving && p.stack.length > 1 && html`
           <h4>Stacked here</h4>
           <ul class="stack">
             ${p.stack.map((n) => html`
