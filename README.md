@@ -333,3 +333,9 @@ Then [`python/examples/`](python/examples/), eleven worked examples with notes, 
 cargo test                                  # the Engine
 .venv/bin/python python/tests/run.py             # the Authoring Surface
 ```
+
+## License
+
+[MIT](LICENSE). The fonts compiled into Codimate keep their own licenses —
+the SIL Open Font License, the DejaVu license and Apache 2.0 — listed in
+[`crates/codimate-fonts/fonts/LICENSES`](crates/codimate-fonts/fonts/LICENSES/README.md).

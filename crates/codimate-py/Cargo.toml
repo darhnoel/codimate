@@ -2,6 +2,7 @@
 name = "codimate-py"
 version = "0.1.5"
 edition = "2021"
+license.workspace = true
 
 [lib]
 name = "_codimate"

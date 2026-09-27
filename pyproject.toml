@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.5,<2.0"]
+requires = ["maturin>=1.9,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -8,6 +8,10 @@ version = "0.1.5"
 description = "Turn a running algorithm into an explainer video"
 readme = "README.md"
 requires-python = ">=3.9"
+# Codimate's own code is MIT. The fonts compiled into it are not, and keep
+# their own licenses, which must travel with every wheel that carries them.
+license = "MIT"
+license-files = ["LICENSE", "crates/codimate-fonts/fonts/LICENSES/*"]
 # ffmpeg is needed for every render and pip cannot install it. This ships a
 # static build per platform, used only when the system has no ffmpeg of its
 # own — so `pip install codimate` is enough on a bare machine. `typst`, which

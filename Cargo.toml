@@ -12,3 +12,6 @@ members = [
     "crates/codimate-py",
     "crates/codimate-reconcile",
 ]
+
+[workspace.package]
+license = "MIT"
