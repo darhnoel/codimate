@@ -398,6 +398,7 @@ exp.timeline()                       # [(start, length, event), ...] in seconds
 exp.frame_at(12.5, "check.png")      # one moment, without rendering the video
 exp.sheet([8, 22, 54], "look.png")   # several moments, tiled into one picture
 exp.index()                          # every beat as data: state, shapes, boxes
+exp.covered()                        # [(seconds, above, below), ...] — labels drawn on
 ```
 
 `frame_at` uses the same scenes, timing and arithmetic as `render`, resolved at
@@ -430,12 +431,37 @@ screen at any of them. A whole list per beat is the obvious format and it is
 94% repetition — on a hundred-second film, seven megabytes of the same
 rectangle against one and a bit.
 
-A `box` is `null` only for a **formula**, which Typst has not typeset yet.
+A formula's box is measured by Typst, so it is `null` only on a machine
+without `typst`. Each beat also carries `covered`: the `[above, below]` pairs
+where something is drawn on a label (see *Covered labels* below).
 `render` writes this beside the video as `<name>.index.json` unless you pass
 `index=False`; `write_index(output)` writes it without rendering. The file
 wraps the beats as `{"version": 1, "canvas": [w, h], "beats": [...]}` — the
 canvas is what turns a click on a scaled video back into these coordinates.
 See [ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).
+
+## Covered labels
+
+`render` checks every Trace Event for a label something is drawn on, and says
+so when it has finished:
+
+```text
+1 label is covered:
+  0:02.80  "arrow" is drawn over "label"
+
+rendered anyway.
+```
+
+Two rules, and nothing to configure: nothing visible may be drawn **above** a
+text or a formula, at any opacity, and no two of them may **overlap**. The plate
+a label sits on is drawn below it and passes; an arrow drawn across it does
+not. "Above" is the Engine's draw order — `layer`, then name — and text is on
+layer 10 unless you move it.
+
+It complains and never fails: a deliberate overlap, such as a mask revealing a
+title letter by letter, is reported every time, by design. Each collision is
+reported once, where it starts. `exp.covered()` returns the same list without
+rendering. See [ADR 0017](adr/0017-a-check-that-says-a-label-is-covered.md).
 
 ## The Previewer
 
@@ -464,6 +490,9 @@ edit shows its error and keeps the last good film. It cannot play sound.
 
 **Given an mp4**, it plays the finished film, with sound, against the index
 written beside it.
+
+Either way, **Covered labels** lists every collision the check found; click
+one to jump to it with the pair outlined.
 
 **It never writes.** No save, no edit — changing the film stays an edit to your
 script. The lookup it uses is plain Python, for asking without a window:

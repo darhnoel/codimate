@@ -174,22 +174,76 @@ def test_the_index_answers_what_was_on_screen_and_why():
     assert index[2]["shapes"]["set"] == [], "the final hold changes nothing"
 
 
-def test_only_a_formula_has_no_box():
-    """Typst types a formula when the video is built, so until then nothing
-    on this side of the boundary knows how wide it is (ADR 0005)."""
+def test_a_formula_has_a_box_centred_on_its_point():
+    """Typst measures it — the same cached glyphs the Engine draws — so a
+    formula can be clicked and checked like any label (ADR 0005)."""
     def once(state, emit):
         emit("one")
 
     def view(frame):
         scene = cm.Scene()
-        scene.text("said", "hello", size=20, at=(100, 100))
         scene.formula("maths", r"a^2", size=20, at=(200, 100))
         return scene
 
     shapes = {s["name"]: s for s in cm.explain(
         trace=cm.trace(once, {}), view=view).index()[0]["shapes"]["set"]}
-    assert shapes["said"]["box"] is not None
-    assert shapes["maths"]["box"] is None
+    left, top, w, h = shapes["maths"]["box"]
+    assert (left + w / 2, top + h / 2) == (200, 100)
+    assert (w, h) == cm.measure_math(r"a^2", 20)
+
+
+def the_covered(*draw):
+    """What the check reports for one picture drawn by `draw`."""
+    def once(state, emit):
+        emit("one")
+
+    def view(frame):
+        scene = cm.Scene()
+        for step in draw:
+            step(scene)
+        return scene
+
+    return [(a, b) for _, a, b in cm.explain(
+        trace=cm.trace(once, {}), view=view).covered()]
+
+
+def test_an_arrow_over_a_label_is_reported_and_its_plate_is_not():
+    """ADR 0017: what is drawn above a label hides it; below it holds it up."""
+    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
+    plate = lambda s: s.rect("plate", w=120, h=40, at=(200, 100)).on(layer=-1)
+    arrow = lambda s: s.line("arrow", start=(200, 40), end=(200, 160), w=4).on(layer=11)
+    assert the_covered(plate, label) == []
+    assert the_covered(plate, label, arrow) == [("arrow", "name")]
+
+
+def test_any_opacity_counts_and_invisible_does_not():
+    """No threshold: 46% water over a caption is still unreadable."""
+    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
+    water = lambda s: s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0.46)
+    gone = lambda s: s.rect("water", w=300, h=300, at=(200, 100)).on(layer=11, opacity=0)
+    assert the_covered(label, water) == [("water", "name")]
+    assert the_covered(label, gone) == []
+
+
+def test_two_labels_in_one_place_are_reported_once():
+    a = lambda s: s.text("a", "force", size=24, at=(200, 100))
+    b = lambda s: s.text("b", "weight", size=24, at=(210, 104))
+    assert the_covered(a, b) == [("b", "a")]
+
+
+def test_words_set_edge_to_edge_do_not_collide():
+    """A running subtitle is words laid side by side, touching exactly."""
+    w, _ = cm.measure("one", 24)
+    a = lambda s: s.text("a", "one", size=24, at=(200, 100))
+    b = lambda s: s.text("b", "one", size=24, at=(200 + w, 100))
+    assert the_covered(a, b) == []
+
+
+def test_a_diagonal_line_near_a_label_misses_it():
+    """Its box covers the label; the line itself does not."""
+    label = lambda s: s.text("name", "iron", size=24, at=(200, 100))
+    line = lambda s: s.line("edge", start=(150, 180), end=(300, 60), w=2).on(layer=11)
+    assert the_covered(label, line) == []
 
 
 def test_the_index_survives_a_state_it_does_not_understand():

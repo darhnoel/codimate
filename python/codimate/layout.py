@@ -483,7 +483,10 @@ class Axes:
                     ((x - 5, y), (x + 5, y))
                 scene.line((name, "tick", axis, n), start=mark[0], end=mark[1],
                            w=1.6).fill(ink).on(layer=layer)
-                where = at(x=x, top=y + 10) if along else at(x=x - 18, y=y)
+                # A y label ends a fixed gap before its tick, however long it
+                # is — centred at a fixed x, "1000" ran into the tick.
+                where = at(x=x, top=y + 10) if along else \
+                    at(x=x - 10 - measure(words, self.label)[0] / 2, y=y)
                 scene.text((name, "label", axis, n), words, size=self.label,
                            at=where).fill(ink).on(layer=layer)
         return self

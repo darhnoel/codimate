@@ -47,6 +47,10 @@
   .notes pre { background: var(--ground); border: 1px solid var(--line);
                border-radius: 4px; padding: 8px; max-height: 40vh; overflow-y: auto; }
   .hint { color: var(--quiet); font-size: 12px; }
+  .covered { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .covered li:first-child { color: inherit; }
+  .covered button { width: 100%; text-align: left; font: 12px ui-monospace, Menlo, monospace;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 900px) {
     body { grid-template-columns: 1fr; height: auto; }
     .stage { min-height: 50vh; }
@@ -79,6 +83,10 @@
   <h2 id="title">Previewer</h2>
   <p class="hint" id="how">Click anything in the film to see what it is, which event drew it,
     and the State behind it. Nothing here changes the film.</p>
+  <section id="problems" hidden>
+    <h2>Covered labels</h2>
+    <ol id="covered" class="covered"></ol>
+  </section>
   <section>
     <h2>Under the click</h2>
     <ol id="hits"><li class="hint">nothing clicked yet</li></ol>
@@ -147,6 +155,30 @@ const media = {
 let clock = frames;
 const picture = () => (clock === media ? video : still);
 
+function problems() {
+  // ADR 0017: labels something is drawn on. Each jumps to where it starts
+  // and outlines the pair, the way a click would.
+  const list = $("covered");
+  list.replaceChildren();
+  $("problems").hidden = !index.covered.length;
+  for (const [t, above, below] of index.covered) {
+    const b = document.createElement("button");
+    b.textContent = `${stamp(t)}  ${above} over ${below}`;
+    b.title = b.textContent;
+    b.onclick = async () => {
+      clock.pause(); clock.seek(t);
+      const all = await (await fetch(`/at?t=${t}`)).json();
+      const pair = [above, below].map((n) => all.shapes.find((s) => s.name === n)).filter(Boolean);
+      const [x, y, w, h] = pair[1]?.box ?? pair[0]?.box ?? [0, 0, 0, 0];
+      last = { ...all, shapes: pair, point: [x + w / 2, y + h / 2] };
+      last.seconds = clock.t;
+      show(); draw();
+    };
+    const li = document.createElement("li");
+    li.append(b); list.append(li);
+  }
+}
+
 async function refresh(force) {
   const got = await (await fetch("/index" + (force ? "?force" : ""))).json();
   $("error").hidden = !got.error;
@@ -154,7 +186,7 @@ async function refresh(force) {
   const changed = got.built !== index.built;
   index = got;
   if (!changed) return;
-  last = null; draw();
+  last = null; draw(); problems();
   frames.duration = got.duration; scrub.max = got.duration;
   frames.seek(frames.t);
 }
@@ -163,6 +195,7 @@ fetch("/index").then((r) => r.json()).then((got) => {
   index = got;
   $("title").textContent = got.title;
   document.title = `${got.title} — Codimate Previewer`;
+  problems();
   if (got.video) {
     clock = media; video.src = "/video"; video.hidden = false;
   } else {
@@ -250,7 +283,7 @@ function show() {
   hits.replaceChildren();
   if (!last.shapes.length) {
     const li = document.createElement("li");
-    li.className = "hint"; li.textContent = "nothing here — a formula has no box yet";
+    li.className = "hint"; li.textContent = "nothing here";
     hits.append(li);
   }
   for (const s of last.shapes) {

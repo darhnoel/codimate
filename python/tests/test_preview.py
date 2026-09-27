@@ -122,6 +122,33 @@ def test_the_window_serves_frames_and_answers_clicks():
         server.server_close()
 
 
+def test_the_window_lists_where_a_label_is_covered():
+    """Reported once, where it starts, and read from the index — so an mp4
+    with its index answers it as well as a script does."""
+    here = Path(tempfile.mkdtemp())
+    (here / "film.py").write_text('''
+import codimate as cm
+
+def grow(state, emit):
+    for n in range(3):
+        state["n"] = n
+        emit("step")
+
+def view(frame):
+    scene = cm.Scene()
+    scene.text("label", "iron", size=24, at=(200, 100))
+    if frame.state.get("n", -1) >= 1:
+        scene.line("arrow", start=(200, 40), end=(200, 160), w=4).on(layer=11)
+    return scene
+
+cm.explain(trace=cm.trace(grow, {}), view=view,
+           timing=cm.Timing(default=1.0)).render("never.mp4")
+''')
+    film = preview.Film(here / "film.py")
+    assert film.listing()["covered"] == [[2.8, "arrow", "label"]]
+    assert film.explanation.covered() == [(2.8, "arrow", "label")]
+
+
 def test_a_broken_edit_keeps_the_last_good_film():
     here = folder()
     film = preview.Film(here / "film.py", ["1.0"])

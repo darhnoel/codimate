@@ -123,3 +123,30 @@ example would need auditing first, and the first deliberate overlap anywhere
 reintroduces the escape hatch.
 
 **An opacity threshold.** Kinder to faint washes, and an unjustifiable number.
+
+## Amended: built in Python, where the names are
+
+The decision put the check in the Engine for one reason: a Formula had no box
+until Typst ran. That stopped being true — `cm.measure_math` asks the Engine,
+which asks Typst once and caches the glyphs it will draw — so the one case a
+Python check would miss is no longer missed.
+
+And the Engine turned out to be the wrong side for the other half of the job.
+By the time a Scene is resolved it carries geometry and no names; reporting
+`"wt" is drawn over "body_word"` from there would mean threading every name
+through reconcile, layout and render only to print it. The Authoring Surface
+holds the names, the draw order `(layer, name)`, every box, and the index the
+Previewer reads.
+
+So `covered(scene)` lives beside `box()`, and everything else stands as
+decided: the two rules, no configuration, any opacity, once per Trace Event,
+reported where a collision starts, complain and never fail. `render` prints the
+report; the index carries it per beat; the Previewer lists it. A whole
+162-second film checks in 0.3s.
+
+Measured against the examples on the day it landed: one real bug (otsu's axis
+labels centred at a fixed x, so "1000" ran into its tick — fixed in the axes
+helper), one deliberate overlap (archimedes' typewriter mask over its title),
+and no false positives once a label's edge was allowed 2px: a measured box
+includes the blank side bearing of its outer glyphs, so words set edge to
+edge are not covered.

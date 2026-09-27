@@ -121,8 +121,21 @@ def at(index: dict, seconds: float, point=None) -> dict:
     raise ValueError("the index has no beats")
 
 
+def covered(index: dict) -> "list[list]":
+    """Every label something is drawn on, as `[seconds, above, below]`, from
+    the index — so a rendered film answers it as well as a script does.
+    Reported where each collision starts, at the moment its beat settles."""
+    found, before = [], set()
+    for beat in index["beats"]:
+        now = {tuple(pair) for pair in beat.get("covered", [])}
+        found += [[round(beat["at"] + beat["secs"], 2), a, b]
+                  for a, b in sorted(now - before)]
+        before = now
+    return found
+
+
 def _under(shapes, point):
-    """The shapes at `point`, topmost first. A formula has no box to hit."""
+    """The shapes at `point`, topmost first. A shape with no box cannot be hit."""
     # The Engine draws in (layer, name) order, so the last drawn is on top.
     ordered = sorted(shapes, key=lambda s: (s["layer"], s["name"]),
                      reverse=True)
@@ -238,6 +251,7 @@ class Film:
         return {"title": self.path.name, "video": bool(self.video),
                 "canvas": self.index["canvas"], "built": self.built,
                 "error": self.error,
+                "covered": covered(self.index),
                 "duration": (self.explanation.duration
                              if self.explanation else None),
                 "beats": [[b["at"], b["secs"], b["event"]]

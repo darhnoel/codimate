@@ -99,6 +99,10 @@ def ease(t: float) -> float:
     return _codimate.ease(float(t))
 
 
+def _quoted(name: str, room: int = 32) -> str:
+    return f'"{name}"' if len(name) <= room else f'"{name[:room - 1]}…"'
+
+
 def _plain(value, depth: int = 0):
     """`value` as something JSON can hold, without pretending to be complete.
 
@@ -214,7 +218,43 @@ class Explanation:
 
         if index:
             self.write_index(output)
+        report = self.report()
+        if report:
+            import sys
+            print(report, file=sys.stderr)
         return output
+
+    def covered(self) -> "list[tuple[float, str, str]]":
+        """Every label something was drawn on: `(seconds, above, below)`.
+
+        Checked once per Trace Event, on the picture the event settles into
+        (ADR 0017). A collision that lasts is reported where it starts, not
+        at every beat it survives.
+        """
+        from .scene import covered
+
+        found, before = [], set()
+        for i, (at, secs, _) in enumerate(self.timeline()):
+            now = set(covered(self._arrives(i)))
+            found += [(round(at + secs, 2), a, b) for a, b in now - before]
+            before = now
+        return sorted(found)
+
+    def report(self) -> str:
+        """:meth:`covered`, worded — what `render` prints when it is not empty."""
+        found = self.covered()
+        if not found:
+            return ""
+        many = len(found) != 1
+        lines = [f"{len(found)} label{'s are' if many else ' is'} covered:"]
+        for at, above, below in found:
+            stamp = f"{int(at // 60)}:{at % 60:05.2f}"
+            lines.append(f"  {stamp}  {_quoted(above)} is drawn over {_quoted(below)}")
+        return "\n".join(lines) + "\n\nrendered anyway."
+
+    def _arrives(self, beat: int):
+        """The Scene beat `beat` travels to — what its event produced."""
+        return self.scenes[min(beat + 1, len(self.scenes) - 1)]
 
     def write_index(self, output: str) -> str:
         """Write :meth:`index` beside `output`, as `<name>.index.json`.
@@ -321,13 +361,16 @@ class Explanation:
         beat is the obvious format and it is 94% repetition — in a hundred
         second film that is seven megabytes of the same rectangle.
 
-        A shape's box is `None` only for a formula, which Typst has not
-        typeset yet (ADR 0005).
+        `covered` lists the `[above, below]` pairs where something is drawn
+        on a label at that beat (ADR 0017).
+
+        A shape's box is `None` only for a formula on a machine without
+        Typst, which is what measures one (ADR 0005).
 
         `render` writes this beside the video by default. See
         [ADR 0018](../../docs/adr/0018-a-previewer-that-reads-an-index.md).
         """
-        from .scene import box
+        from .scene import box, covered
 
         states = ([self.trace.initial]
                   + [e.state for e in self.trace.events]
@@ -337,7 +380,7 @@ class Explanation:
         for i, (at, secs, name) in enumerate(self.timeline()):
             # Beat `i` travels from scenes[i] to scenes[i + 1]; what it
             # arrives at is what the event named here produced.
-            scene = self.scenes[min(i + 1, len(self.scenes) - 1)]
+            scene = self._arrives(i)
             now = {
                 shape.item: {"name": shape.item, "kind": shape.kind,
                              "layer": shape.layer, "box": box(shape)}
@@ -352,6 +395,7 @@ class Explanation:
                     "set": [s for n, s in now.items() if before.get(n) != s],
                     "gone": [n for n in before if n not in now],
                 },
+                "covered": [list(pair) for pair in covered(scene)],
             })
             before = now
         return out
