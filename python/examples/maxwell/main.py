@@ -17,6 +17,7 @@ arrive alone, in orange, in scene 6. Captions are Khmer on a plate, a bright mar
 stepping word by word (`lines.py`, made by `segment_lines.py`). Each scene lasts as
 long as its line takes to read."""
 
+import json
 import math
 import sys
 from dataclasses import dataclass
@@ -29,6 +30,24 @@ from codimate import science
 # The caption lives in `year` for now (ADR 0019 leaves it out of the kit).
 sys.path.append(str(Path(__file__).resolve().parent.parent / "year"))
 import caption  # noqa: E402
+
+# The narration is optional. `speak.py` records each caption and works out when
+# every word is said; without its files, or with `--silent`, the film runs at
+# reading pace and says nothing. The voice is an addition, never a dependency.
+AUDIO = Path(__file__).resolve().parent / "audio"
+SILENT = "--silent" in sys.argv
+OUT = "results/maxwell-silent.mp4" if SILENT else "results/maxwell.mp4"
+
+
+def _load(name):
+    path = AUDIO / name
+    return json.loads(path.read_text()) if path.exists() and not SILENT else None
+
+
+VOICE = {entry["text"]: entry for entry in _load("narration.json") or []}
+WHEN = (
+    _load("timing.json") or {}
+)  # per caption: when each word is said, from its clip's start
 
 cm.canvas(1280, 720)
 W, H = cm.width(), cm.height()
@@ -761,39 +780,65 @@ SCENES = (
 )
 
 
+def clip(key):
+    """The recording of this scene's line, if there is one."""
+    return VOICE.get(lines.SPEAK[key])
+
+
 def reading(key):
     """Seconds each word of the line holds the mark, as the reader needs them."""
     return [caption.pace(piece) for piece, _ in caption.chunks(lines.SAY[key])]
 
 
+def starts(key):
+    """When each word of the line begins, in seconds from the scene's start.
+
+    From the voice if the clip has been heard word by word: the mark is then on
+    the word being said. Otherwise the reading pace, stretched to the clip's
+    length if there is a clip, or as it stands if there is none."""
+    heard, when = clip(key), WHEN.get(lines.SPEAK[key])
+    if heard and when and len(when) == len(reading(key)):
+        return [LEAD + moment for moment in when]
+    steps = reading(key)
+    if heard:
+        steps = [step * heard["seconds"] / sum(steps) for step in steps]
+    out, at = [], LEAD
+    for step in steps:
+        out.append(at)
+        at += step
+    return out
+
+
 def length(k):
-    """A scene is as long as its line takes to read, and never shorter than the
+    """A scene is as long as its line takes to say, and never shorter than the
     picture needs."""
     key, _, least = SCENES[k]
-    return max(least, LEAD + sum(reading(key)) + TAIL)
+    heard = clip(key)
+    spoken = heard["seconds"] if heard else sum(reading(key))
+    return max(least, LEAD + spoken + TAIL)
 
 
 def said(key, t):
-    """Which word is being read at `t` (1-based); 0 before the first, and the
+    """Which word is being said at `t` (1-based); 0 before the first, and the
     last stays lit once the line is done."""
-    elapsed, count = t - LEAD, 0
-    for step in reading(key):
-        if elapsed < 0:
-            break
-        count += 1
-        elapsed -= step
-    return count
+    return sum(start <= t for start in starts(key))
 
 
 def story(state, emit):
     for k, (key, _, _) in enumerate(SCENES):
         total = round(length(k) * FPS)
+        heard, cued = clip(key), False
         for i in range(total + 1):
             t = length(k) * i / total
             # the caption comes in just after the scene and leaves just before it
             shown = 0.2 <= t <= length(k) - 0.4
             state.update(k=k, t=t, line=key if shown else "", said=said(key, t))
-            emit("tick")
+            cue = {}
+            if heard and not cued and t >= LEAD:
+                # the recording rides on the event the line starts at, so the
+                # voice and the picture are timed by the same clock
+                cue, cued = {"sound": AUDIO / heard["file"]}, True
+            emit("tick", **cue)
 
 
 def view(frame):
@@ -817,6 +862,6 @@ cm.explain(
     view=view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=1 / FPS, opening=0.4, final_hold=0.6),
-).render("results/maxwell.mp4", fps=FPS, scale=1.5)
+).render(OUT, fps=FPS, scale=1.5)
 
-print("wrote results/maxwell.mp4")
+print(f"wrote {OUT}")

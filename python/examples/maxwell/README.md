@@ -46,6 +46,23 @@ scene lasts as long as its caption takes to read.
 **One moment per tick.** The film runs at 30 fps and emits a moment every frame,
 so nothing is interpolated between two draw orders.
 
+## Narration
+
+The film is silent until its captions have been spoken. `speak.py` sends each one
+to Kiri TTS (voice Oudom, as in `archimedes` and `year`), then sends each clip
+back through the transcriber to learn when every word is said:
+
+```bash
+.venv/bin/python python/examples/maxwell/speak.py           # what would be done
+.venv/bin/python python/examples/maxwell/speak.py --write   # record and hear (spends credits)
+```
+
+The mark on the caption then steps on the word being spoken, and each recording
+starts on the frame its line begins. The audio is not committed. It comes from a
+paid API, and `speak.py` rebuilds it from the captions and a key. A symbol the voice
+cannot read is spelled out in `segment_lines.py` (`ε0` is spoken as "epsilon
+zero"). `main.py --silent` renders without the voice.
+
 ## Check before trusting
 
 Dates and numbers (1820, 1831, 3.1 × 10⁸ m/s from Weber and Kohlrausch 1856,

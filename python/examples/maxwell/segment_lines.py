@@ -19,6 +19,10 @@ import segment  # noqa: E402
 
 NAMES = ("ផារ៉ាដេ", "អំពែរ", "ម៉ាក់ស្វិល")
 
+# What the voice is given, where it differs from what the screen shows: a Greek
+# letter with a subscript is a picture, not something a speech model can read.
+SPOKEN = {"ε0": "epsilon zero", "μ0": "mu zero"}
+
 RAW = {
     "question": "តើម៉ាក់ស្វិលរកឃើញសមីការទាំងនេះដោយរបៀបណា?",
     "ampere": "នៅឆ្នាំ១៨២០គេឃើញថាចរន្តអគ្គិសនីធ្វើឱ្យម្ជុលត្រីវិស័យងាក។",
@@ -46,6 +50,15 @@ def main():
         words = [w for w in marked.replace(" ", segment.ZWSP).split(segment.ZWSP) if w]
         print(f"{key:9s} {len(words):2d}  {' | '.join(words)}")
         lines.append(f"    {key!r}: {marked!r},")
+    lines.append("}")
+    lines += ["", "# What is spoken for each caption: the same words, without the word marks,",
+              "# with symbols written out. `speak.py` sends these; `main.py` looks them up.",
+              "SPEAK = {"]
+    for key, raw in RAW.items():
+        said = raw
+        for symbol, words in SPOKEN.items():
+            said = said.replace(symbol, f" {words} ")
+        lines.append(f"    {key!r}: {' '.join(said.split())!r},")
     lines.append("}")
     (HERE / "lines.py").write_text("\n".join(lines) + "\n")
     print("wrote lines.py")
