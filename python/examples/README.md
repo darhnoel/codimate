@@ -110,6 +110,13 @@ easy and for what it did not: one moment per frame or the draw order tears, name
 that follow bodies collide unless something moves them, and a pull-back is `dolly`,
 not `moved`.
 
+**[`year/`](year/)** — the same three bodies for a real 365 days, 2025.
+
+The motion is taken from the sky and only the sizes are made up: true eccentricity
+and closest approach, the equinoxes and solstices on their dates, a Moon whose
+orbit turns and whose phases come from the light. `sky.py` is the astronomy and
+knows nothing about drawing; its test checks it against the almanac.
+
 ## When the numbers have to be real
 
 **[`archimedes/`](archimedes/)** — one box that becomes water, ice, steel and

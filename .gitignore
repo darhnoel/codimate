@@ -23,6 +23,7 @@ __pycache__/
 # Not ours to publish. `narrate.py` rebuilds it from the captions and a key.
 python/examples/attention/audio/
 python/examples/archimedes/audio/
+python/examples/year/audio/
 
 # Examples kept local. `fourier_einstein` traces a copyrighted engraving it
 # reads at build time, so the input is not ours to redistribute even though
