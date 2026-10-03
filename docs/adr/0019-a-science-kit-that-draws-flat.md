@@ -110,8 +110,8 @@ a reasonable first version gets wrong.
 Left out for want of evidence, not for want of use:
 
 - **The caption plate** (a plate sized to the line, a mark stepping word by word)
-  exists in `archimedes`, a simpler one in `spacetime`, and a copy of the first in
-  a sketch. It is not science, and wants its own home rather than this one.
+  exists in `archimedes`, a simpler one in `spacetime`, and copies of the first in
+  `cavendish` and `year`. It is not science, and wants its own home rather than this one.
 - Nested-scale zooming ("powers of ten"), damped oscillation and grid diffusion
   each appeared once. Once is not a shape yet.
 - Containers, thresholds and graphs: `cm.axes` already covers the graph, and the

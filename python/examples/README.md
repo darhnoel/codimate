@@ -110,6 +110,13 @@ easy and for what it did not: one moment per frame or the draw order tears, name
 that follow bodies collide unless something moves them, and a pull-back is `dolly`,
 not `moved`.
 
+**[`cavendish/`](cavendish/)** — how do you weigh the Earth? Two minutes of Khmer
+captions, a torsion balance, and a zoom out through four scales to say how small the
+twist was.
+
+The long film the science kit was cut out of, drawn by hand and kept as it was. It is
+here for the captions that pace the scenes, and for zoom levels nested round one point.
+
 **[`year/`](year/)** — the same three bodies for a real 365 days, 2025.
 
 The motion is taken from the sky and only the sizes are made up: true eccentricity
