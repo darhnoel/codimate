@@ -244,6 +244,19 @@ def test_an_orbit_is_closest_at_zero_and_furthest_at_half_a_turn():
     assert abs(far - 1200.0) < 1e-6, "a(1 + e)"
 
 
+def test_periapsis_and_node_turn_the_orbit_without_changing_its_shape():
+    plain = science.Orbit(a=1000.0, e=0.2)
+    turned = plain.moved(periapsis=103.0)
+    x, y, _ = turned.point(0.0)
+    assert abs(math.degrees(math.atan2(y, x)) - 103.0) < 1e-6, "closest approach turns"
+    assert abs(math.hypot(x, y) - 800.0) < 1e-6, "and is as close as ever"
+    tilted = plain.moved(inclination=10.0, node=90.0)
+    x, y, z = tilted.point(90.0)       # a quarter round: the furthest from the nodes
+    assert abs(z) > 100.0, "still leaves the plane"
+    assert abs(tilted.point(0.0)[0]) < 1e-6 and tilted.point(0.0)[1] > 0, \
+        "the line of nodes now points along +y"
+
+
 def test_the_body_orbited_is_at_a_focus_not_the_middle():
     orbit = science.Orbit(a=1000.0, e=0.5, around=(5.0, 6.0, 7.0))
     path = orbit.path(720)
@@ -458,6 +471,17 @@ def test_a_tag_anchored_by_its_top_has_the_plate_top_there():
     box.draw(scene, "d")
     plate, text = _shapes(scene)["d/plate"], _shapes(scene)["d/text"]
     assert plate.y == text.y == box.y, "one shared centre for the plate and its text"
+
+
+def test_a_bare_tag_draws_only_its_text_and_takes_the_same_room():
+    if not _engine():
+        return
+    box = science.tag("density", at=cm.at(x=300, top=100), formula=False)
+    bare = box.bare()
+    scene = cm.Scene()
+    bare.draw(scene, "d")
+    assert sorted(_shapes(scene)) == ["d/text"], "no plate"
+    assert (bare.x, bare.y, bare.w, bare.h) == (box.x, box.y, box.w, box.h)
 
 
 def test_a_tag_is_its_content_plus_padding():

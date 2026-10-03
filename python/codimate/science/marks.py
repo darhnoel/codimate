@@ -79,6 +79,12 @@ class Tag:
     color: str = INK
     size: float = 20.0
     formula: bool = True
+    plate: bool = True
+
+    def bare(self) -> "Tag":
+        """The same tag without its plate: a title, not a label. The box it
+        takes up, and so how it clears others, is unchanged."""
+        return replace(self, plate=False)
 
     @property
     def left(self) -> float:
@@ -108,11 +114,14 @@ class Tag:
         """Draw the plate and its content. Returns the Tag, for chaining.
 
         Shapes are named ``(name, "plate")`` and ``(name, "text")``. The plate
-        sits on ``layer`` and the content one above it.
+        sits on ``layer`` and the content one above it. A :meth:`bare` tag
+        draws only the text.
         """
-        scene.rect(_name(name, "plate"), w=self.w, h=self.h, at=(self.x, self.y)) \
-            .fill(PLATE, edge=self.color, edge_w=1).round(6) \
-            .on(layer=layer, opacity=0.92)
+        if self.plate:
+            scene.rect(_name(name, "plate"), w=self.w, h=self.h,
+                       at=(self.x, self.y)) \
+                .fill(PLATE, edge=self.color, edge_w=1).round(6) \
+                .on(layer=layer, opacity=0.92)
         if self.formula:
             body = scene.formula(_name(name, "text"), self.content,
                                  size=self.size, at=(self.x, self.y))

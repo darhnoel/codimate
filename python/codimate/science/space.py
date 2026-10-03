@@ -393,6 +393,12 @@ class Orbit:
 
     ``steps`` is how many segments the drawn path has. Each is a named shape,
     so a bigger ring that needs to look smooth costs more of them.
+
+    ``periapsis`` turns the ellipse in its own plane, so the closest approach
+    is that many degrees round from the line of nodes (0 puts it on +x), and
+    ``node`` turns the whole tilted plane about the vertical — the longitude of
+    the line where the orbit crosses the ground plane. Both default to 0, so an
+    orbit that is not told is the one it always was.
     """
 
     a: float
@@ -402,6 +408,8 @@ class Orbit:
     color: str = "#4a5568"
     hide: tuple = ()
     steps: int = 240
+    periapsis: float = 0.0
+    node: float = 0.0
 
     def __post_init__(self):
         if self.a <= 0:
@@ -411,13 +419,18 @@ class Orbit:
 
     def moved(self, **changes) -> "Orbit":
         """A copy with some of ``a``, ``e``, ``inclination``, ``around``,
-        ``color``, ``hide`` or ``steps`` changed."""
+        ``color``, ``hide``, ``steps``, ``periapsis`` or ``node`` changed."""
         return replace(self, **changes)
 
     def _place(self, eccentric: float) -> tuple:
         b = self.a * math.sqrt(1 - self.e ** 2)
         x = self.a * math.cos(eccentric) - self.a * self.e
-        local = _tilt((x, b * math.sin(eccentric), 0.0), self.inclination)
+        y = b * math.sin(eccentric)
+        c, s = (math.cos(math.radians(self.periapsis)),
+                math.sin(math.radians(self.periapsis)))
+        local = _tilt((x * c - y * s, x * s + y * c, 0.0), self.inclination)
+        c, s = math.cos(math.radians(self.node)), math.sin(math.radians(self.node))
+        local = (local[0] * c - local[1] * s, local[0] * s + local[1] * c, local[2])
         return tuple(c + v for c, v in zip(self.around, local))
 
     def point(self, angle: float) -> tuple:

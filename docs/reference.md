@@ -392,6 +392,7 @@ science.tag(content, *, at, color="#e8eef7", size=20.0, formula=True) -> Tag
 box.draw(scene, name, layer=3) -> Tag         # shapes (name, "plate"), (name, "text")
 box.leader(scene, name, start, side, layer=2) # a line to the middle of one edge
 box.clear_of(*others, gap=6.0) -> Tag         # moved the shortest way out of them
+box.bare() -> Tag                             # no plate: a title, not a label
 box.edge(side) -> (x, y)                      # top | bottom | left | right
 box.left, box.right, box.top, box.bottom, box.x, box.y, box.w, box.h
 ```
@@ -487,7 +488,7 @@ science.Sphere(centre, r, color="#58c4dd", style="solid", spin=0.0, tilt=0.0,
 science.Light(direction=(0.4, 0.3, 0.85), source=None, ambient=0.12,
               shadow="#000000")
 science.Orbit(a, e=0.0, inclination=0.0, around=(0, 0, 0), color="#4a5568",
-              hide=(), steps=240)
+              hide=(), steps=240, periapsis=0.0, node=0.0)
 
 orbit.point(angle) -> (x, y, z)           # angle is mean anomaly, in degrees
 orbit.path(steps=240) -> [(x, y, z), ...]
@@ -510,7 +511,9 @@ An `Orbit` is a real ellipse with the orbited body at a **focus**, not the middl
 `point` takes the *mean anomaly*, an angle that grows evenly with time, and solves
 Kepler's equation — so the body goes quicker near the sun without you doing
 anything but stepping the angle. `hide` names bodies whose silhouettes cut the
-drawn path, so a ring never slices across a planet's face.
+drawn path, so a ring never slices across a planet's face. `periapsis` turns the
+ellipse in its plane and `node` turns the tilted plane about the vertical, in
+degrees, so a real orbit's orientation can be said; both default to 0.
 
 ```python
 science.World(camera, light=None, name="world", layer=0)
