@@ -81,6 +81,9 @@ worse answer than an identity buffer gives, and a much cheaper one.
 - **The index can be large.** `spacetime` has 1,226 shapes and some 1,000
   events. Shapes that never move need not be repeated per event, but the format
   has to think about it rather than assume it away.
+  Past 50 MB `render` no longer writes it on its own (`index="auto"`, 2026-10-03,
+  after a dense film made 470 MB beside a 1.5 MB video): it says so, and the
+  previewer given the script builds the index in memory instead.
 - **The index is a published format**, so it has to be versioned like one.
 - **The window is optional.** Everything it does, an agent can do by reading
   the file — which is the property that makes this worth building before any

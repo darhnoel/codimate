@@ -371,6 +371,191 @@ scene.text("label", label, size=30, at=(x, y))
 The height is the line height, so it is the same for `"cat"` and `"Qgy"` and a
 row of boxes lines up instead of jittering with whatever letters it holds.
 
+## The science kit
+
+```python
+from codimate import science        # also reachable as cm.science
+```
+
+The marks and the space that explaining a physical thing keeps needing. Optional,
+and none of it is in the Engine: it is arithmetic that ends in the ordinary shapes
+above. Every piece follows `cm.axes` — it works out pixels and hands them back, and
+where it draws it draws named shapes, so they tween, `focus` can frame them and a
+motion Rule can be aimed at them. See
+[ADR 0019](./adr/0019-a-science-kit-that-draws-flat.md).
+
+### Marks
+
+```python
+science.tag(content, *, at, color="#e8eef7", size=20.0, formula=True) -> Tag
+
+box.draw(scene, name, layer=3) -> Tag         # shapes (name, "plate"), (name, "text")
+box.leader(scene, name, start, side, layer=2) # a line to the middle of one edge
+box.clear_of(*others, gap=6.0) -> Tag         # moved the shortest way out of them
+box.edge(side) -> (x, y)                      # top | bottom | left | right
+box.left, box.right, box.top, box.bottom, box.x, box.y, box.w, box.h
+```
+
+A label on its own plate, sized from its real content plus padding. `at` is a
+point, a Slot or `cm.at(...)`; with `top=` or `bottom=` the *plate's* edge lands
+there, and the plate and its text share one centre. `formula=False` for words —
+use it for Khmer. `leader` aims at the plate's actual edge, not a spot near it.
+
+**Labels that follow bodies collide**, and no fixed offset prevents it, because
+the bodies move. `clear_of` moves a tag the shortest way out of the others' boxes
+— and does nothing to one that is already clear — so a name slides round another
+instead of landing on it. Earlier tags win. It hurries only when two pass nearly
+dead centre.
+
+```python
+box = science.tag(r"\rho = 1000\ \text{kg/m}^3", at=cm.at(x=900, top=80))
+box.draw(scene, "density")
+box.leader(scene, "density-line", start=(620, 300), side="left")
+```
+
+```python
+science.Glow(color, steps=8, spread=1.8, strength=1.0, rim="#0b0f16")
+glow.dot(scene, name, at, r, layer=0)          # a glowing disc
+glow.ring(scene, name, at, r, layer=0)         # a glowing rim, nothing inside
+```
+
+A soft halo made of stacked, fainter, wider copies. It works on **one shape at a
+time**. Over many thin lines — a grid, a mesh — the copies wash into mud or
+bands, and more steps do not fix that.
+
+```python
+science.wave(start, end, *, cycles=2.5, amp=8.0, steps=20) -> [(x, y), ...]
+```
+
+Points along a wave between two places, for `curve`. Like `cm.ngon` it returns
+points rather than drawing, so the count is fixed and one wave tweens into
+another. Use a whole or half number of `cycles` and the ends land on the line.
+
+```python
+science.Bracket(color, tick=10.0, w=2.0, side=1, size=22.0, formula=False, layer=0)
+bracket.draw(scene, name, start, end, label=None)
+```
+
+A measured span — a line, a tick at each end, a label beside it. `side` is `+1`
+or `-1`, the side of the span the label sits on. `label` is one string or a list,
+stacked. Shapes are named `(name, "span")`, `(name, "tick", 0|1)` and
+`(name, "label", n)`.
+
+```python
+science.ForceScale(px_per_unit, cap=None, color="#58c4dd", w=7.0, head=19.0)
+scale.length(value) -> (pixels, capped)
+scale.arrow(scene, name, at, vector, label=None) -> tip
+```
+
+**One scale for every arrow in a film.** The arrows are usually the argument, and
+one that quietly rescaled between scenes would make steel look no heavier than ice.
+`vector` is `(fx, fy)` with **y up**, as physics writes it. An arrow longer than
+`cap` is cut at the cap and marked with a break — rather than shrunk to fit or run
+into the title — and `length` tells you it was capped. `label` is LaTeX, set above
+and beside the tip. Returns the tip, or `None` if the arrow is too short to draw.
+
+### Space
+
+```python
+science.Camera(azimuth=45.0, elevation=35.264, distance=1800.0, scale=0.7,
+               target=(0, 0, 0), centre=None)
+
+cam.project(point) -> ((x, y), depth)
+cam.at(point) -> (x, y)
+cam.facing(point, normal) -> bool         # does that surface face the camera?
+cam.hidden_by(point, centre, r) -> bool   # is the point behind that sphere?
+cam.moved(**changes) -> Camera            # same scale; perspective changes
+cam.dolly(distance) -> Camera             # same lens; things shrink
+```
+
+Where you are looking from. **Z is up and space is right-handed**, as a physics
+diagram writes it. The defaults are isometric: all three axes 120 degrees apart.
+`scale` is pixels per unit at the target. `centre` is the pixel the target lands
+on, the middle of the canvas by default.
+
+**Distance is how much perspective there is.** A sphere far from the middle of the
+picture stretches into an egg — measured at ratio 1.36 close in against 1.02 far
+back — so if a round thing looks oval, stand further away rather than moving the
+thing. A very large `distance` is an orthographic camera.
+
+**To pull back, `dolly`.** It keeps the lens, so things shrink. `moved(distance=)`
+keeps `scale`, so nothing shrinks and only the perspective changes.
+
+```python
+science.Sphere(centre, r, color="#58c4dd", style="solid", spin=0.0, tilt=0.0,
+               detail=None)
+science.Light(direction=(0.4, 0.3, 0.85), source=None, ambient=0.12,
+              shadow="#000000")
+science.Orbit(a, e=0.0, inclination=0.0, around=(0, 0, 0), color="#4a5568",
+              hide=(), steps=240)
+
+orbit.point(angle) -> (x, y, z)           # angle is mean anomaly, in degrees
+orbit.path(steps=240) -> [(x, y, z), ...]
+body.on_equator(angle, reach=1.0) -> (x, y, z)
+body.moved(**changes), orbit.moved(**changes)
+```
+
+A `Sphere` is a value, not a drawing. `style` is `"solid"` (shaded), `"flat"` (one
+colour: for something that is itself the light), `"star"` (lit from within: dimmer
+toward the rim, mottled, the mottle turning with `spin`) or `"wire"` (its mesh only,
+see-through, faded with depth). `spin` turns it about its own axis; `tilt` leans
+that axis and stays put as the body orbits, which is what makes seasons. Colours
+for shaded bodies must be hex.
+
+A `Light` is a `direction` — rays all parallel — or a `source` point, so light
+arrives *from* it and the lit side follows a body round its orbit. Faces are
+shaded by mixing toward `shadow`, so what is drawn is opaque.
+
+An `Orbit` is a real ellipse with the orbited body at a **focus**, not the middle.
+`point` takes the *mean anomaly*, an angle that grows evenly with time, and solves
+Kepler's equation — so the body goes quicker near the sun without you doing
+anything but stepping the angle. `hide` names bodies whose silhouettes cut the
+drawn path, so a ring never slices across a planet's face.
+
+```python
+science.World(camera, light=None, name="world", layer=0)
+world.draw(scene, bodies, paths=None) -> next_free_layer
+
+science.RingArrows(count=6, color="#ffd23f", span=16.0, w=4.0, head=15.0,
+                   gap=1.2, layer=science.ABOVE)
+arrows.draw(scene, world, name, body, angle) -> number_in_sight
+```
+
+```python
+view = science.World(science.Camera(), light=science.Light(source=(0, 0, 0)))
+top = view.draw(scene, {"sun": sun, "earth": earth}, {"year": orbit})
+science.RingArrows().draw(scene, view, "spin", earth, angle)
+```
+
+`draw` takes every body **as one set**, because they must be sorted together —
+sorted separately, a moon behind its planet would be painted over it. Each face
+and each orbit segment gets its own layer, far to near, from `layer` upward, and
+is named after the key *you* gave the body — `(name, key, "face", n)`,
+`(name, key, "edge", i, j)` or `(name, key, "orbit", n)`. It returns the next free
+layer; `ABOVE` is above any world.
+
+**Emit one moment per frame.** Draw order is resolved once per *segment*, so a
+layer that changes is a hard cut at the boundary between two Scenes. One Scene
+per frame makes that cut one frame long and invisible; one every few frames
+makes a turning ball re-sort in jumps and a ring tear across a planet. Use
+`Timing(default=1 / fps)` and render at that `fps`.
+
+A World draws a **dense** scene — a few thousand named shapes a frame. The
+previewer's index records every shape of every moment — 470 MB beside a 1.5 MB
+video for `examples/orbits`, and 1.3 GB for a denser one — so `render` skips it
+for a scene like that and says so (`index="auto"`, below).
+
+`RingArrows` ride a body's equator at the angle you give, so a turning solid ball
+has something to follow. Those on the far side are skipped by a real ray against
+the sphere, so they go *behind* it rather than floating over it.
+
+What it does not do: bodies that interpenetrate, anything not a sphere, shadows
+cast on other bodies, or a camera that goes behind what it looks at. Painter's
+order is correct when shapes admit a separating plane, which separate spheres
+do; the rest needs a depth buffer the Engine does not have. See
+[ADR 0016](./adr/0016-axes-that-hand-back-pixels.md) and
+[ADR 0019](./adr/0019-a-science-kit-that-draws-flat.md).
+
 ## Motion
 
 ```python
@@ -449,8 +634,13 @@ rectangle against one and a bit.
 A formula's box is measured by Typst, so it is `null` only on a machine
 without `typst`. Each beat also carries `covered`: the `[above, below]` pairs
 where something is drawn on a label (see *Covered labels* below).
-`render` writes this beside the video as `<name>.index.json` unless you pass
-`index=False`; `write_index(output)` writes it without rendering. The file
+`render(index="auto")` writes this beside the video as `<name>.index.json`
+unless it would be huge — over `INDEX_LIMIT`, 50 MB — and then it skips it and
+prints one line with the size it avoided. `index=True` writes it anyway,
+`index=False` never does, and `exp.index_size()` estimates the bytes without
+building it. Preview the script itself (not the mp4) and the previewer builds
+the index in memory, so a skipped file costs nothing. `write_index(output)`
+writes it without rendering. The file
 wraps the beats as `{"version": 1, "canvas": [w, h], "beats": [...]}` — the
 canvas is what turns a click on a scaled video back into these coordinates.
 See [ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).

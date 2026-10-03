@@ -8,6 +8,7 @@ Plain `assert` tests, no framework. One file per module of the package:
 | `test_scene.py` | Groups, names, and the shapes you can draw |
 | `test_trace.py` | `emit`/`trace`, and Items that survive a snapshot |
 | `test_explain.py` | motion rules, timing, `cm.ease` |
+| `test_science.py` | the science kit: camera, spheres, orbits, and the marks |
 | `test_examples.py` | every example still renders, end to end |
 | `test_docs.py` | every code block in the guide still runs |
 

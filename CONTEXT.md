@@ -122,6 +122,20 @@ a centre by hand. Ambiguous or missing anchors are rejected. Distinct from the
 Engine's **Anchor** (a point on a shape's boundary that a Connection attaches
 to); the two never meet, because Connections are not in the Authoring Surface.
 
+**Science Kit**: Optional Authoring Surface helpers (`codimate.science`) for
+explaining a physical phenomenon. **Marks** are flat — a labelled plate, a glow,
+a bracket on a measured span, a force arrow on one scale for the whole film, a
+wave. **Space** is a camera, spheres and orbits, drawn flat in the right order.
+It is arithmetic that ends in ordinary named shapes: not an Engine feature, and
+not a 3D renderer. Like `cm.axes` it works out pixels and hands them back, so what
+it draws can be tweened, framed and aimed at.
+([ADR 0019](docs/adr/0019-a-science-kit-that-draws-flat.md))
+
+**Camera (Science Kit)**: Where a Science Kit scene is looked from; it maps a point
+in space to a pixel and a depth. Not the Scene's camera, which frames shapes
+already on the canvas (`scene.focus`, ADR 0009) — that one moves over a picture,
+this one decides what picture there is.
+
 **Box**: A reusable View authoring component for a styled rectangular visual
 area, usually positioned by a Slot. A Box may have a corner radius, fill, stroke
 width, and stroke color. "Box" is the canonical authoring term; "rounded
@@ -344,6 +358,22 @@ to codimate-core, reject it.
 6. `codimate-core` has no I/O dependencies
 7. Every public API accepts `impl IntoAnimated<T>` not `Animated<T>` directly
 
+## Generating (Standing Rule)
+
+**Never generate unless the user explicitly says to.** Generating means
+rendering a video or an image, writing an index, re-rendering an example, or
+running the test suite with `--all`. Editing code, running the fast tests and
+linting are not generating.
+
+If generating is genuinely important to finish the work, ask **one big,
+important question** first — what will be generated, why it cannot be skipped
+and roughly what it costs — and wait. Do not warn and proceed, and do not
+generate "just to check".
+
+The index (`<video>.index.json`) is generated output too, and can be far larger
+than the video. `render` skips it when it would be huge; `index=True` writes it
+anyway.
+
 ## Formatting Conventions
 
 Use standard `cargo fmt` output. The root `rustfmt.toml` only pins stable,
@@ -364,5 +394,7 @@ Inline builder chains only for tiny one-offs where naming would add noise.
 ## Out of Scope (Do Not Implement)
 - Stateful particles (violates pure f(t))
 - Physics simulation (frame-dependent state)  
-- 3D rendering (Skia is 2D, keep it that way)
+- 3D rendering (Skia is 2D, keep it that way). The Science Kit's `Camera` and
+  `Sphere` *project* to ordinary 2D shapes in the Authoring Surface; the Engine
+  gains no depth and no third dimension.
 - GUI editor (preview window is viewer only)

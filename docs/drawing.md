@@ -103,6 +103,8 @@ turns a wheel this way; the car below turns its wheels.
 | an image or sprite | not supported — build it from shapes |
 | `rotate=` on a group | emit the rotated positions; the Engine tweens them |
 | a gradient | several shapes with stepped colours |
+| a ball, a planet, an orbit | `codimate.science` — spheres and orbits, drawn flat in the right order ([reference](reference.md#the-science-kit)) |
+| true 3D with solids passing through each other | not supported — only convex bodies that stay apart sort correctly |
 
 ---
 

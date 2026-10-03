@@ -43,10 +43,15 @@ encoding — happens in Rust (ADR 0008).
 
 - `explain` — gather algorithm, view, motion and timing
 - `Explanation.render` — write the video
+
+## Explaining physics
+
+- `science` — labels, glows, brackets, force arrows; a camera, spheres, orbits
 """
 
 from __future__ import annotations
 
+from . import science
 from .explain import Explanation, Rule, Timing, ease, explain
 from .layout import (Axes, Place, Slot, at, axes, canvas, column, height, measure,
                      measure_math, ngon, row, star, width)
@@ -87,4 +92,6 @@ __all__ = [
     "ease",
     "explain",
     "Explanation",
+    # optional kits
+    "science",
 ]

@@ -38,7 +38,8 @@ def load(video: "str | Path") -> dict:
     beside = video.with_name(f"{video.stem}.index.json")
     if not beside.exists():
         raise FileNotFoundError(
-            f"no index beside {video} — render it with index=True (the default)")
+            f"no index beside {video} — render with index=True (it is skipped "
+            f"when huge), or preview the script itself")
     return json.loads(beside.read_text())
 
 

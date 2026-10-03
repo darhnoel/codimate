@@ -99,6 +99,17 @@ order is resolved once per *segment* rather than per frame — so any layer that
 changes is a hard cut at a scene boundary, sixteen times a second. The fix is
 to freeze the order, which is free when nothing is filled.
 
+## Explaining a physical thing, with a kit
+
+**[`orbits/`](orbits/)** — the Sun, the Earth and the Moon, and a camera pulling
+back from one to all three.
+
+Built from [`codimate.science`](../../docs/reference.md#the-science-kit) alone:
+a camera, spheres, orbits, labels that stay clear of each other. It is here for what the kit made
+easy and for what it did not: one moment per frame or the draw order tears, names
+that follow bodies collide unless something moves them, and a pull-back is `dolly`,
+not `moved`.
+
 ## When the numbers have to be real
 
 **[`archimedes/`](archimedes/)** — one box that becomes water, ice, steel and

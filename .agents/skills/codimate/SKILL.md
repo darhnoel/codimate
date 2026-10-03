@@ -169,8 +169,9 @@ cd python && ../.venv/bin/python tests/run.py
 .venv/bin/ruff check
 ```
 
-That skips the two files that render video. Run `--all` before committing — it
-renders every example and takes about two minutes.
+That skips the two files that render video. **Never run `--all`, render an
+example or write a video unless the user explicitly tells you to** — see
+"Generating" in `CONTEXT.md`. If it is truly needed, ask one big question first.
 
 `ruff check` must pass before you are done. It enforces PEP 8 and, in
 particular, **PLR0913: no function takes more than five arguments** — which is
@@ -181,4 +182,4 @@ together, not to raise the limit.
 The list above goes out of date the moment a primitive is added; check
 `docs/reference.md` rather than this file.
 
-Then report the runnable command.
+Then report the runnable command — do not run it unless asked.

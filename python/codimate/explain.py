@@ -13,6 +13,12 @@ View = Callable[[Frame], Scene]
 
 PATHS = ("straight", "linear", "fall", "lift_carry_drop")
 
+# What `render(index="auto")` will write: ~200 bytes an entry, measured on the
+# pretty-printed file, and nothing past 50 MB — a film of a few thousand shapes
+# a frame is an index of hundreds, beside a video of one or two.
+INDEX_ENTRY_BYTES = 200
+INDEX_LIMIT = 50_000_000
+
 # Set by the Previewer while it runs a script: `render` hands the Explanation
 # here and stops the script, instead of drawing a video nobody asked for yet.
 _capture: "Callable[[Explanation], None] | None" = None
@@ -181,7 +187,7 @@ class Explanation:
         return self._built
 
     def render(self, output: str, *, fps: float = 30, scale: float = 1.0,
-               index: bool = True) -> str:
+               index: "bool | str" = "auto") -> str:
         """Draw every frame and write the video.
 
         Coordinates always mean what `cm.canvas()` says — `scale` only changes
@@ -194,6 +200,12 @@ class Explanation:
 
         The folder is created if it does not exist, so `render("results/x.mp4")`
         works on a fresh clone.
+
+        `index` decides whether `<name>.index.json` is written beside the
+        video: `"auto"` writes it unless it would be huge (over
+        `INDEX_LIMIT`, and it says so), `True` always writes it, `False`
+        never does. A dense scene makes a film of a megabyte or two and an
+        index of hundreds.
         """
         from pathlib import Path
 
@@ -219,7 +231,7 @@ class Explanation:
 
         if sounds:
             self._lay_sound(output, sounds)
-        if index:
+        if self._index_wanted(index):
             self.write_index(output)
         report = self.report()
         if report:
@@ -328,6 +340,31 @@ class Explanation:
         """The Scene beat `beat` travels to — what its event produced."""
         return self.scenes[min(beat + 1, len(self.scenes) - 1)]
 
+    def index_size(self) -> int:
+        """About how many bytes :meth:`write_index` would write, without
+        building it: shapes that arrive or move, at what the index measured
+        per entry. Cheap beside a render, and close enough to pick a side of
+        `INDEX_LIMIT` by."""
+        changed, before = 0, {}
+        for i in range(len(self.durations)):
+            now = self._arrives(i)._shapes
+            changed += sum(1 for n, s in now.items() if before.get(n) != s)
+            before = now
+        return changed * INDEX_ENTRY_BYTES
+
+    def _index_wanted(self, index) -> bool:
+        if index != "auto":
+            return bool(index)
+        size = self.index_size()
+        if size <= INDEX_LIMIT:
+            return True
+        import sys
+        print(f"index skipped: it would be about {size / 1e6:.0f} MB "
+              f"(limit {INDEX_LIMIT / 1e6:.0f} MB). Pass index=True to write "
+              f"it anyway, or preview the script itself, which builds it in "
+              f"memory.", file=sys.stderr)
+        return False
+
     def write_index(self, output: str) -> str:
         """Write :meth:`index` beside `output`, as `<name>.index.json`.
 
@@ -434,7 +471,8 @@ class Explanation:
         A shape's box is `None` only for a formula on a machine without
         Typst, which is what measures one (ADR 0005).
 
-        `render` writes this beside the video by default (ADR 0018).
+        `render` writes this beside the video unless it would be huge
+        (ADR 0018; :meth:`index_size`).
         """
         from .scene import box, covered
 

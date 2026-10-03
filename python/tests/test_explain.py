@@ -174,6 +174,39 @@ def test_the_index_answers_what_was_on_screen_and_why():
     assert index[2]["shapes"]["set"] == [], "the final hold changes nothing"
 
 
+def test_a_huge_index_is_skipped_unless_asked_for():
+    """`render(index="auto")` writes the index beside the video unless it would
+    be huge — a dense film is a video of a megabyte and an index of hundreds.
+    Decided without rendering, so no video is made here."""
+    import importlib
+    explain = importlib.import_module("codimate.explain")  # `cm.explain` hides it
+
+    def swap(values, emit):
+        values[0], values[1] = values[1], values[0]
+        emit("swap")
+
+    exp = cm.explain(trace=cm.trace(swap, cm.items([3, 1])), view=view,
+                     timing=cm.Timing(default=1.0))
+    changed = sum(len(b["shapes"]["set"]) for b in exp.index())
+    assert exp.index_size() == changed * explain.INDEX_ENTRY_BYTES, \
+        "estimated from the shapes that arrive or move, as the index writes them"
+    assert exp._index_wanted("auto"), "a small film gets its index"
+
+    import contextlib
+    import io
+
+    limit = explain.INDEX_LIMIT
+    explain.INDEX_LIMIT = exp.index_size() - 1
+    try:
+        with contextlib.redirect_stderr(io.StringIO()) as said:
+            assert not exp._index_wanted("auto"), "over the limit it is skipped"
+        assert "index skipped" in said.getvalue(), "and it says so"
+        assert exp._index_wanted(True), "and True still writes it"
+    finally:
+        explain.INDEX_LIMIT = limit
+    assert not exp._index_wanted(False), "False never does"
+
+
 def test_a_formula_has_a_box_centred_on_its_point():
     """Typst measures it — the same cached glyphs the Engine draws — so a
     formula can be clicked and checked like any label (ADR 0005)."""
