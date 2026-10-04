@@ -25,6 +25,7 @@ python/examples/attention/audio/
 python/examples/archimedes/audio/
 python/examples/year/audio/
 python/examples/maxwell/audio/
+python/examples/cavendish/audio/
 
 # Examples kept local. `fourier_einstein` traces a copyrighted engraving it
 # reads at build time, so the input is not ours to redistribute even though
@@ -41,3 +42,7 @@ python/examples/pypi_nightly/
 #   python docs/build_site.py
 /site/
 /docs/api/
+
+# locals
+output/
+branding/

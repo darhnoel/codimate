@@ -13,12 +13,32 @@ at reading pace (`lines.py`, made by `segment_lines.py`). Drawn by hand rather
 than with `codimate.science`: it came first, and is the long film the kit was
 cut out of."""
 
+import json
 import math
-import random
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 import codimate as cm
-from lines import SAY  # Khmer, word boundaries marked
+from lines import SAY, SPEAK  # Khmer, word boundaries marked; and as spoken
+from words import chunks, pace
+
+# The narration is optional. `speak.py` records each caption and works out when every
+# word is said; without its files, or with `--silent`, the film runs at reading pace
+# and says nothing. The voice is an addition, never a dependency.
+AUDIO = Path(__file__).resolve().parent / "audio"
+SILENT = "--silent" in sys.argv
+OUT = "results/cavendish-silent.mp4" if SILENT else "results/cavendish.mp4"
+
+
+def _load(name):
+    path = AUDIO / name
+    return json.loads(path.read_text()) if path.exists() and not SILENT else None
+
+
+VOICE = {entry["text"]: entry for entry in _load("narration.json") or []}
+# per caption: when each word is said, counted from the start of its own clip
+WHEN = _load("timing.json") or {}
 
 cm.canvas(1280, 720)
 
@@ -31,7 +51,7 @@ STEEL, STEEL_EDGE = "#8fa3bf", "#c5d3e8"
 APPLE, YELLOW = "#ff5d5d", "#ffd23f"
 
 LAY_SCALE, LAY_EARTH, LAY_APPLE, LAY_PAIR = 1, 20, 550, 600
-LAY_CITY, LAY_LAB, LAY_APP, LAY_S5 = 520, 790, 900, 1000
+LAY_LAB, LAY_APP, LAY_S5 = 790, 900, 1000
 LAY_PLATE = 9000
 
 ZC = (640, 320)  # the one point every zoom level nests around
@@ -77,55 +97,10 @@ class Pose:
 # line, a bright mark stepping word by word, at most eight words on screen,
 # and the scene lasting as long as the line takes to read.
 
-ZWSP = "​"
 CAPTION_BG = "#141a26"
 READ, UNREAD = "#58C4DD", "#5d6a7e"
 SAY_Y, SAY_SIZE, SAY_ROOM = 636.0, 34, 1150.0
 PAGE = 8  # the most words shown at once
-WORD, PER_LETTER, CLAUSE = 0.24, 0.035, 0.55  # reading pace, as archimedes
-STOPS = "។៕៖,.;:?!"
-_CLUSTER = __import__("re").compile(r"[ក-ឳ](?:្[ក-ឳ])*[ា-៓]*")
-
-
-def chunks(line):
-    """`line` as the pieces the mark steps over — Khmer words where the line
-    has been segmented (ZWSP), spaced words otherwise — each flagged with
-    whether a real space comes before it."""
-    pieces = []
-    for w, token in enumerate(line.split()):
-        first = True
-        for part in token.split(ZWSP):
-            if part:
-                pieces.append((part, (w > 0) and first))
-                first = False
-    return pieces
-
-
-def clusters(line):
-    """`line` split into orthographic clusters, so a word is timed by what a
-    reader sees and not by how many code points hold its vowel signs."""
-    marks = range(0x17B4, 0x17D4)
-    line = line.replace(ZWSP, "")
-    out, i = [], 0
-    while i < len(line):
-        piece, i = line[i], i + 1
-        while i < len(line):
-            here = ord(line[i])
-            if here == 0x17D2 and i + 1 < len(line):
-                piece, i = piece + line[i : i + 2], i + 2
-            elif here in marks or here == 0x17DD or 0x0300 <= here <= 0x036F:
-                piece, i = piece + line[i], i + 1
-            else:
-                break
-        out.append(piece)
-    return out
-
-
-def pace(piece):
-    """Seconds one word holds the mark: a moment, a little per letter, and a
-    rest where a clause ends."""
-    rest = CLAUSE if piece and piece[-1] in STOPS else 0.0
-    return WORD + PER_LETTER * len(clusters(piece)) + rest
 
 
 def fit(line, size, room=SAY_ROOM):
@@ -592,6 +567,61 @@ def draw_apparatus(scene, tag, pose, a, layer):
             ).fill(BLUE).on(layer=layer + 4, opacity=fo)
 
 
+# ------------------------------------------------ 4b. from the twist to the force
+
+# The four steps, one after another in the same place: the angle from how far the
+# end of the rod moves, the wire's torque, the balance that gives F, and the wire's
+# stiffness from how long the rod takes to swing once.
+ANGLE_STEPS = [
+    r"\theta=\frac{s}{\ell}",
+    r"\tau_{\text{wire}}=\kappa\,\theta",
+    r"\kappa\,\theta=2F\ell\ \Rightarrow\ F=\frac{\kappa\,\theta}{2\ell}",
+    r"\kappa=\frac{4\pi^{2}I}{T^{2}}",
+]
+
+
+def draw_geometry(scene, st, a):
+    """The twist, measured: the rod at rest as a ghost, the angle between it and the
+    rod now, the distance s the end of the rod has travelled, and its half-length."""
+    o = a * st["geo_op"]
+    if o <= 0:
+        return
+    C, L, phi = APP_C, APP_L, st["rod_phi"]
+    layer = LAY_APP + 14
+
+    def at(r, angle):
+        return (C[0] + r * math.cos(angle), C[1] - r * math.sin(angle))
+
+    arc = lambda r: [at(r, phi * i / 12) for i in range(13)]  # noqa: E731
+    scene.line(("geo", "rest"), start=(C[0] - L, C[1]), end=(C[0] + L, C[1]), w=2).fill(
+        DIM
+    ).on(layer=layer, opacity=0.6 * o)
+    scene.circle(("geo", "ghost"), r=R_SMALL, at=(C[0] + L, C[1])).fill(
+        "none", edge=DIM, edge_w=1.5
+    ).on(layer=layer, opacity=0.8 * o)
+    scene.curve(("geo", "theta"), arc(110), w=4).fill(YELLOW).on(
+        layer=layer + 1, opacity=o
+    )
+    scene.formula(
+        ("geo", "theta", "lab"), r"\theta", size=40, at=at(142, phi / 2)
+    ).fill(YELLOW).on(layer=layer + 2, opacity=o)
+    scene.curve(("geo", "s"), arc(L), w=5).fill(ORANGE).on(layer=layer + 1, opacity=o)
+    scene.formula(
+        ("geo", "s", "lab"), r"s", size=40, at=(C[0] + L + 34, C[1] - L * phi / 2)
+    ).fill(ORANGE).on(layer=layer + 2, opacity=o)
+    y = C[1] + 56  # the half-length, drawn beneath the rod from the wire to its end
+    scene.line(("geo", "l"), start=(C[0], y), end=(C[0] + L, y), w=3).fill(INK).on(
+        layer=layer + 1, opacity=o
+    )
+    for name, x in (("l0", C[0]), ("l1", C[0] + L)):
+        scene.line((("geo", name)), start=(x, y - 9), end=(x, y + 9), w=3).fill(INK).on(
+            layer=layer + 1, opacity=o
+        )
+    scene.formula(
+        ("geo", "l", "lab"), r"\ell", size=40, at=(C[0] + L / 2, y + 28)
+    ).fill(INK).on(layer=layer + 2, opacity=o)
+
+
 # ------------------------------------------------------------- zoom levels
 
 
@@ -616,27 +646,6 @@ LAB = [
     (1010, 500, 200, 120, "#1d2635"),
 ]
 
-_rnd = random.Random(7)
-CITY = []
-for gx in range(-4, 5):
-    for gy in range(-3, 4):
-        if gx == 0 and gy == 0:
-            continue
-        cx_, cy_ = 640 + gx * 320, 320 + gy * 250
-        park = (gx, gy) in {(2, -1), (-3, 1)}
-        CITY.append((cx_, cy_, 260, 190, "park" if park else "block"))
-        if not park:
-            for _ in range(3):
-                CITY.append(
-                    (
-                        cx_ + _rnd.uniform(-70, 70),
-                        cy_ + _rnd.uniform(-45, 45),
-                        _rnd.uniform(60, 110),
-                        _rnd.uniform(40, 80),
-                        "bld",
-                    )
-                )
-
 
 def draw_lab(scene, f, a):
     if a <= 0:
@@ -649,19 +658,6 @@ def draw_lab(scene, f, a):
         ).on(layer=LAY_LAB + i, opacity=a)
 
 
-def draw_city(scene, f, a):
-    if a <= 0:
-        return
-    colors = {"block": "#16202e", "park": "#1b3326", "bld": "#26354b"}
-    for i, (cx_, cy_, w, h, kind) in enumerate(CITY):
-        scene.rect(("city", i), w=w * f, h=h * f, at=Tz((cx_, cy_), f)).fill(
-            colors[kind]
-        ).on(layer=LAY_CITY + i, opacity=a)
-    scene.rect(("city", "plot"), w=260 * f, h=190 * f, at=Tz((640, 320), f)).fill(
-        "none", edge="#4a5d7c", edge_w=max(1.0, 2 * f)
-    ).on(layer=LAY_CITY + 900, opacity=a)
-
-
 # --------------------------------------------------------------- 5. the chain
 
 CHAIN_Y = 85
@@ -671,6 +667,7 @@ CHAIN = [
     (790, "G", "ថេរទំនាញសកល"),
     (1065, "M_{⊕}", "ម៉ាស់ផែនដី"),
 ]
+CHIP_GAP = 60  # between the three values at the foot of the last part
 CHAIN_ARROWS = ["ជញ្ជីងរមួល", "ច្បាប់ទំនាញញូតុន", "g និងកាំផែនដី R"]
 
 
@@ -742,6 +739,12 @@ def view(frame):
         a = st["app_op"]
         pose = Pose(APP_C, 1.0, st["rod_phi"], st["big_t"], st["force_op"])
         draw_apparatus(scene, "app", pose, a, LAY_APP)
+        draw_geometry(scene, st, a)
+        for i, latex in enumerate(ANGLE_STEPS):
+            if st[f"kap{i + 1}_op"] > 0:
+                scene.formula(("kap", i), latex, size=48, at=(640, 62)).fill(INK).on(
+                    layer=LAY_APP + 12, opacity=a * st[f"kap{i + 1}_op"]
+                )
         lo = a * st["applabel_op"]
         if lo > 0:
             # Each part is named beside itself with a line to it, and the
@@ -844,11 +847,19 @@ def view(frame):
             size=40,
             at=(640, 345),
         ).fill(INK).on(layer=L5, opacity=st["eqNum_op"])
-    chips = [
-        (r"g = 9.8\ \text{m/s}^2", 260),
-        (r"R_{⊕} = 6.37\times10^{6}\ \text{m}", 640),
-        (r"G = 6.67\times10^{-11}\ \text{N}\,\text{m}^2/\text{kg}^2", 1010),
+    values = [
+        r"g = 9.8\ \text{m/s}^2",
+        r"R_{⊕} = 6.37\times10^{6}\ \text{m}",
+        r"G = 6.67\times10^{-11}\ \text{N}\,\text{m}^2/\text{kg}^2",
     ]
+    # Laid end to end by their own widths, with the same gap between each, and the row
+    # centred on the screen: at fixed x the gaps were 148 and 48 pixels.
+    widths = [cm.measure_math(latex, 28)[0] + 40 for latex in values]
+    left = cm.width() / 2 - (sum(widths) + CHIP_GAP * (len(widths) - 1)) / 2
+    chips = []
+    for latex, wide in zip(values, widths):
+        chips.append((latex, left + wide / 2))
+        left += wide + CHIP_GAP
     for i, (latex, x) in enumerate(chips):
         a = st[f"chip{i + 1}"] * (1 - st["chip_t"])
         if a > 0:
@@ -871,7 +882,7 @@ def view(frame):
     if st["note_op"] > 0:
         scene.text(
             ("note",),
-            "(កាវេនឌីសវាស់ដង់ស៊ីតេមធ្យមរបស់ផែនដី។ គេគណនា G ពីលទ្ធផលនេះនៅពេលក្រោយ។)",
+            "(តាមពិត កាវេនឌីសរកបានដង់ស៊ីតេរបស់ផែនដី។ ក្រោយមកគេគណនា G ពីលទ្ធផលនោះ។)",
             size=22,
             at=cm.at(x=640, top=535),
         ).fill(DIM).on(layer=L5 + 4, opacity=st["note_op"])
@@ -879,7 +890,6 @@ def view(frame):
     if st["zoom_op"] > 0:
         z = st["zoom"]
         zo = st["zoom_op"]
-        draw_city(scene, 64 * z, lvl_op(64 * z) * zo)
         draw_lab(scene, 8 * z, lvl_op(8 * z) * zo)
         draw_apparatus(scene, "zapp", Pose(ZC, z, PHI_REAL), lvl_op(z) * zo, LAY_APP)
     if st["final_op"] > 0:
@@ -972,10 +982,17 @@ def story(state, emit):
             state["rod_phi"] = PHI_EXAG * (
                 1 - math.exp(-t / 1.2) * math.cos(2 * math.pi * t / 2.0)
             )
+        sound = {}
         if cap:
             elapsed = (state["tick"] - cap["t0"]) * TICK
-            state["cap_said"] = max(1, sum(1 for s in cap["starts"] if s <= elapsed))
-        emit(name)
+            said = sum(1 for s in cap["starts"] if s <= elapsed)
+            # read to a voice, no word is lit before it is said
+            state["cap_said"] = said if cap["voiced"] else max(1, said)
+            if cap["cue"]:
+                # the recording rides on the event the line starts at, so the voice
+                # and the picture are timed by the same clock
+                sound, cap["cue"] = {"sound": cap["cue"]}, None
+        emit(name, **sound)
 
     def to(n, **targets):
         """Ramp these in the background; the story carries on meanwhile."""
@@ -996,13 +1013,28 @@ def story(state, emit):
         """Start reading a line. What the scene does while it is read is
         the next few calls; `finish()` waits out whatever is left."""
         line = SAY[key]
-        starts, run = [], 0.0
-        for piece, _ in chunks(line):
-            starts.append(run)
-            run += pace(piece)
+        pieces = [piece for piece, _ in chunks(line)]
+        heard, when = VOICE.get(SPEAK[key]), WHEN.get(SPEAK[key])
+        if heard and when and len(when) == len(pieces):
+            # measured: the mark is on the word being said
+            starts, run = list(when), heard["seconds"]
+        else:
+            starts, run = [], 0.0
+            for piece in pieces:
+                starts.append(run)
+                run += pace(piece)
+            if heard:  # guessed, then stretched onto the recording
+                starts = [x * heard["seconds"] / run for x in starts]
+                run = heard["seconds"]
         cap.clear()
-        cap.update(t0=state["tick"], starts=starts, total=run)
-        state["cap_line"], state["cap_said"] = line, 1
+        cap.update(
+            t0=state["tick"],
+            starts=starts,
+            total=run,
+            voiced=bool(heard),
+            cue=AUDIO / heard["file"] if heard else None,
+        )
+        state["cap_line"], state["cap_said"] = line, (0 if heard else 1)
 
     def finish(tail=0.45):
         """Wait until the line is read, a breath after, then take it down."""
@@ -1115,6 +1147,30 @@ def story(state, emit):
     finish()
     hold(20)
 
+    # ------------------------------------ 4b. from the twist to the force
+    # The twist is taught large again, and what is measured is drawn on it.
+    go(25, theta_op=0.0, applabel_op=0.0, rod_phi=PHI_EXAG)
+    to(25, geo_op=1.0)
+    say("twist_angle")
+    go(15, kap1_op=1.0)
+    finish()
+    say("wire_torque")
+    go(12, kap1_op=0.0)
+    go(15, kap2_op=1.0)
+    finish()
+    say("force_balance")
+    go(12, kap2_op=0.0)
+    go(15, kap3_op=1.0)
+    finish()
+    say("stiffness")
+    go(12, kap3_op=0.0, geo_op=0.0)
+    go(15, kap4_op=1.0, rod_phi=0.0)
+    osc["on"], osc["t0"] = True, state["tick"]  # the rod swings while that is said
+    finish()
+    osc["on"] = False
+    go(20, kap4_op=0.0, rod_phi=PHI_REAL)
+    hold(15)
+
     # --------------------------------------- 5. from a tiny twist to the planet
     go(30, app_op=0.0, theta_op=0.0, force_op=0.0, applabel_op=0.0)
     say("angle_force")
@@ -1199,6 +1255,11 @@ def initial():
         "eq_op",
         "theta_op",
         "applabel_op",
+        "geo_op",
+        "kap1_op",
+        "kap2_op",
+        "kap3_op",
+        "kap4_op",
         "chip_t",
         "zoom_op",
         "final_op",
@@ -1233,6 +1294,6 @@ cm.explain(
     view=view,
     motion=[cm.Rule("*", position="linear")],
     timing=cm.Timing(default=TICK, opening=0.4, final_hold=2.0),
-).render("results/cavendish.mp4", fps=30, scale=1.5)
+).render(OUT, fps=30, scale=1.5)
 
-print("wrote results/cavendish.mp4")
+print(f"wrote {OUT}")

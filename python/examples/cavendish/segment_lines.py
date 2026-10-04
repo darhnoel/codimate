@@ -5,12 +5,34 @@ words. The film imports the result and needs no segmenter.
     .venv/bin/python python/examples/cavendish/segment_lines.py
 """
 
+import re
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "archimedes"))
 import segment  # noqa: E402
+
+# What the voice is given where it differs from what the screen shows: a bare Latin
+# letter is read by name, a year as a number in words, and punctuation that is only
+# for the eye is left out.
+LETTERS = {"F": "អេហ្វ", "G": "ជី"}
+YEARS = {"1798": "មួយពាន់ប្រាំពីររយកៅសិបប្រាំបី"}
+FOR_THE_EYE = ("...", "«", "»")
+
+
+def spoken(raw):
+    said = raw
+    for mark in FOR_THE_EYE:
+        said = said.replace(mark, "")
+    for letter, name in LETTERS.items():
+        said = re.sub(rf"(?<![A-Za-z]){letter}(?![A-Za-z])", name, said)
+    # a space beside a year is for the eye, not the voice
+    for year, words in YEARS.items():
+        said = re.sub(rf"(?<=[\u1780-\u17d3\u17d7-\u17ff]) {year} ?", year, said)
+        said = said.replace(year, words)
+    return " ".join(said.split())
+
 
 RAW = {
     # 1 — the impossible question
@@ -27,9 +49,9 @@ RAW = {
     "nothing": "ប៉ុន្តែយើងមើលមិនឃើញវាផ្លាស់ទីទេ។",
     "tiny": "ព្រោះកម្លាំងទាញនេះតិចតួចណាស់។",
     # 4 — the torsion balance
-    "michell": "ចន មីឆែល បានរចនាឧបករណ៍មួយ។",
+    "michell": "ចនមីឆែល បានរចនាឧបករណ៍មួយ។",
     "torsion": "ឧបករណ៍នេះហៅថា «ជញ្ជីងរមួល»។",
-    "cavendish": "ហេនរី កាវេនឌីស បានប្រើវានៅឆ្នាំ ១៧៩៨។",
+    "cavendish": "ហេនរីកាវេនឌីស បានប្រើវានៅឆ្នាំ 1798។",
     "big_pulls": "គ្រាប់សំណធំទាញគ្រាប់សំណតូច។",
     "rod_turns": "គ្រាប់សំណតូចធ្វើឱ្យដងវិល។",
     "wire_twists": "ពេលដងវិល ខ្សែព្យួរក៏រមួលដែរ។",
@@ -37,6 +59,11 @@ RAW = {
     "equal": "ពេលទាញនិងទប់ស្មើគ្នា ដងឈប់វិល។",
     "real": "តាមពិត មុំរមួលតូចណាស់។",
     "measurable": "ប៉ុន្តែយើងនៅតែអាចវាស់វាបាន។",
+    # 4b — from the twist to the force
+    "twist_angle": "វាស់ចម្ងាយដែលចុងដងរំកិល រួចចែកនឹងប្រវែងដង នោះបានមុំរមួល។",
+    "wire_torque": "ខ្សែរមួលតទល់វិញដោយកម្លាំងរមួល ដែលសមាមាត្រនឹងមុំ។",
+    "force_balance": "ពេលមានតុល្យភាព គេរកបានកម្លាំងទាញ។",
+    "stiffness": "ខ្សែរឹង ដងយោលលឿន។ ខ្សែទន់ ដងយោលយឺត។ ដូច្នេះរយៈពេលយោលប្រាប់ពីភាពរឹងរបស់ខ្សែ។",
     # 5 — from a tiny twist to the planet
     "angle_force": "មុំរមួលបង្ហាញកម្លាំងទាញ F។",
     "force_G": "ពីកម្លាំង F យើងគណនាថេរទំនាញ G។",
@@ -63,6 +90,9 @@ def main():
             "កា\u200bវេន\u200bឌីស": "កាវេនឌីស",
         }.items():
             marked = marked.replace(split_name, whole_name)
+        # a person's name is one word, however the dictionary cuts it
+        for name in ("ចនមីឆែល", "ហេនរីកាវេនឌីស"):
+            marked = re.sub("\u200b?".join(map(re.escape, name)), name, marked)
         words = [w for w in marked.replace(" ", segment.ZWSP).split(segment.ZWSP) if w]
         flag = "  <-- OVER 8" if len(words) > 8 else ""
         print(f"{key:12s} {len(words):2d}  {' | '.join(words)}{flag}")
@@ -77,6 +107,15 @@ def main():
     ]
     for key, marked in out.items():
         lines.append(f"    {key!r}: {marked!r},")
+    lines.append("}")
+    lines += [
+        "",
+        "# What is spoken for each caption: the same words, without the word marks,",
+        "# with symbols written out. `speak.py` sends these; `main.py` looks them up.",
+        "SPEAK = {",
+    ]
+    for key, raw in RAW.items():
+        lines.append(f"    {key!r}: {spoken(raw)!r},")
     lines.append("}")
     (HERE / "lines.py").write_text("\n".join(lines) + "\n")
     print("wrote lines.py")

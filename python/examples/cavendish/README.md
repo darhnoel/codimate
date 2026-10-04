@@ -16,7 +16,7 @@ so how do we weigh the whole Earth? Five parts:
 
 ## What it teaches
 
-**Zoom levels nested round one point.** The apparatus, a lab, a city and the planet
+**Zoom levels nested round one point.** The apparatus, a lab and the planet
 are all drawn at their own scale about `ZC`, and `lvl_op` fades each in and out as the
 zoom passes it, so zooming out is one number going down rather than five scenes. The
 twist is taught large (`PHI_EXAG`) so it can be seen, and drawn at its real size
@@ -39,6 +39,23 @@ They are Khmer, and Khmer has no spaces, so the mark cannot step word by word wi
 knowing where the words are. `segment_lines.py` inserts U+200B at each word boundary and
 writes `lines.py`; the film imports that and needs no segmenter. It borrows the segmenter
 that `archimedes/segment.py` finds, so it only runs on a machine that has it.
+
+## Narration
+
+The captions can be spoken. `speak.py` sends each one to Kiri TTS (voice Oudom) and
+then sends the clip back through the transcriber to learn when every word is said:
+
+```bash
+.venv/bin/python python/examples/cavendish/speak.py           # what would be done
+.venv/bin/python python/examples/cavendish/speak.py --write   # record and hear (spends credits)
+```
+
+The mark on the caption then steps on the word being spoken, each recording starts on
+the event its line starts at, and a line holds for as long as it takes to say. The audio
+is not committed: it comes from a paid API, and `speak.py` rebuilds it. What the voice is
+given can differ from the screen (`SPEAK` in `lines.py`): the year as words, a bare
+letter by name. `words.py` cuts a caption into the pieces its mark steps over, for both
+`main.py` and `speak.py`. `main.py --silent` renders without the voice.
 
 ## Not here
 
