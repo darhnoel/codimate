@@ -22,17 +22,23 @@ NAMES = ("ផារ៉ាដេ", "អំពែរ", "ម៉ាក់ស្វ�
 # What the voice is given, where it differs from what the screen shows: a Greek
 # letter with a subscript is a picture, not something a speech model can read.
 SPOKEN = {"ε0": "epsilon zero", "μ0": "mu zero"}
+# The screen shows a year as 1820; the voice is given it as a number in words, which
+# it reads better than numerals.
+YEARS = {"1820": "មួយពាន់ប្រាំបីរយម្ភៃ", "1831": "មួយពាន់ប្រាំបីរយសាមសិបមួយ"}
+# A name the voice reads badly as spelled for the screen, in the spelling it reads well
+# (ហ្វ is the Khmer for the f in a foreign name).
+VOICE_NAMES = {"ផារ៉ាដេ": "ហ្វារ៉ាដេ"}
 
 RAW = {
     "question": "តើម៉ាក់ស្វិលរកឃើញសមីការទាំងនេះដោយរបៀបណា?",
-    "ampere": "នៅឆ្នាំ១៨២០គេឃើញថាចរន្តអគ្គិសនីធ្វើឱ្យម្ជុលត្រីវិស័យងាក។",
-    "faraday": "នៅឆ្នាំ១៨៣១ផារ៉ាដេឃើញថាការរំកិលមេដែកចូលបូប៊ីនធ្វើឱ្យមានចរន្តអគ្គិសនី។",
-    "field": "ផារ៉ាដេយល់ថាដែនម៉ាញេទិចមានពិតនៅក្នុងលំហ។",
+    "ampere": "នៅឆ្នាំ 1820 គេឃើញថាចរន្តអគ្គិសនីធ្វើឱ្យម្ជុលត្រីវិស័យងាក។",
+    "faraday": "នៅឆ្នាំ 1831 ផារ៉ាដេ ឃើញថាការរំកិលមេដែកចូលបូប៊ីនធ្វើឱ្យមានចរន្តអគ្គិសនី។",
+    "field": "ផារ៉ាដេ យល់ថាដែនម៉ាញេទិចមានពិតនៅក្នុងលំហ។",
     "hole": "បន្ទុកមិនឆ្លងកាត់ចន្លោះកុងដង់សាទ័រទេ។ ច្បាប់អំពែរដើមមិនអាចពន្យល់ដែន B នៅទីនោះបាន។",
     "patch": "ម៉ាក់ស្វិលបន្ថែមតួមួយក្នុងសមីការ។ ដែនអគ្គិសនីដែលប្រែប្រួលក៏ដើរតួដូចចរន្តដែរ។",
-    "wave": "E និង B ដែលប្រែប្រួលភ្ជាប់គ្នាជារលកដែលធ្វើដំណើរដោយល្បឿន c។",
-    "constants": "ε0 កំណត់កម្លាំងរុញរវាងបន្ទុក។ μ0 កំណត់កម្លាំងទាញរវាងខ្សែចរន្ត។ ទាំងពីរជាថេរនៃសុញ្ញកាស។",
-    "speed": "ការវាស់អគ្គិសនីនិងម៉ាញេទិចក៏ឱ្យល្បឿនជិតល្បឿនពន្លឺ។ ម៉ាក់ស្វិលសន្និដ្ឋានថាពន្លឺជារលកអេឡិចត្រូម៉ាញេទិច។",
+    "wave": "ដែនអគ្គិសនីនិងដែនម៉ាញេទិចដែលប្រែប្រួលភ្ជាប់គ្នាជារលកដែលធ្វើដំណើរដោយល្បឿន c។",
+    "constants": "ε0 គឺជាថេរអគ្គិសនីដែលកំណត់កម្លាំងរវាងបន្ទុក។ μ0 គឺជាថេរម៉ាញេទិចដែលកំណត់កម្លាំងរវាងខ្សែចរន្ត។",
+    "speed": "លទ្ធផលនៃការគណនាផ្ដល់តម្លៃមួយដែលស្មើនឹងល្បឿនពន្លឺ។ ម៉ាក់ស្វិលសន្និដ្ឋានថាពន្លឺជារលកអេឡិចត្រូម៉ាញេទិច។",
 }
 
 
@@ -58,6 +64,14 @@ def main():
         said = raw
         for symbol, words in SPOKEN.items():
             said = said.replace(symbol, f" {words} ")
+        # a space beside a name or a year is for the eye, not the voice
+        for token in (*NAMES, *YEARS):
+            # (not after ។ or ៖, where the space is the sentence's own)
+            for pattern in (f"(?<=[\u1780-\u17d3\u17d7-\u17ff]) {re.escape(token)}",
+                            f"{re.escape(token)} (?=[\u1780-\u17ff])"):
+                said = re.sub(pattern, token, said)
+        for written, spoken in (*YEARS.items(), *VOICE_NAMES.items()):
+            said = said.replace(written, spoken)
         lines.append(f"    {key!r}: {' '.join(said.split())!r},")
     lines.append("}")
     (HERE / "lines.py").write_text("\n".join(lines) + "\n")

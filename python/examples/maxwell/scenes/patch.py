@@ -35,9 +35,3 @@ def draw(s, u, t, D):
         Look(color=E_COL, size=32, op=ramp(u, 0.15, 0.3)),
     )
     probe(s, slide(u, 0.45, 0.92), 1.0, show=ramp(u, 0.38, 0.45))
-    s.text(
-        "disp",
-        "displacement current",
-        (W / 2, 598),
-        Look(color=E_COL, size=34, op=ramp(u, 0.8, 0.92)),
-    )
