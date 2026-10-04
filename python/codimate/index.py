@@ -29,7 +29,8 @@ megabytes. The compact file stores the same facts as columns of small integers:
 
     file   := MAGIC  chunk*  footer  footer_length(u64, little endian)
     footer := lzma(JSON: version, canvas, chunk, quant, chunks[(offset, length)], beats)
-    chunk  := lzma(u32 header_length, JSON header, then little-endian int32 columns)
+    chunk  := lzma(u32 header_length, JSON header, then little-endian columns:
+               int32, and int64 for boxes, which can be huge when a shape is zoomed)
 
 On `year`, whose index is about 390 MB as JSON, this comes to a few megabytes. To read
 one, `python -m codimate.preview --json film.mp4` prints it as JSON (ADR 0020).
@@ -46,13 +47,13 @@ from array import array
 from collections import OrderedDict
 from pathlib import Path
 
-MAGIC = b"CDIDX\x00\x00\x01"   # the last byte is the format version
+MAGIC = b"CDIDX\x00\x00\x02"   # the last byte is the format version
 QUANT = 16                      # boxes are kept to 1/16 of a pixel
 CHUNK = 32                      # beats per chunk
 PRESET = 6                      # lzma: the sizes at 6 and 9 are the same, 6 is faster
 CACHED = 6                      # chunks a reader keeps decoded
 
-assert array("i").itemsize == 4, "the columns are int32"
+assert array("i").itemsize == 4 and array("q").itemsize == 8, "int32 and int64 columns"
 
 
 class Index:
@@ -160,7 +161,8 @@ def _encode(base: dict, beats: list) -> bytes:
         return kinds.setdefault(kind, len(kinds))
 
     last = {n: q for n, (_, _, q) in base.items() if q is not None}
-    b_name, b_kind, b_layer, b_has, b_box = (array("i") for _ in range(5))
+    b_name, b_kind, b_layer, b_has = (array("i") for _ in range(4))
+    b_box = array("q")        # a shape zoomed far past the screen has a huge box
     for name, (kind, layer, q) in base.items():
         b_name.append(name_of(name))
         b_kind.append(kind_of(kind))
@@ -169,7 +171,8 @@ def _encode(base: dict, beats: list) -> bytes:
         b_box.extend(q if q is not None else (0, 0, 0, 0))
 
     counts = array("i")
-    s_name, s_kind, s_layer, s_has, s_delta, gone_ids = (array("i") for _ in range(6))
+    s_name, s_kind, s_layer, s_has, gone_ids = (array("i") for _ in range(5))
+    s_delta = array("q")
     for sets, gone in beats:
         counts.extend((len(sets), len(gone)))
         for name, kind, layer, q in sets:
@@ -254,8 +257,8 @@ class CompactIndex(Index):
         self.path = Path(path)
         with self.path.open("rb") as f:
             if f.read(len(MAGIC)) != MAGIC:
-                raise ValueError(f"{self.path.name} is not a codimate index "
-                                 f"(or is from a newer version)")
+                raise ValueError(f"{self.path.name} is not a codimate index of this "
+                                 f"version: write it again with write_compact_index")
             f.seek(-8, 2)
             (length,) = struct.unpack("<Q", f.read(8))
             f.seek(-8 - length, 2)
@@ -291,21 +294,22 @@ class CompactIndex(Index):
         names, kinds = head["names"], head["kinds"]
         at = 4 + hlen
 
-        def take(count):
+        def take(count, code="i"):
             nonlocal at
-            column = array("i")
-            column.frombytes(raw[at:at + 4 * count])
-            at += 4 * count
+            column = array(code)
+            width = column.itemsize
+            column.frombytes(raw[at:at + width * count])
+            at += width * count
             if sys.byteorder == "big":
                 column.byteswap()
             return column
 
         n, nb, ns, ng = head["n"], head["beats"], head["sets"], head["gone"]
         b_name, b_kind, b_layer, b_has = (take(n) for _ in range(4))
-        b_box = take(4 * n)
+        b_box = take(4 * n, "q")
         counts = take(2 * nb)
         s_name, s_kind, s_layer, s_has = (take(ns) for _ in range(4))
-        s_delta = take(4 * ns)
+        s_delta = take(4 * ns, "q")
         gone_ids = take(ng)
 
         base, last = {}, {}

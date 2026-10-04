@@ -126,6 +126,23 @@ def test_a_shape_with_no_box_survives_the_file():
     assert [s["name"] for s in compact.shapes_at(1)] == ["r"]
 
 
+def test_a_shape_zoomed_far_past_the_screen_keeps_its_box():
+    """Cavendish's zoom-out scales shapes by orders of magnitude: a box of a billion
+    pixels is a real box, and the file must hold it, not overflow."""
+    huge = [-3.0e9, -2.5e9, 6.0e9, 5.0e9]
+    beats = [{"at": float(i), "secs": 1.0, "event": "e", "state": None, "covered": [],
+              "shapes": {"set": [{"name": "earth", "kind": "circle", "layer": 0,
+                                  "box": [x * (1 + i) for x in huge]}], "gone": []}}
+             for i in range(3)]
+    path = Path(tempfile.mkdtemp()) / "x.index.bin"
+    ix.write(path, [1280, 720], iter(beats), chunk=2)
+    compact = ix.CompactIndex(path)
+    for i in range(3):
+        got = compact.shapes_at(i)[0]["box"]
+        for g, want in zip(got, beats[i]["shapes"]["set"][0]["box"]):
+            assert abs(g - want) <= 1 / ix.QUANT, (i, g, want)
+
+
 def test_an_empty_film_has_an_empty_index():
     path = Path(tempfile.mkdtemp()) / "x.index.bin"
     ix.write(path, [1280, 720], iter(()))

@@ -48,7 +48,8 @@ about a millisecond.
 
 **The compact format** stores a box to 1/16 of a pixel as the difference from that
 shape's previous box, names and kinds once per chunk, and everything as little-endian
-int32 columns under lzma. Beats are grouped in chunks of 32, each starting with
+columns under lzma: int32, and int64 for boxes, which a zoom can make enormous (the
+first version used int32 and overflowed on Cavendish's zoom-out). Beats are grouped in chunks of 32, each starting with
 everything on screen, so any beat decodes from one chunk and no beat depends on the
 ones before it. The per-beat table is a footer, so opening the file reads that and
 nothing else. The writer emits a chunk at a time, so its memory does not grow with the
