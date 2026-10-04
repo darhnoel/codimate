@@ -24,6 +24,24 @@ light is a wave. Nine scenes, each built on a real object:
 9. **The speed** — neither experiment has light in it, yet 1/√(μ₀ε₀) is the speed
    of light.
 
+## Where things are
+
+```text
+main.py          what connects it all: scene lengths, one moment per frame, the render call
+scenes/          one module per scene, each with a draw(s, u, t, D) for a single moment
+  capacitor.py   the capacitor, ring and bar that scenes 5 and 6 share
+pen.py           how a scene draws: a Look, and a Stage that fades shapes in and out
+palette.py       the canvas and the colours
+equations.py     the equations, as LaTeX
+geometry.py      curves, arrowheads, and laying formulas side by side
+narration.py     the voice, the word timings, and the caption
+lines.py         the Khmer captions and what is spoken (made by segment_lines.py)
+speak.py         records the captions and hears when each word is said
+```
+
+To change a scene, open its module in `scenes/`. To change how long a scene lasts,
+or the order, change `scenes/__init__.py`.
+
 ## What it teaches
 
 **Equations are LaTeX, and arrive when their discovery does.** Each is a
