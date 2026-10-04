@@ -370,9 +370,10 @@ important question** first — what will be generated, why it cannot be skipped
 and roughly what it costs — and wait. Do not warn and proceed, and do not
 generate "just to check".
 
-The index (`<video>.index.json`) is generated output too, and can be far larger
-than the video. `render` skips it when it would be huge; `index=True` writes it
-anyway.
+The index (`<video>.index.bin`) is generated output too. It is compact, a few
+megabytes however dense the film, but writing it still takes seconds on a dense one.
+`index="json"` writes the readable `.index.json`, which can be far larger than the
+video; `index=False` writes neither.
 
 ## Formatting Conventions
 

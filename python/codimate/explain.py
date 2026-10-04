@@ -13,11 +13,10 @@ View = Callable[[Frame], Scene]
 
 PATHS = ("straight", "linear", "fall", "lift_carry_drop")
 
-# What `render(index="auto")` will write: ~200 bytes an entry, measured on the
-# pretty-printed file, and nothing past 50 MB — a film of a few thousand shapes
-# a frame is an index of hundreds, beside a video of one or two.
+# What the readable index (`index="json"`) costs: ~200 bytes an entry, measured on
+# the pretty-printed file. A film of a few thousand shapes a frame is an index of
+# hundreds of megabytes that way, which is why `render` writes the compact one.
 INDEX_ENTRY_BYTES = 200
-INDEX_LIMIT = 50_000_000
 
 # Set by the Previewer while it runs a script: `render` hands the Explanation
 # here and stops the script, instead of drawing a video nobody asked for yet.
@@ -201,14 +200,18 @@ class Explanation:
         The folder is created if it does not exist, so `render("results/x.mp4")`
         works on a fresh clone.
 
-        `index` decides whether `<name>.index.json` is written beside the
-        video: `"auto"` writes it unless it would be huge (over
-        `INDEX_LIMIT`, and it says so), `True` always writes it, `False`
-        never does. A dense scene makes a film of a megabyte or two and an
-        index of hundreds.
+        `index` decides what is written beside the video. `"auto"` (or `True`)
+        writes `<name>.index.bin`, the compact index: a few megabytes for a film
+        whose readable index would be hundreds, written a chunk at a time, so
+        its size and the memory it takes do not depend on the film. `"json"`
+        writes the readable `<name>.index.json` instead, which is as large as it
+        looks. `False` writes neither. See :mod:`codimate.index`.
         """
         from pathlib import Path
 
+        if index not in (True, False, "auto", "json"):
+            # before any frame is drawn, not after a render has finished
+            raise ValueError(f"index is True, False, 'auto' or 'json', not {index!r}")
         if _capture is not None:
             _capture(self)
             raise _Captured
@@ -231,7 +234,9 @@ class Explanation:
 
         if sounds:
             self._lay_sound(output, sounds)
-        if self._index_wanted(index):
+        if index in ("auto", True):
+            self.write_compact_index(output)
+        elif index == "json":
             self.write_index(output)
         report = self.report()
         if report:
@@ -343,27 +348,14 @@ class Explanation:
     def index_size(self) -> int:
         """About how many bytes :meth:`write_index` would write, without
         building it: shapes that arrive or move, at what the index measured
-        per entry. Cheap beside a render, and close enough to pick a side of
-        `INDEX_LIMIT` by."""
+        per entry. Cheap beside a render, and close enough to know whether the
+        readable index (`index="json"`) is worth asking for."""
         changed, before = 0, {}
         for i in range(len(self.durations)):
             now = self._arrives(i)._shapes
             changed += sum(1 for n, s in now.items() if before.get(n) != s)
             before = now
         return changed * INDEX_ENTRY_BYTES
-
-    def _index_wanted(self, index) -> bool:
-        if index != "auto":
-            return bool(index)
-        size = self.index_size()
-        if size <= INDEX_LIMIT:
-            return True
-        import sys
-        print(f"index skipped: it would be about {size / 1e6:.0f} MB "
-              f"(limit {INDEX_LIMIT / 1e6:.0f} MB). Pass index=True to write "
-              f"it anyway, or preview the script itself, which builds it in "
-              f"memory.", file=sys.stderr)
-        return False
 
     def write_index(self, output: str) -> str:
         """Write :meth:`index` beside `output`, as `<name>.index.json`.
@@ -382,6 +374,21 @@ class Explanation:
                    "beats": self.index()}
         beside.write_text(json.dumps(written, ensure_ascii=False, indent=2) + "\n")
         return str(beside)
+
+    def write_compact_index(self, output: str) -> str:
+        """Write the index beside `output` as `<name>.index.bin`.
+
+        The same facts as :meth:`write_index`, kept to 1/16 of a pixel and
+        stored as columns of small integers: see :mod:`codimate.index`. Written
+        a chunk at a time, so it does not first build the whole index in memory.
+        """
+        from pathlib import Path
+
+        from . import index as _index
+
+        video = Path(output)
+        return _index.write(video.with_name(f"{video.stem}.index.bin"),
+                            [width(), height()], self._index_beats())
 
     def sheet(self, times, output: str = "sheet.png", *,
               columns: int = 3, scale: float = 0.5) -> str:
@@ -471,44 +478,56 @@ class Explanation:
         A shape's box is `None` only for a formula on a machine without
         Typst, which is what measures one (ADR 0005).
 
-        `render` writes this beside the video unless it would be huge
-        (ADR 0018; :meth:`index_size`).
+        `render` writes it beside the video in a compact form, a few megabytes
+        however dense the film, and `index="json"` writes this as JSON
+        (ADR 0018, ADR 0020).
         """
-        from .scene import box, covered
+        return list(self._index_beats())
+
+    def _index_beats(self, shapes: bool = True):
+        """The beats of :meth:`index`, one at a time. `shapes=False` leaves out
+        what is on screen, which is most of the cost, for a table of when and
+        why only."""
+        from .scene import covered
 
         states = ([self.trace.initial]
                   + [e.state for e in self.trace.events]
                   + [self.trace.events[-1].state if self.trace.events
                      else self.trace.initial])
-        out, before = [], {}
+        before = {}
         for i, (at, secs, name) in enumerate(self.timeline()):
             # Beat `i` travels from scenes[i] to scenes[i + 1]; what it
             # arrives at is what the event named here produced.
             scene = self._arrives(i)
-            now = {
-                shape.item: {"name": shape.item, "kind": shape.kind,
-                             "layer": shape.layer, "box": box(shape)}
-                for shape in scene._shapes.values()
-            }
-            entry = {
-                "at": at,
-                "secs": round(secs, 3),
-                "event": name,
-                "state": _plain(states[min(i, len(states) - 1)]),
-                "shapes": {
+            entry = {"at": at, "secs": round(secs, 3), "event": name,
+                     "state": _plain(states[min(i, len(states) - 1)])}
+            if shapes:
+                now = self._shape_map(scene)
+                entry["shapes"] = {
                     "set": [s for n, s in now.items() if before.get(n) != s],
                     "gone": [n for n in before if n not in now],
-                },
-                "covered": [list(pair) for pair in covered(scene)],
-            }
+                }
+                before = now
+            entry["covered"] = [list(pair) for pair in covered(scene)]
             # Beat 0 is the opening hold; beat i + 1 is event i.
             events = self.trace.events
             event = events[i - 1] if 0 < i <= len(events) else None
             if event is not None and event.data.get("chapter"):
                 entry["chapter"] = str(event.data["chapter"])
-            out.append(entry)
-            before = now
-        return out
+            yield entry
+
+    def _shape_map(self, scene) -> dict:
+        """What is on a scene, by name: the shape as the index records it."""
+        from .scene import box
+
+        return {shape.item: {"name": shape.item, "kind": shape.kind,
+                             "layer": shape.layer, "box": box(shape)}
+                for shape in scene._shapes.values()}
+
+    def _shapes_after(self, beat: int) -> list:
+        """Every shape on screen once beat `beat` has arrived, read off its scene
+        when asked, so a film in memory needs no index built to answer."""
+        return list(self._shape_map(self._arrives(beat)).values())
 
     def timeline(self) -> "list[tuple[float, float, str]]":
         """Every beat as ``(start, duration, event name)``, in seconds.

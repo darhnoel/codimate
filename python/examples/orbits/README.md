@@ -66,6 +66,6 @@ right *size* beside the Earth and the distances are compressed — which is what
 diagram of this has to do, and is better said than hidden.
 
 A world is a few thousand named shapes a frame, and the previewer's index records
-every shape of every moment: 470 MB for this film, against a 1.5 MB video. `render`
-skips it for a film like this and says so; preview `main.py` itself and the
-previewer builds the index in memory. `index=True` writes the file anyway.
+every shape of every moment: 470 MB as JSON for this film, against a 1.5 MB video.
+`render` writes it in a compact form instead (a few megabytes), and the previewer,
+given `main.py` itself, reads no file at all: it answers from the scenes it holds.

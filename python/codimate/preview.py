@@ -31,16 +31,14 @@ import sys
 import threading
 from pathlib import Path
 
+from .index import Index, LiveIndex, as_index, beside
 
-def load(video: "str | Path") -> dict:
-    """The index written beside `video` by `render`."""
-    video = Path(video)
-    beside = video.with_name(f"{video.stem}.index.json")
-    if not beside.exists():
-        raise FileNotFoundError(
-            f"no index beside {video} — render with index=True (it is skipped "
-            f"when huge), or preview the script itself")
-    return json.loads(beside.read_text())
+
+def load(video: "str | Path") -> Index:
+    """The index written beside `video` by `render`: the compact `.index.bin` if
+    there is one, else the readable `.index.json`. It is read lazily, so a film
+    with an index of hundreds of megabytes as JSON opens at once."""
+    return beside(video)
 
 
 def build(script: "str | Path", args=()):
@@ -90,28 +88,17 @@ def index_of(explanation) -> dict:
             "beats": explanation.index()}
 
 
-def on_screen(index: dict, beat: int) -> "list[dict]":
+def on_screen(index, beat: int) -> "list[dict]":
     """Every shape on screen once `beat` has arrived, topmost first.
 
-    Shapes are stored as differences, so this replays them from the start —
-    from the nearest checkpoint, kept every 32 beats on the index itself, so a
-    film of a thousand beats of a thousand shapes is not replayed per ask.
+    How it is found depends on the index: a film in memory is read off its
+    scene, a compact file decodes one chunk, and the readable JSON replays
+    differences from the nearest checkpoint (see :mod:`codimate.index`).
     """
-    marks = index.setdefault("_checkpoints", {})
-    start = max((k for k in marks if k <= beat), default=-1)
-    now = dict(marks[start]) if start >= 0 else {}
-    for k in range(start + 1, beat + 1):
-        changed = index["beats"][k]["shapes"]
-        for shape in changed["set"]:
-            now[shape["name"]] = shape
-        for name in changed["gone"]:
-            now.pop(name, None)
-        if k % 32 == 31:
-            marks[k] = dict(now)
-    return _under(now.values(), None)
+    return _under(as_index(index).shapes_at(beat), None)
 
 
-def at(index: dict, seconds: float, point=None) -> dict:
+def at(index, seconds: float, point=None) -> dict:
     """What is on screen at `seconds`, and what put it there.
 
     Returns the beat — its event and the State behind it — and the shapes on
@@ -122,7 +109,8 @@ def at(index: dict, seconds: float, point=None) -> dict:
     one takes it. The nearer of the two is reported: good enough to identify
     what was clicked, and honest about being an approximation.
     """
-    beats = index["beats"]
+    index = as_index(index)
+    beats = index.beats
     if not beats:
         raise ValueError("the index has no beats")
     i = shown_beat = beat_at(index, seconds)
@@ -134,19 +122,18 @@ def at(index: dict, seconds: float, point=None) -> dict:
             "shapes": _under(on_screen(index, shown_beat), point)}
 
 
-def beat_at(index: dict, seconds: float) -> int:
+def beat_at(index, seconds: float) -> int:
     """The beat `seconds` falls in: the last one to have started."""
     import bisect
-    starts = [b["at"] for b in index["beats"]]
-    return max(bisect.bisect_right(starts, seconds) - 1, 0)
+    return max(bisect.bisect_right(as_index(index).starts(), seconds) - 1, 0)
 
 
-def covered(index: dict) -> "list[list]":
+def covered(index) -> "list[list]":
     """Every label something is drawn on, as `[seconds, above, below]`, from
     the index — so a rendered film answers it as well as a script does.
     Reported where each collision starts, at the moment its beat settles."""
     found, before = [], set()
-    for beat in index["beats"]:
+    for beat in as_index(index).beats:
         now = {tuple(pair) for pair in beat.get("covered", [])}
         found += [[round(beat["at"] + beat["secs"], 2), a, b]
                   for a, b in sorted(now - before)]
@@ -227,7 +214,7 @@ class Film:
         self.error = None
         self.explanation = None
         if self.video:
-            self.index = load(self.video)
+            self.index = load(self.video)       # lazy: nothing but its table is read
         else:
             self.stamp = self._stamp()
             self._build()
@@ -242,7 +229,10 @@ class Film:
         import traceback
         try:
             explanation = build(self.path, self.args)
-            index = index_of(explanation)
+            # Not `index_of`: that builds every shape of every beat, seconds and
+            # hundreds of megabytes on a dense film, to answer for one beat at a
+            # time. The scenes are already here; ask them.
+            index = LiveIndex(explanation)
         except BaseException as e:   # a broken edit must not take the window down
             if isinstance(e, KeyboardInterrupt):
                 raise
@@ -295,14 +285,14 @@ class Film:
     def listing(self) -> dict:
         """Everything the page needs, in one answer — the whole index
         included, so pointing at the picture is answered in the browser."""
-        beats = self.index["beats"]
+        beats = self.index.beats
         # Shapes stay here and are asked for a beat at a time: a film where
         # everything moves every beat has an index of hundreds of megabytes.
         light = [{k: v for k, v in b.items() if k != "shapes"} for b in beats]
         return {"title": " ".join([self.path.name, *self.args]),
                 "key": str(self.path) + "|" + " ".join(self.args),
                 "video": bool(self.video),
-                "canvas": self.index["canvas"], "built": self.built,
+                "canvas": self.index.canvas, "built": self.built,
                 "error": self.error,
                 "covered": covered(self.index),
                 "chapters": [[b["at"], b["chapter"]] for b in beats if "chapter" in b],
@@ -446,6 +436,26 @@ def _handler(film: Film):
     return Handler
 
 
+def dump(path, args=(), beats: "str | None" = None) -> int:
+    """Print an index as the readable JSON `index="json"` would write: of an mp4,
+    from the file beside it, and of a script, built in memory. How a compact index
+    is read by eye."""
+    path = Path(path)
+    if path.suffix == ".mp4":
+        index = load(path)
+    else:
+        index = LiveIndex(build(path, args))
+    start, _, stop = (beats or "").partition(":")
+    count = len(index.beats)
+    first = int(start) if start else 0
+    last = int(stop) if stop else count
+    sys.stdout.write(json.dumps(
+        {"version": 1, "canvas": index.canvas,
+         "beats": list(index.changes(first, last))},
+        ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
 def main(argv=None) -> int:
     import argparse
 
@@ -460,7 +470,16 @@ def main(argv=None) -> int:
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--no-open", action="store_true",
                         help="print the address instead of opening a browser")
+    parser.add_argument("--json", action="store_true",
+                        help="print the index as readable JSON and exit: of an mp4, "
+                             "from the file beside it; of a script, built in memory. "
+                             "Put it before the path, which takes the rest as the "
+                             "script's own arguments")
+    parser.add_argument("--beats", metavar="FROM:TO",
+                        help="with --json, only these beats (e.g. 100:120)")
     options = parser.parse_args(argv)
+    if options.json:
+        return dump(options.path, options.args, options.beats)
     serve(options.path, options.args, port=options.port,
           show=not options.no_open)
     return 0

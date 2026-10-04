@@ -544,9 +544,9 @@ makes a turning ball re-sort in jumps and a ring tear across a planet. Use
 `Timing(default=1 / fps)` and render at that `fps`.
 
 A World draws a **dense** scene — a few thousand named shapes a frame. The
-previewer's index records every shape of every moment — 470 MB beside a 1.5 MB
-video for `examples/orbits`, and 1.3 GB for a denser one — so `render` skips it
-for a scene like that and says so (`index="auto"`, below).
+index records every shape of every moment — 470 MB as JSON beside a 1.5 MB video
+for `examples/orbits`, and 1.3 GB for a denser one — which is why `render` writes
+it in the compact form (`index="auto"`, below).
 
 `RingArrows` ride a body's equator at the angle you give, so a turning solid ball
 has something to follow. Those on the far side are skipped by a real ray against
@@ -637,16 +637,22 @@ rectangle against one and a bit.
 A formula's box is measured by Typst, so it is `null` only on a machine
 without `typst`. Each beat also carries `covered`: the `[above, below]` pairs
 where something is drawn on a label (see *Covered labels* below).
-`render(index="auto")` writes this beside the video as `<name>.index.json`
-unless it would be huge — over `INDEX_LIMIT`, 50 MB — and then it skips it and
-prints one line with the size it avoided. `index=True` writes it anyway,
-`index=False` never does, and `exp.index_size()` estimates the bytes without
-building it. Preview the script itself (not the mp4) and the previewer builds
-the index in memory, so a skipped file costs nothing. `write_index(output)`
-writes it without rendering. The file
-wraps the beats as `{"version": 1, "canvas": [w, h], "beats": [...]}` — the
-canvas is what turns a click on a scaled video back into these coordinates.
-See [ADR 0018](adr/0018-a-previewer-that-reads-an-index.md).
+`render(index="auto")` writes the index beside the video as `<name>.index.bin`, a
+compact file: boxes kept to 1/16 of a pixel, stored as columns of small integers
+and compressed in chunks. It is a few megabytes however dense the film (the
+390 MB index of `examples/year` is 5 MB), it is written a chunk at a time so it
+costs no more memory than a short film, and it is read a chunk at a time, so
+opening it is instant. `index="json"` writes the readable `<name>.index.json`
+instead, as large as it looks (`exp.index_size()` estimates the bytes without
+building it); `index=False` writes neither. `write_compact_index(output)` and
+`write_index(output)` write them without rendering. To read a compact file by
+eye, `python -m codimate.preview --json [--beats 100:120] film.mp4` prints it as
+JSON. The JSON wraps the beats as `{"version": 1, "canvas": [w, h], "beats":
+[...]}` — the canvas is what turns a click on a scaled video back into these
+coordinates. Preview the script itself (not the mp4) and the previewer reads no
+file: it answers from the scenes it already holds. See
+[ADR 0018](adr/0018-a-previewer-that-reads-an-index.md) and
+[ADR 0020](adr/0020-a-compact-index.md).
 
 ## Covered labels
 
