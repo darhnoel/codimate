@@ -348,4 +348,4 @@ the first link below.
   what they're enough for, and a car built out of them.
 - [Reference](reference.md): every call and parameter, on one page.
 - [How Codimate Thinks](concepts.md): why the library is shaped this way.
-- [`python/examples/`](../python/examples/): six worked examples, each with notes.
+- [codimate-examples](https://github.com/darhnoel/codimate-examples): worked examples, each with notes.

@@ -9,15 +9,15 @@ Plain `assert` tests, no framework. One file per module of the package:
 | `test_trace.py` | `emit`/`trace`, and Items that survive a snapshot |
 | `test_explain.py` | motion rules, timing, `cm.ease` |
 | `test_science.py` | the science kit: camera, spheres, orbits, and the marks |
-| `test_year.py` | `examples/year/sky.py` against the 2025 almanac: equinoxes, perihelion, moon phases |
-| `test_examples.py` | every example still renders, end to end |
+| `test_index.py` | the compact index: written, read back, any beat in any order |
+| `test_preview.py` | the Previewer: running a script without rendering it, and asking what is on screen |
 | `test_docs.py` | every code block in the guide still runs |
 
 Run the lot:
 
 ```bash
-python python/tests/run.py           # ~25s: the example and doc checks render real video
-python python/tests/run.py    # skip those while working on the library
+python python/tests/run.py --all     # also runs the guide's programs, which render real video
+python python/tests/run.py           # skip that while working on the library
 ```
 
 or one file on its own while you work on it:
@@ -30,16 +30,17 @@ They are also valid pytest modules if you prefer that. Everything except
 `cm.ease` is pure Python and runs without the Rust extension built — the Engine
 has its own tests in `crates/codimate-py/src/lib.rs`, run with `cargo test`.
 
-`test_examples.py` is the only end-to-end coverage — view, diff, tween,
-rasterize, ffmpeg, file on disk — and it **discovers** examples rather than
-listing them, so a new one is covered the day it is added. It checks that each
-renders, at the right size and frame rate, and is neither black nor frozen. It
-cannot tell you the motion is *right*; only watching it can.
+The examples have their own checks in
+[codimate-examples](https://github.com/darhnoel/codimate-examples): every example
+builds, every formula typesets, and an opt-in render checks each is neither black nor
+frozen. That repository is where the end-to-end rendering of every example lives. Here,
+`test_docs.py` still renders the guide's complete programs, so the path from view to
+video is covered.
 
 `test_docs.py` extracts every `python` block from the README and the four
 guide chapters. A block that imports codimate and calls `.render(` is run as
 written, which is why a full test run leaves the guide's own videos in
-`results/` next to the examples. Everything else is compiled, so a typo in a
+`results/`. Everything else is compiled, so a typo in a
 snippet fails here rather than in a reader's terminal.
 
 A test's name should say what must be true, so a failure reads as a sentence:

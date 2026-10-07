@@ -338,7 +338,7 @@ codimate/
 │   └── codimate-py/        # PyO3 bindings — the Authoring Surface (see ADR 0008)
 └── python/
     ├── codimate/           # the `codimate` Python package
-    └── examples/           # every example, in Python
+    (the examples are in https://github.com/darhnoel/codimate-examples)
 
 **Every crate here is reachable from the wheel.** The Rust authoring path —
 `codimate` (facade), `codimate-effects`, `codimate-arrange`,

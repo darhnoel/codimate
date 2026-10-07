@@ -1,6 +1,6 @@
 ---
 name: codimate
-description: Create runnable Codimate examples in Python from user prompts, with minimal token usage. Use when the user asks to visualize a concept or algorithm, create an example under python/examples/<name>, or learn the Codimate authoring API quickly.
+description: Create runnable Codimate examples in Python from user prompts, with minimal token usage. Use when the user asks to visualize a concept or algorithm, create an example in the codimate-examples repository, or learn the Codimate authoring API quickly.
 ---
 
 # Codimate Skill
@@ -8,8 +8,8 @@ description: Create runnable Codimate examples in Python from user prompts, with
 Turn a prompt into a runnable Codimate explainer.
 
 **Python is the authoring surface. Rust is the engine** (ADR 0008). Never write
-a Rust example and never touch `crates/` for authoring work. Examples live in
-`python/examples/<name>/`; there is no Rust example tree.
+a Rust example and never touch `crates/` for authoring work. Examples live in their own
+repository, [codimate-examples](https://github.com/darhnoel/codimate-examples), as `<name>/`; there is no Rust example tree.
 
 ## The model, in one paragraph
 
@@ -57,7 +57,7 @@ cm.explain(
 print("wrote results/coins.mp4")
 ```
 
-`print("wrote <path>")` on its own line is a contract: `test_examples` reads it
+`print("wrote <path>")` on its own line is a contract: the examples repository's render test reads it
 to find what was produced. Anything else goes on a separate line.
 
 ## Token budget: signature-first
@@ -133,7 +133,7 @@ speed swing with easing against 1.2x with `linear`.
 ## Output shape
 
 ```text
-python/examples/<snake_case_name>/
+<snake_case_name>/
     main.py       the algorithm, the view, and the render call
     README.md     what this example teaches, and what to try changing
 ```
@@ -163,13 +163,15 @@ tests the day it is added.
 
 ## Validation
 
+Run these in the codimate-examples repository:
+
 ```bash
-.venv/bin/python python/examples/<name>/main.py
-cd python && ../.venv/bin/python tests/run.py
+.venv/bin/python <name>/main.py
+.venv/bin/python tests/run.py
 .venv/bin/ruff check
 ```
 
-That skips the two files that render video. **Never run `--all`, render an
+That skips the render test. **Never run `--render`, render an
 example or write a video unless the user explicitly tells you to** — see
 "Generating" in `CONTEXT.md`. If it is truly needed, ask one big question first.
 

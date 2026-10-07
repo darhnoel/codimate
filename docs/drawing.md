@@ -71,7 +71,7 @@ scene.line("spoke", start=(x1, y1), end=(x2, y2), w=24.0).fill("gold")
 
 **A filled outline — one polygon.** `scene.polygon(name, points)` fills any
 closed run of corners, and `cm.ngon`/`cm.star` produce the regular ones.
-[`bernoulli_lift`](../python/examples/bernoulli_lift/) predates it and still
+[`bernoulli_lift`](https://github.com/darhnoel/codimate-examples/tree/main/bernoulli_lift) predates it and still
 fills its aerofoil with 140 vertical lines, one per column, the way a
 rasteriser would — correct, and no longer necessary.
 
@@ -89,7 +89,7 @@ correct and no longer necessary.
 
 **Rotation — from positions over time.** There is no `rotate`. Emit the angle
 at each moment and let the Engine work out everything between, exactly as it
-does for a bar sliding sideways. [`dharma_wheel`](../python/examples/dharma_wheel/)
+does for a bar sliding sideways. [`dharma_wheel`](https://github.com/darhnoel/codimate-examples/tree/main/dharma_wheel)
 turns a wheel this way; the car below turns its wheels.
 
 ---
@@ -208,4 +208,4 @@ wheel.circle("hub", r=9, at=cm.at(y=-WHEEL_R)).on(layer=4)
 - [Reference](reference.md) — every call and parameter
 - [The one thing to understand](../README.md#the-one-thing-to-understand) —
   names decide what moves
-- [`python/examples/`](../python/examples/) — six worked ones, with notes
+- [codimate-examples](https://github.com/darhnoel/codimate-examples) — worked ones, with notes

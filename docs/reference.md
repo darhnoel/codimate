@@ -680,7 +680,7 @@ rendering. See [ADR 0017](adr/0017-a-check-that-says-a-label-is-covered.md).
 ## The Previewer
 
 ```bash
-python -m codimate.preview python/examples/archimedes/main.py km
+python -m codimate.preview archimedes/main.py km    # from codimate-examples
 python -m codimate.preview results/archimedes-km.mp4
 ```
 

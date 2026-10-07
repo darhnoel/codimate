@@ -104,8 +104,34 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl
-          python python/examples/bubble_sort/main.py
-          test -s results/bubble_sort.mp4
+          python - <<'PY'
+          import codimate as cm
+
+          def bubble_sort(values, emit):
+              for i in range(len(values)):
+                  for j in range(len(values) - 1 - i):
+                      emit("compare", items=[values[j], values[j + 1]])
+                      if values[j] > values[j + 1]:
+                          values[j], values[j + 1] = values[j + 1], values[j]
+                          emit("swap", items=[values[j], values[j + 1]])
+
+          def bars(frame):
+              scene = cm.Scene()
+              active = frame.items()
+              for slot, item in cm.row(frame.state, gap=40):
+                  bar = scene.group(item.id, slot)
+                  shape = bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
+                  shape.fill("orange" if item in active else "blue")
+              return scene
+
+          cm.explain(
+              trace=cm.trace(bubble_sort, cm.items([3, 1, 4, 2])),
+              view=bars,
+              motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
+              timing=cm.Timing(default=0.3),
+          ).render("results/smoke.mp4", fps=30)
+          PY
+          test -s results/smoke.mp4
 
   publish:
     needs: [wheels, sdist, smoke]

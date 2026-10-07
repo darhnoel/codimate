@@ -19,21 +19,9 @@ __pycache__/
 # API keys for authoring-time tools (Kiri TTS). Never committed.
 .env
 
-# Narration: audio from a paid API, kept only so it need not be bought again.
-# Not ours to publish. `narrate.py` rebuilds it from the captions and a key.
-python/examples/attention/audio/
-python/examples/archimedes/audio/
-python/examples/year/audio/
-python/examples/maxwell/audio/
-python/examples/cavendish/audio/
-
-# Examples kept local. `fourier_einstein` traces a copyrighted engraving it
-# reads at build time, so the input is not ours to redistribute even though
-# the code is; `pypi_nightly` is a one-off announcement clip. Both still run
-# and are graded by `tests/run.py --all` like any other example — they are
-# simply not published.
-python/examples/fourier_einstein/
-python/examples/pypi_nightly/
+# The examples moved to https://github.com/darhnoel/codimate-examples. What this tree still holds
+# of them on one machine is paid audio and examples kept local; none of it is published.
+/python/examples/
 
 # Frames pulled out of a render while checking it.
 /scenes/

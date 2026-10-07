@@ -1,21 +1,14 @@
 """Run the self-checks.
 
-    python python/tests/run.py                    # no video; 0.04s
-    python python/tests/run.py --all              # every example, before a commit
-    python python/tests/run.py --all pendulum     # just that one example
+    python python/tests/run.py                    # no video; a second or two
+    python python/tests/run.py --all              # also runs the guide's programs
 
-Two of these files render real video: `test_examples` renders all eight
-examples, `test_docs` runs every complete program in the guide. Together they
-take about two minutes when everything is stale — and everything goes stale
-whenever `python/codimate/` is touched, because any change there *might* change
-every video.
+One of these files renders real video: `test_docs` runs every complete program in
+the guide. That is the right check to run before committing and the wrong one to run
+after every edit, so it is opt-in.
 
-That is the right check to run before committing and the wrong one to run after
-every edit, so it is opt-in. The fast checks take 0.04 seconds, which is the
-difference between running them constantly and avoiding them.
-
-Naming examples after `--all` narrows it to those, which is what you want while
-working on one: rendering the other twelve proves nothing about the change.
+The examples are in their own repository, https://github.com/darhnoel/codimate-examples,
+with their own checks (every example builds, every formula typesets, an opt-in render).
 """
 
 import importlib
@@ -29,7 +22,7 @@ import support  # noqa: E402  (sets up the import path for `codimate`)
 
 HERE = Path(__file__).resolve().parent
 
-RENDERS_VIDEO = {"test_examples", "test_docs"}
+RENDERS_VIDEO = {"test_docs"}
 everything = {"--all", "-a"} & set(sys.argv)
 
 # Example names after the flag narrow the render to those. Passed by env var

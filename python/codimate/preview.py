@@ -1,6 +1,6 @@
 """The Previewer: a window onto a film, and a way to ask what is on it.
 
-    python -m codimate.preview python/examples/archimedes/main.py km
+    python -m codimate.preview archimedes/main.py km    # from codimate-examples
     python -m codimate.preview results/archimedes-km.mp4
 
 Given a **script**, it runs it up to its `render` call and keeps the film in
