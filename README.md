@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/codimate)](https://pypi.org/project/codimate/)
 [![Python](https://img.shields.io/pypi/pyversions/codimate)](https://pypi.org/project/codimate/)
 
-![Planets tracing helices around the Sun's path through the galaxy](docs/media/helical_solar_system.gif)
+![Planets tracing helices around the Sun's path through the galaxy](https://raw.githubusercontent.com/darhnoel/codimate/main/docs/media/helical_solar_system.gif)
 
 *Two seconds of [`helical_solar_system/`](https://github.com/darhnoel/codimate-examples/tree/main/helical_solar_system)*
 
@@ -298,7 +298,7 @@ and twice the same way.
 
 The Rust crates are the Engine. You do not need to read them to use Codimate,
 and the Rust API is not a second way to author explanations — see
-[ADR 0008](docs/adr/0008-python-authoring-surface.md).
+[ADR 0008](https://github.com/darhnoel/codimate/blob/main/docs/adr/0008-python-authoring-surface.md).
 
 ```text
 crates/codimate-core/      pure animation model — f(t) → Scene
@@ -318,16 +318,16 @@ with `python docs/build_site.py`.
 
 **The guide, in order.** Four chapters; read them front to back the first time.
 
-1. [Writing Your First Animation](docs/tutorial.md) — build one from an empty
+1. [Writing Your First Animation](https://github.com/darhnoel/codimate/blob/main/docs/tutorial.md) — build one from an empty
    file, meeting all four pieces on the way.
-2. [What You Have to Work With](docs/drawing.md) — the shapes, what they
+2. [What You Have to Work With](https://github.com/darhnoel/codimate/blob/main/docs/drawing.md) — the shapes, what they
    are enough for, and a car built out of them.
-3. [How Codimate Thinks](docs/concepts.md) — why motion is derived rather than
+3. [How Codimate Thinks](https://github.com/darhnoel/codimate/blob/main/docs/concepts.md) — why motion is derived rather than
    authored, and the one decision you have to make.
-4. [Reference](docs/reference.md) — every call and parameter, on one page.
+4. [Reference](https://github.com/darhnoel/codimate/blob/main/docs/reference.md) — every call and parameter, on one page.
 
 Then the worked examples, with notes, in [codimate-examples](https://github.com/darhnoel/codimate-examples), and
-[the decisions](docs/adr/) behind the design.
+[the decisions](https://github.com/darhnoel/codimate/tree/main/docs/adr) behind the design.
 
 ```bash
 cargo test                                  # the Engine
@@ -336,6 +336,6 @@ cargo test                                  # the Engine
 
 ## License
 
-[MIT](LICENSE). The fonts compiled into Codimate keep their own licenses —
+[MIT](https://github.com/darhnoel/codimate/blob/main/LICENSE). The fonts compiled into Codimate keep their own licenses —
 the SIL Open Font License, the DejaVu license and Apache 2.0 — listed in
-[`crates/codimate-fonts/fonts/LICENSES`](crates/codimate-fonts/fonts/LICENSES/README.md).
+[`crates/codimate-fonts/fonts/LICENSES`](https://github.com/darhnoel/codimate/blob/main/crates/codimate-fonts/fonts/LICENSES/README.md).
