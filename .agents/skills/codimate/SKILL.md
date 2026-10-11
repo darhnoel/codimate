@@ -13,8 +13,9 @@ repository, [codimate-examples](https://github.com/darhnoel/codimate-examples), 
 
 ## The model, in one paragraph
 
-You write ordinary Python and mark it with `@cm.trace()`. Call `cm.emit()`
-where something worth showing happens. A `view` function receives one moment
+You write ordinary Python that takes the state and an `emit`, and call
+`emit()` where something worth showing happens; `cm.trace(fn, state)` runs it
+and records what happened. A `view` function receives one moment
 and returns one `Scene`. Codimate pairs shapes between consecutive Scenes **by
 name** and turns whatever differs into movement. You never write a keyframe, a
 duration on a shape, or an interpolation.
@@ -26,21 +27,23 @@ are useful; choosing wrong gives a confusing video, not an error.
 ## Smallest complete example
 
 ```python
+import random
+
 import codimate as cm
 
 SIDES = ("heads", "tails")
+coin = random.Random(7)          # seeded: the same video every run
 
 
-@cm.trace()
-def flip(tally):
+def flip(tally, emit):
     for _ in range(20):
-        tally["heads" if coin() else "tails"] += 1
-        cm.emit("flip")          # after changing the data — it snapshots the result
+        tally[coin.choice(SIDES)] += 1
+        emit("flip")             # after changing the data — it snapshots the result
 
 
 def view(frame):
     scene = cm.Scene()
-    for slot, side in cm.row(SIDES, gap=120, w=190):
+    for slot, side in cm.row(SIDES, gap=120, size=190):
         bar = scene.group(side, slot)
         bar.rect("box", h=max(frame.state[side] * 22, 1),
                  at=cm.at(bottom=0)).fill("blue")
@@ -49,7 +52,7 @@ def view(frame):
 
 
 cm.explain(
-    trace=flip({"heads": 0, "tails": 0}),
+    trace=cm.trace(flip, {"heads": 0, "tails": 0}),
     view=view,
     timing=cm.Timing(default=0.35, opening=0.8, final_hold=2.0),
 ).render("results/coins.mp4", fps=60, scale=1.5)

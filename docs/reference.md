@@ -74,9 +74,6 @@ keeps its recorded level. `exp.sounds()` lists `(start, path)`, and
 `exp.mix_sound("x.wav")` writes the mix alone. Sound never enters a Scene
 (ADR 0007).
 
-The older form — `@cm.trace()` on a function calling a module-level `cm.emit`
-— still works and warns. It is removed in 0.2.
-
 ```python
 cm.items(values) -> list[Item]
 cm.Item(value, id=None)
@@ -782,4 +779,4 @@ view, it is in the wrong place.
 | `ValueError: two shapes share the name` | One name used twice in one Scene |
 | `ValueError: unknown path` | A `Rule` position that is not in the table above |
 | `ValueError: unknown color` | Not a name above or `#rrggbb` — raised at render |
-| `RuntimeError: emit() called outside a @trace function` | The old `cm.emit` outside `@cm.trace()` — take `emit` as an argument instead |
+| `AttributeError: module 'codimate' has no attribute 'emit'` | The old `cm.emit`, removed in 0.2 — take `emit` as an argument: `def algo(state, emit)` and `cm.trace(algo, state)` |

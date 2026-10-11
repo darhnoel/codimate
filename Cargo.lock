@@ -217,7 +217,7 @@ dependencies = [
 
 [[package]]
 name = "codimate-py"
-version = "0.1.5"
+version = "0.2.0"
 dependencies = [
  "codimate-animation",
  "codimate-core",

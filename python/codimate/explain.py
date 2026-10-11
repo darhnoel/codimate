@@ -616,7 +616,7 @@ def explain(
 ) -> Explanation:
     """Gather an algorithm, a view and a timing into something renderable.
 
-    ``trace`` is what a ``@cm.trace()``-marked function returns: the moments
+    ``trace`` is what ``cm.trace(fn, state)`` returns: the moments
     your algorithm passed through. ``view`` is called once per moment and
     returns the picture of it. ``motion`` and ``timing`` are optional —
     without them every shape travels in a straight line and every event lasts

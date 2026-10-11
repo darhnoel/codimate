@@ -13,8 +13,8 @@ encoding — happens in Rust (ADR 0008).
 
 ## What your algorithm did
 
-- `trace` — mark a function so Codimate can watch it run
-- `emit` — say that something worth showing just happened
+- `trace` — run your algorithm and record what it did; it hands the algorithm an
+  `emit`, to say that something worth showing just happened
 - `items` — a list whose entries keep their identity when they move
 - `Item`, `Event`, `Trace`, `Frame` — what your view is handed
 
@@ -56,11 +56,10 @@ from .explain import Explanation, Rule, Timing, ease, explain
 from .layout import (Axes, Place, Slot, at, axes, canvas, column, height, measure,
                      measure_math, ngon, row, star, width)
 from .scene import Group, Handle, Scene
-from .trace import Event, Frame, Item, Trace, emit, items, trace
+from .trace import Event, Frame, Item, Trace, items, trace
 
 __all__ = [
     # what happened
-    "emit",
     "trace",
     "items",
     "Item",

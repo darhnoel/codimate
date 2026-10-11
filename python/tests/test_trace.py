@@ -56,30 +56,15 @@ def test_a_frame_reports_what_just_happened():
     assert opening.items() == []
 
 
-def test_the_ambient_emit_is_rejected_outside_a_traced_function():
-    """The older `cm.emit` still works inside `@cm.trace()`, and nowhere else."""
+def test_the_old_decorator_and_the_ambient_emit_are_gone():
+    """`@cm.trace()` and module-level `cm.emit` were removed in 0.2, as 0.1.5 said."""
+    assert not hasattr(cm, "emit"), "cm.emit is gone: emit is an argument"
     try:
-        cm.emit("stray")
-    except RuntimeError:
+        cm.trace()
+    except TypeError:
         pass
     else:
-        raise AssertionError("cm.emit() outside a trace should be rejected")
-
-
-def test_the_old_decorator_still_works_and_says_it_is_going():
-    """Both forms work for one version. The old one warns."""
-    import warnings
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-
-        @cm.trace()
-        def older(values):
-            cm.emit("tick")
-
-        assert [w.category for w in caught] == [DeprecationWarning]
-
-    assert [e.name for e in older(cm.items([1])).events] == ["tick"]
+        raise AssertionError("cm.trace() with no function should be an error")
 
 
 def test_an_algorithm_is_ordinary_python():
