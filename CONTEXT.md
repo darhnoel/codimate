@@ -57,11 +57,15 @@ one Python file containing the four pieces — algorithm, view, motion, timing �
 and repeatedly rendering until the concept reads clearly. There is no module
 split to learn; a whole explanation fits in a single file.
 
-**The Guide**: The four chapters an Explanation Author reads in order —
-`docs/tutorial.md` (build one from an empty file), `docs/drawing.md` (what can
-be drawn), `docs/concepts.md` (why it is shaped this way), `docs/reference.md`
-(every call). Documentation-first: every command and every code block in them
-must run as written, and each is checked by extracting and executing it.
+**The Guide**: Five pages: Home, Concepts, Tutorial, Reference, API. Home
+introduces Codimate and leads to the first animation. Concepts explains the core
+ideas briefly. Tutorial changes one moving-ball program a little at a time.
+Reference covers tasks, defaults, and troubleshooting comprehensively. API
+is the complete public API page generated from the package docstrings, including
+public classes, functions, methods, signatures, and parameter documentation. Assume basic Python, but no animation
+knowledge. Keep the reading path simple and the language concrete.
+Documentation-first: complete programs must build valid scenes, and fragments
+must compile. Media export checks are separate and require authorization.
 
 **Onboarding Success Metric**: An Explanation Author can go from clone to first
 custom animation in less than 30 minutes via the Canonical Onboarding Workflow,

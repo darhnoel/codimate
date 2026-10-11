@@ -20,6 +20,7 @@ checkout and the docs build is Python-only.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -32,24 +33,32 @@ from pygments.formatters import HtmlFormatter
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 OUT = ROOT / "site"
+# This repository's own URLs, as the README writes them for PyPI.
+OWN_URLS = (
+    "https://raw.githubusercontent.com/darhnoel/codimate/main/",
+    "https://github.com/darhnoel/codimate/blob/main/",
+    "https://github.com/darhnoel/codimate/tree/main/",
+)
 
 # Order is the reading order, and it is also the nav. A page not listed here
 # is still built if something links to it — it just does not get a nav entry.
 NAV = [
     ("index.html", "Home"),
-    ("tutorial.html", "Tutorial"),
     ("concepts.html", "Concepts"),
-    ("drawing.html", "Drawing"),
+    ("tutorial.html", "Tutorial"),
     ("reference.html", "Reference"),
     ("api/codimate.html", "API"),
 ]
 
 PAGES = {
     ROOT / "README.md": "index.html",
-    DOCS / "tutorial.md": "tutorial.html",
     DOCS / "concepts.md": "concepts.html",
-    DOCS / "drawing.md": "drawing.html",
+    DOCS / "tutorial.md": "tutorial.html",
     DOCS / "reference.md": "reference.html",
+    # Keep existing guide URLs working, without adding navigation choices.
+    DOCS / "drawing.md": "drawing.html",
+    DOCS / "recipes.md": "recipes.html",
+    DOCS / "troubleshooting.md": "troubleshooting.html",
 }
 
 # Pygments paints the code blocks. Both themes are emitted and the dark one is
@@ -84,16 +93,29 @@ nav {{ max-width:min(860px, 92vw); margin:0 auto; display:flex; flex-wrap:wrap;
 nav a {{ color:var(--dim); text-decoration:none; }}
 nav a.here, nav a:hover {{ color:var(--ink); }}
 nav .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
-main {{ max-width:min(860px, 92vw); margin:0 auto; padding:2.5rem 0 6rem; }}
+.layout {{ max-width:min(860px, 92vw); margin:0 auto; }}
+main {{ min-width:0; padding:2.5rem 0 5rem; }}
+details {{ margin:1rem 0; }}
+summary {{ cursor:pointer; color:var(--dim); }}
+.contents {{ padding:1rem; background:var(--panel); border-radius:8px; }}
+.contents ul {{ padding-left:1.2rem; }}
 a {{ color:var(--link); }}
 h1, h2, h3 {{ line-height:1.25; margin:2.2rem 0 .8rem; }}
 h1 {{ font-size:2rem; margin-top:0; }}
 h2 {{ font-size:1.4rem; padding-top:.6rem; border-top:1px solid var(--line); }}
 h3 {{ font-size:1.1rem; }}
+h1, h2, h3 {{ scroll-margin-top:8rem; }}
 code {{ background:var(--panel); padding:.12em .35em; border-radius:4px;
         font-size:.88em; }}
 pre {{ background:var(--panel); border:1px solid var(--line); border-radius:8px;
        padding:1rem; overflow-x:auto; }}
+.codehilite {{ position:relative; }}
+.copy {{ position:absolute; top:.5rem; right:.5rem; border:1px solid var(--line);
+         background:var(--bg); color:var(--ink); border-radius:4px;
+         padding:.25rem .5rem; cursor:pointer; }}
+.codehilite pre {{ padding:1rem 5rem 1rem 1rem; }}
+.next {{ border-top:1px solid var(--line); margin-top:3rem; padding-top:1rem;
+         display:flex; justify-content:space-between; gap:1rem; }}
 pre code {{ background:none; padding:0; font-size:.85rem; line-height:1.55; }}
 table {{ border-collapse:collapse; width:100%; display:block; overflow-x:auto; }}
 th, td {{ border:1px solid var(--line); padding:.5rem .7rem; text-align:left; }}
@@ -105,7 +127,26 @@ img {{ max-width:100%; }}
 </style>
 </head><body>
 <header><nav>{nav}</nav></header>
-<main>{body}</main>
+<div class="layout"><main>{toc}{body}{next_page}</main></div>
+<script>
+document.querySelectorAll('.codehilite').forEach(block => {{
+  const button = document.createElement('button');
+  button.className = 'copy';
+  button.type = 'button';
+  button.textContent = 'Copy';
+  button.setAttribute('aria-label', 'Copy code to clipboard');
+  button.addEventListener('click', async () => {{
+    try {{
+      await navigator.clipboard.writeText(block.querySelector('code').textContent);
+      button.textContent = 'Copied';
+    }} catch {{
+      button.textContent = 'Select code to copy';
+    }}
+    setTimeout(() => {{ button.textContent = 'Copy'; }}, 2000);
+  }});
+  block.appendChild(button);
+}});
+</script>
 </body></html>
 """
 
@@ -126,13 +167,31 @@ def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
     # two built pages. Rewriting at this one point is why every guide can keep
     # linking the way it does when read on GitHub.
     def relink(m):
-        label, target = m.group(1), m.group(2)
+        image, label, target = m.group(1), m.group(2), m.group(3)
+        # The README links to this repository by absolute URL, because PyPI
+        # shows it on its own site where a relative path points nowhere. On
+        # the built site those are pages and media it carries, so they are
+        # taken back to repository paths and handled like any other.
+        for prefix in OWN_URLS:
+            if target.startswith(prefix):
+                inside = ROOT / target[len(prefix):].split("#")[0]
+                anchor = "#" + target.split("#", 1)[1] if "#" in target else ""
+                if inside.exists():
+                    target = os.path.relpath(inside, md_path.parent) + anchor
+                break
         if target.startswith(("http", "#", "mailto:")):
             return m.group(0)
         anchor = ""
         if "#" in target:
             target, anchor = target.split("#", 1)
             anchor = "#" + anchor
+        if image:
+            source = (md_path.parent / target).resolve()
+            if source.is_relative_to(DOCS / "media"):
+                media = source.relative_to(DOCS / "media")
+                return f"![{label}]({'../' * depth}media/{media}{anchor})"
+        if target.startswith("api/") and target.endswith(".html"):
+            return f"[{label}]({'../' * depth}{target}{anchor})"
         name = target.split("/")[-1]
         if name.endswith(".md"):
             page = PAGES.get((md_path.parent / target).resolve())
@@ -143,33 +202,52 @@ def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
         rel = (md_path.parent / target).resolve().relative_to(ROOT)
         return f"[{label}](https://github.com/darhnoel/codimate/blob/main/{rel}{anchor})"
 
-    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", relink, text)
+    text = re.sub(r"(!?)\[([^\]]+)\]\(([^)]+)\)", relink, text)
 
-    body = markdown.markdown(
-        text,
-        extensions=["fenced_code", "codehilite", "tables", "toc", "sane_lists"],
-        extension_configs={"codehilite": {"guess_lang": False}},
+    converter = markdown.Markdown(
+        extensions=["fenced_code", "codehilite", "tables", "toc",
+                    "sane_lists", "md_in_html"],
+        extension_configs={"codehilite": {"guess_lang": False},
+                           "toc": {"toc_depth": "2-3"}},
     )
+    body = converter.convert(text)
+    guides = NAV
+    position = next((i for i, (href, _) in enumerate(guides) if href == dest), None)
+    links = []
+    for i, prefix in (() if position is None or dest == "index.html" else
+                      ((position - 1, "Previous: "), (position + 1, "Next: "))):
+        if 0 <= i < len(guides):
+            href, label = guides[i]
+            links.append(f'<a href="{"../" * depth}{href}">{prefix}{label}</a>')
+    next_page = '<div class="next">' + "".join(links) + "</div>" if links else ""
+    toc = ('<details class="contents"><summary>Find a topic on this page</summary>'
+           + converter.toc + "</details>"
+           if dest == "reference.html" else "")
     title = re.search(r"^#\s+(.+)$", text, re.M)
     return SHELL.format(title=title.group(1) if title else "Codimate",
                         nav=nav_html(dest, depth), body=body,
-                        highlight=HIGHLIGHT)
+                        highlight=HIGHLIGHT, toc=toc,
+                        next_page=next_page)
 
 
 def main() -> int:
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
+    shutil.copytree(DOCS / "media", OUT / "media", dirs_exist_ok=True)
 
     for source, dest in PAGES.items():
-        (OUT / dest).write_text(to_html(source, dest))
+        (OUT / dest).parent.mkdir(parents=True, exist_ok=True)
+        depth = len(Path(dest).parts) - 1
+        (OUT / dest).write_text(to_html(source, dest, depth))
         print(f"  {dest}")
 
     # The API reference, straight from the docstrings.
     subprocess.run(
         [sys.executable, "-m", "pdoc", "-o", str(OUT / "api"),
          "-d", "google", "--no-include-undocumented", "--no-show-source",
-         "codimate"],
+         "codimate", "codimate.scene", "codimate.layout",
+         "codimate.preview", "codimate.index"],
         cwd=ROOT / "python", check=True,
         env={**__import__("os").environ, "PYTHONPATH": str(ROOT / "python")},
     )

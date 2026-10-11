@@ -1,165 +1,176 @@
-# How it works
+# Concepts
 
-Codimate connects **saved data** to **pictures**. It matches shapes between
-pictures and animates whatever changed.
+One ball, two moments: left, then right. Codimate makes the movement between them.
+Here are the main ideas, using that same ball each time.
 
-Read [First animation](tutorial.md) first if you have not run a program yet.
-This page explains the decisions you make when building a larger explanation.
+![A blue ball moving from left to right](media/ball.gif)
 
-## The four pieces
+## State: the data now
 
-| Piece | Your job | Example |
-| --- | --- | --- |
-| Algorithm | Calculate what happens and record important moments. | Increment a count, then `emit("counted")`. |
-| View | Draw one saved moment as a `Scene`. | Turn the count into a bar height. |
-| Motion | Choose the path for objects whose positions change. | Let swapped bars travel over each other. |
-| Timing | Decide how long events take in the video. | Give `"swap"` 0.9 seconds. |
-
-Motion is optional. The default path works for many explanations.
+State is the information your program works with. Our ball only needs an x position:
 
 ```python
-explanation = cm.explain(
-    trace=cm.trace(algorithm, initial_state),
-    view=view,
-    timing=cm.Timing(default=0.5),
-)
+state = {"x": 100}
 ```
 
-Here `algorithm`, `initial_state`, and `view` refer to your own function,
-data, and drawing function. This is a connection pattern, not a standalone program.
+## Algorithm: what changes
 
-## State, events, and scenes are different
-
-**State** is the data: a count, a list, a grid, or a simulation's values.
-An **event** names something that happened and includes a saved state.
-A **scene** is the drawing your view creates from that state.
+An algorithm is your Python logic. Ours changes the ball's position:
 
 ```python
-def count(state, emit):
-    state["count"] += 1
-    emit("counted", amount=1)
+state["x"] = 540
 ```
 
-For this event, the view can read:
+Codimate does not decide where a ball should go or calculate your physics.
+Your code does that.
+
+## Event: a moment worth saving
+
+Call `emit()` after a change you want to show:
 
 ```python
-value = frame.state["count"]       # the count after the increment
-amount = frame.event.data["amount"]  # extra information about this event
-finished = frame.is_("done")       # whether this event is named "done"
+state["x"] = 540
+emit("moved")
 ```
 
-The first view call uses the initial state and has no event. Check
-`frame.event` before accessing its data, or use `frame.is_()` and `frame.items()`,
-which handle the opening picture for you.
+`emit` is given to your algorithm as an argument. An event name such as `"moved"`
+says what happened; it does not identify a shape.
 
-Choose event names that describe your subject: `compare`, `swap`, `measure`,
-`add_sample`. The name also lets you assign a duration in `Timing`.
+## Trace: the saved moments
 
-## Names decide what moves
-
-A shape name answers: **is this the same object as in the previous picture?**
-
-| Between two scenes | Codimate's behavior |
-| --- | --- |
-| Same name, different position | Move the shape. |
-| Same name, different size or color | Animate that change. |
-| Name only in the new scene | Fade the shape in. |
-| Name only in the old scene | Fade the shape out. |
-
-Keep names stable. Use `"bar"`, not `f"bar-{count}"`, for one bar whose height
-changes. Names must also be unique within a scene.
-
-## Should a name follow an item or a position?
-
-For a sorting animation, the **item** moves. For a heatmap, the **cell** stays
-put while its value changes. Name the shapes accordingly.
-
-| Subject | Name follows | Typical name |
-| --- | --- | --- |
-| Sorting bars | Individual items | `item.id` |
-| Moving planets | Individual planets | `"earth"` |
-| Heatmap | Fixed cells | `("cell", row, col)` |
-| Growing tally | Categories | `"heads"`, `"tails"` |
-
-`cm.items()` gives values stable identities. Two equal values still represent
-two separate objects:
+A trace holds the starting data and a copy saved at each event:
 
 ```python
-values = cm.items([3, 1, 3])
-# Each item has .value and a different .id.
+trace = cm.trace(move, {"x": 100})
 ```
 
-Items compare by value, so ordinary sorting comparisons still work.
-Create the items before recording the trace, not again inside the view.
+For our ball, the trace saves **x=100 → x=540**. `move` is the function from the
+[tutorial](tutorial.md). It runs once, rather than once for each video frame.
 
-## Example: two items exchanging places
+## Frame: a saved moment handed to your view
 
-Save this complete program as `swap.py` and run `python swap.py`.
-The orange and blue circles exchange places, carrying their labels with them.
+Read its state to find where the ball belongs:
 
 ```python
-import codimate as cm
+x = frame.state["x"]
+```
 
+A `Frame` here is a saved moment from the trace, not every image in the exported
+video. The opening moment has no event: `frame.event` is `None`.
 
-def swap(values, emit):
-    values.reverse()
-    emit("swapped")
+## View: how to draw a moment
 
+The view is a function that turns saved data into a picture:
 
+```python
 def view(frame):
     scene = cm.Scene()
-    for slot, item in cm.row(frame.state, gap=180, size=120,
-                             at=cm.at(y=360)):
-        group = scene.group(item.id, slot)
-        group.circle("body", r=50).fill(
-            "orange" if item.value == "A" else "blue"
-        )
-        group.text("label", item.value, size=32).fill("white")
+    scene.circle("ball", r=30, at=(frame.state["x"], 180)).fill("blue")
     return scene
-
-
-cm.explain(
-    trace=cm.trace(swap, cm.items(["A", "B"])),
-    view=view,
-    timing=cm.Timing(default=1.0, opening=0.8, final_hold=1.0),
-).render("results/swap.mp4")
 ```
 
-Now try naming groups by their slot index instead of `item.id`. Each circle
-stays in its position while its color and label change. That is appropriate
-for a fixed grid, but it tells a different story from moving items.
+The same saved data should always give the same picture. Update the model in your
+algorithm; read it in the view.
 
-## Groups and slots
+## Scene: the picture
 
-A **slot** is a place to put something. It does not draw anything.
-A **group** gives several shapes a shared position and name prefix.
+A scene contains the shapes for one moment:
 
 ```python
-bar = scene.group(item.id, slot)
-bar.rect("body", h=item.value * 70, at=cm.at(bottom=0)).fill("blue")
-bar.text("label", item.value, size=28, at=cm.at(top=20))
+scene = cm.Scene()
+scene.circle("ball", r=30, at=(100, 180)).fill("blue")
 ```
 
-The bar and label share an item identity, so they travel together. Each child's
-position is relative to the group's point, rather than the canvas origin.
-See [Drawing and layout](drawing.md#use-local-coordinates-inside-a-group).
+You can put circles, rectangles, text, formulas, images, and more in a scene.
 
-## What Codimate calculates, and what you calculate
+## Names: how Codimate recognizes things
 
-You calculate the subject: a sorting decision, a planet's position, or a
-floating object's equilibrium. Your view maps those results to shapes.
-Codimate calculates the animation between the scenes you supply.
+Use `"ball"` in both pictures to say it is the same ball:
 
-It cannot verify your physics or fix a misleading mapping from data to shapes.
-Keep the view free of changes to the model: the same saved moment should
-produce the same picture each time.
+```python
+scene.circle("ball", r=30, at=(x, 180))
+```
 
-For continuous motion, record enough sample states to describe the path and use
-`linear` motion to avoid repeatedly slowing down between samples.
-[Motion recipes](recipes.md#choose-a-motion-path).
+Same name + different position = movement.
+A different name means a different thing, so it fades in or out instead.
+Each complete shape name must be unique in a scene.
 
-## Further reading
+## Items: separate things with their own names
 
-Use [Reference](reference.md) for signatures and defaults.
-Engine contributors can read [the architecture decisions](adr/) for the
-implementation model; animation authors do not need them to get started.
+Two balls can have the same value and still be different balls:
+
+```python
+balls = cm.items([30, 30])
+```
+
+Each item has a `.value` and a different `.id`. Use the ID as its shape name
+when the item should travel. Fixed chart bars can use category names instead.
+
+## Groups: parts that belong together
+
+A group lets a ball and its label travel together:
+
+```python
+ball = scene.group("ball", at=(x, 180))
+ball.circle("body", r=30).fill("blue")
+ball.text("label", "A", size=24)
+```
+
+Inside the group, `(0, 0)` means the group's point. Its shapes have complete
+names such as `ball/body` and `ball/label`.
+
+## Slots: places to put things
+
+A slot gives an object a place on the screen. It does not draw a shape:
+
+```python
+for slot, name in cm.row(("A", "B"), gap=80, size=100):
+    scene.group(name, slot).circle("body", r=30).fill("blue")
+```
+
+Think of two empty seats: the slots are the seats; the balls are what sits there.
+
+## Motion: which path to take
+
+Motion chooses how a shape travels between its saved positions:
+
+```python
+motion = [cm.Rule("*", position="linear")]
+```
+
+`linear` keeps the movement steady. The default `straight` slows down at the
+start and end. A rule only changes the path; the saved positions decide where to go.
+
+## Timing: how long it takes
+
+Timing sets seconds in the video:
+
+```python
+timing = cm.Timing(default=2.0)
+```
+
+Our ball's move takes two seconds. Python still runs the algorithm normally;
+it does not wait two seconds while recording the trace.
+
+## Explanation: put it all together
+
+An explanation connects the trace, view, motion, and timing:
+
+```python
+explanation = cm.explain(trace=trace, view=view, timing=timing)
+```
+
+The examples above are small pieces of the [complete tutorial program](tutorial.md),
+not separate scripts.
+
+## Render: make the video
+
+Rendering draws the in-between pictures and writes the file:
+
+```python
+explanation.render("ball.mp4")
+```
+
+You choose what changes. Codimate handles the pictures between your moments.
+
+[Try the tutorial →](tutorial.md)

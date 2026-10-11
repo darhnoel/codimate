@@ -12,6 +12,7 @@ Plain `assert` tests, no framework. One file per module of the package:
 | `test_index.py` | the compact index: written, read back, any beat in any order |
 | `test_preview.py` | the Previewer: running a script without rendering it, and asking what is on screen |
 | `test_docs.py` | every code block in the guide still runs |
+| `test_doc_programs.py` | guide programs build scenes and snippets compile without exporting media |
 
 Run the lot:
 
@@ -37,11 +38,11 @@ frozen. That repository is where the end-to-end rendering of every example lives
 `test_docs.py` still renders the guide's complete programs, so the path from view to
 video is covered.
 
-`test_docs.py` extracts every `python` block from the README and the four
-guide chapters. A block that imports codimate and calls `.render(` is run as
-written, which is why a full test run leaves the guide's own videos in
-`results/`. Everything else is compiled, so a typo in a
-snippet fails here rather than in a reader's terminal.
+The documentation checks discover every `python` block in the README and
+top-level Markdown guides. The fast suite captures complete programs before
+export and constructs their scenes; it also compiles usage fragments.
+With `--all`, `test_docs.py` additionally exports complete programs in temporary
+folders to check the rendering pipeline without overwriting existing videos.
 
 A test's name should say what must be true, so a failure reads as a sentence:
 `test_a_group_moves_as_one_thing`, not `test_group_2`.

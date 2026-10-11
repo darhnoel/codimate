@@ -283,7 +283,7 @@ class Group:
 
         The result is glyph outlines, not a font — so it moves, fades and
         recolours like any other shape, and is typeset once when the video is
-        built. Needs the `typst` binary on PATH, the way rendering needs
+        built. Needs the `typst` binary on PATH. Rendering uses the bundled
         `ffmpeg`.
         """
         x, y = self._where(at, size / 2)
@@ -480,8 +480,8 @@ class Group:
         """A place to draw a thing made of several shapes.
 
             bar = scene.group(item.id, slot)
-            bar.rect("bar", h=item.value * 70, bottom=0)
-            bar.text("label", item.value, top=20)
+            bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
+            bar.text("label", item.value, at=cm.at(top=20))
 
         Give it a Slot and it sits where the Slot says, or place it with ``at``
         like any shape. Inside it, ``0`` is that point, and everything drawn on
@@ -619,8 +619,9 @@ class Scene(Group):
     """The picture at one moment. No animation, no timing, no memory of the
     frame before.
 
-    Draw on it with the shapes it inherits from `Group` — `rect`, `circle`,
-    `text`, `line`, `formula` — and `group` to put several of them together.
+    Draw on it with the shapes it inherits from `Group`: `Group.rect`,
+    `Group.circle`, `Group.text`, `Group.line`, and `Group.formula`.
+    Use `Group.group` to put several shapes together.
 
     Every shape carries a name — the identity of the thing you are talking
     about. **Motion is implied by identity:** the Engine pairs shapes by name

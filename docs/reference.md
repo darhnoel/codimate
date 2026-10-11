@@ -1,9 +1,26 @@
 # Reference
 
-Chapter 4 of [the guide](../README.md#more). Every call and parameter, on one
-page. For the walkthrough see [Writing Your First Animation](tutorial.md), for
-what the shapes are enough for see [What You Have to Work With](drawing.md),
-and for the ideas underneath see [How Codimate Thinks](concepts.md).
+Use this page when you want to do something specific. It covers drawing, layout,
+motion, sound, output, and setup. For your first animation, start with the
+[Tutorial](tutorial.md). For public classes, functions, and signatures, open the [API](api/codimate.html).
+
+Signature blocks show argument names and defaults; they are not programs to
+paste into a file. Examples below them show how to use the calls.
+
+| You need to | Go to |
+| --- | --- |
+| Connect a trace and a view, export video | [Build and export an animation](#putting-it-together) |
+| Record events and read saved data | [Record moments and add sound](#what-happened), [Read a saved moment](#one-moment) |
+| Draw shapes and set styles | [Draw shapes, text, and images](#drawing), [Style a shape](#the-handle) |
+| Position objects and arrange rows | [Place a shape](#placement), [Arrange rows and columns](#where-things-sit) |
+| Plot functions or label scientific diagrams | [Graphs](#graphs), [Draw scientific diagrams](#the-science-kit) |
+| Change movement and event durations | [Choose how things move](#motion), [Set how long a change takes](#timing) |
+| Inspect pictures, audio, or previews | [Inspect your output](#looking-at-what-you-made), [Preview and inspect an animation](#the-previewer) |
+| Install or fix a command | [Setup help](#setup-help) |
+| Keep a label with its ball | [Complete labeled-ball example](#a-complete-example-add-a-label) |
+
+In the usage snippets, `scene`, `frame`, and `explanation` refer to objects in
+your own program. File-based snippets require you to supply the named assets.
 
 ```python
 import codimate as cm
@@ -11,17 +28,20 @@ import codimate as cm
 
 ---
 
-## Putting it together
+<a id="putting-it-together"></a>
+
+## Build and export an animation
 
 ```python
 cm.explain(*, trace, view, motion=None, timing=None) -> Explanation
 ```
 
-The four pieces. `motion` is a list of `Rule`; omit it and everything travels
-in a straight line.
+Pass the trace of saved data and a view that draws it. `motion` is an optional
+list of Rules; omit it for straight paths that ease in and out. Omit `timing`
+to use the default Timing. The result is an Explanation.
 
 ```python
-Explanation.render(output, *, fps=30, scale=1.0) -> str
+Explanation.render(output, *, fps=30, scale=1.0, index="auto") -> str
 ```
 
 Draws every frame and writes the video. **Resolution is a render argument, not
@@ -34,11 +54,16 @@ rasterized at the larger size, not upscaled.
 .render("out.mp4", fps=60, scale=1.5) # 1080p60
 ```
 
-The folder is created if it does not exist. `ffmpeg` must be on your PATH.
+The folder is created if it does not exist. The Python package includes FFmpeg;
+you do not need to install it separately. `index="auto"` also writes a compact
+`.index.bin` file for the previewer. Use `index=False` to skip that file or
+`index="json"` to write a readable index.
 
 ---
 
-## What happened
+<a id="what-happened"></a>
+
+## Record moments and add sound
 
 ```python
 cm.trace(fn, state, *, snapshot=None) -> Trace
@@ -59,8 +84,8 @@ arrives in the view as `frame.event.data`.
 `emit` is an argument rather than something ambient, so your algorithm stays
 ordinary Python: `bubble_sort(values, print)` runs it and prints the events.
 
-**`sound=` is the one piece of data Codimate reads itself.** A path to an
-audio file starts it as that event's beat begins:
+**Add sound to a moment:** a path in `sound=` starts an audio clip as that
+event begins. `subtitle=` and `chapter=` also carry playback information:
 
 ```python
 emit("said", sound="audio/said.mp3")
@@ -87,7 +112,9 @@ need it.
 
 ---
 
-## One moment
+<a id="one-moment"></a>
+
+## Read a saved moment
 
 The view is called once per event with a `Frame`, and returns a `Scene`.
 
@@ -102,7 +129,9 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 
 ---
 
-## Drawing
+<a id="drawing"></a>
+
+## Draw shapes, text, and images
 
 `Scene` is the root; every method below exists on `Scene` and on any `Group`.
 
@@ -125,7 +154,7 @@ scene.overlay() -> Group                        # what the camera does not move
 
 Each shape takes the few things that decide **what it is** — a radius, a
 height, some words. Everything else is said afterwards, on the Handle it hands
-back. No call takes more than five arguments; a shape used to take eighteen.
+back. Set position with `at` and appearance with the returned Handle.
 
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
 
@@ -172,7 +201,9 @@ animates the move. `least` is the smallest thing it will fill the frame with.
 Anything drawn on an `overlay` stays where it is put — titles and captions
 belong there, since a caption that zooms with the diagram ends up off the edge.
 
-## The Handle
+<a id="the-handle"></a>
+
+## Style a shape
 
 A shape call returns a `Handle`. Saying more about the shape is a chained call,
 and each one returns the handle again:
@@ -215,9 +246,11 @@ Give `pen` a stroke width and it is *drawn* instead of faded: a pen traces each
 glyph's outline and the solid letter fills in behind it as the pen moves on.
 Both live on the handle: `.write(reveal=1.0, pen=2.2)`. Pass a raw string —
 `r"\frac{a}{b}"` — or every backslash needs doubling. `size` means what it means for `text`. It needs the
-`typst` binary on PATH, the way rendering needs `ffmpeg`.
+`typst` binary on PATH. You only need it when drawing formulas.
 
-## Placement
+<a id="placement"></a>
+
+## Place a shape
 
 Where a shape goes is **one argument**, `at`. It takes a plain point, a `Slot`
 from `cm.row`/`cm.column`, or `cm.at(...)` when you want an edge:
@@ -277,7 +310,9 @@ size, colour or position **tween**. You ask for none of it.
 
 ---
 
-## Where things sit
+<a id="where-things-sit"></a>
+
+## Arrange rows and columns
 
 ```python
 cm.canvas(w, h) -> None      # default 1280x720; call before building anything
@@ -368,7 +403,9 @@ scene.text("label", label, size=30, at=(x, y))
 The height is the line height, so it is the same for `"cat"` and `"Qgy"` and a
 row of boxes lines up instead of jittering with whatever letters it holds.
 
-## The science kit
+<a id="the-science-kit"></a>
+
+## Draw scientific diagrams
 
 ```python
 from codimate import science        # also reachable as cm.science
@@ -556,7 +593,9 @@ do; the rest needs a depth buffer the Engine does not have. See
 [ADR 0016](./adr/0016-axes-that-hand-back-pixels.md) and
 [ADR 0019](./adr/0019-a-science-kit-that-draws-flat.md).
 
-## Motion
+<a id="motion"></a>
+
+## Choose how things move
 
 ```python
 cm.Rule(pattern, position="straight", **options)
@@ -589,7 +628,9 @@ It calls into the Engine, so it cannot drift from what your animation does.
 
 ---
 
-## Looking at what you made
+<a id="looking-at-what-you-made"></a>
+
+## Inspect your output
 
 ```python
 exp = cm.explain(trace=..., view=..., timing=...)
@@ -651,7 +692,9 @@ file: it answers from the scenes it already holds. See
 [ADR 0018](adr/0018-a-previewer-that-reads-an-index.md) and
 [ADR 0020](adr/0020-a-compact-index.md).
 
-## Covered labels
+<a id="covered-labels"></a>
+
+## Check covered labels
 
 `render` checks every Trace Event for a label something is drawn on, and says
 so when it has finished:
@@ -674,7 +717,9 @@ title letter by letter, is reported every time, by design. Each collision is
 reported once, where it starts. `exp.covered()` returns the same list without
 rendering. See [ADR 0017](adr/0017-a-check-that-says-a-label-is-covered.md).
 
-## The Previewer
+<a id="the-previewer"></a>
+
+## Preview and inspect an animation
 
 ```bash
 python -m codimate.preview archimedes/main.py km    # from codimate-examples
@@ -747,7 +792,9 @@ ends.
 The page is Preact, with no build step: its libraries are vendored under
 `python/codimate/viewer/vendor/` and loaded as plain modules.
 
-## Timing
+<a id="timing"></a>
+
+## Set how long a change takes
 
 ```python
 cm.Timing(*, default=0.6, events=None, opening=0.8, final_hold=1.2)
@@ -765,7 +812,9 @@ view, it is in the wrong place.
 
 ---
 
-## When something looks wrong
+<a id="when-something-looks-wrong"></a>
+
+## Fix common problems
 
 | What you see | Why |
 |---|---|
@@ -774,9 +823,73 @@ view, it is in the wrong place.
 | Part of a thing moves without the rest | Draw it on one `scene.group()` |
 | It surges and stalls once per event | Use `position="linear"` |
 | Everything jumps at the start of a step | Consecutive moments differ by more than one event; `emit()` more often |
-| `ValueError: unknown kind` | Codimate draws `rect`, `circle`, `text`, `line` |
+| `ValueError: unknown kind` | Use a supported shape builder, such as `scene.circle()`; do not invent a primitive kind |
 | `ValueError: give only one of x=, left=, right=` | Two anchors on one axis |
 | `ValueError: two shapes share the name` | One name used twice in one Scene |
 | `ValueError: unknown path` | A `Rule` position that is not in the table above |
 | `ValueError: unknown color` | Not a name above or `#rrggbb` — raised at render |
 | `AttributeError: module 'codimate' has no attribute 'emit'` | The old `cm.emit`, removed in 0.2 — take `emit` as an argument: `def algo(state, emit)` and `cm.trace(algo, state)` |
+
+
+## Setup help
+
+Use Python 3.9 or newer. Install into the same Python environment that runs your
+script:
+
+```bash
+python --version
+python -m pip install codimate
+python ball.py
+```
+
+If your computer uses `python3`, use it for all three commands.
+If you see `ModuleNotFoundError: codimate`, check that installation and execution
+use the same environment. A virtual environment keeps that simple:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install codimate
+python ball.py
+```
+
+On Windows, activate with `.venv\Scripts\activate` instead. Save `ball.py` before
+running it, and run the command from the folder that contains it.
+
+The installed package includes the rendering engine and FFmpeg. No Rust setup
+or repository clone is needed. Formula drawing additionally needs
+[Typst](https://typst.app/); ordinary shapes and text do not.
+
+## A complete example: add a label
+
+This is the tutorial's ball with a label that travels with it. Save it as
+`labeled_ball.py` and run `python labeled_ball.py`.
+
+```python
+import codimate as cm
+
+cm.canvas(640, 360)
+
+
+def move(state, emit):
+    state["x"] = 540
+    emit("moved")
+
+
+def view(frame):
+    scene = cm.Scene()
+    ball = scene.group("ball", at=(frame.state["x"], 180))
+    ball.circle("body", r=30).fill("blue")
+    ball.text("label", "A", size=24)
+    return scene
+
+
+cm.explain(
+    trace=cm.trace(move, {"x": 100}),
+    view=view,
+    timing=cm.Timing(default=2.0, opening=0.5, final_hold=0.5),
+).render("labeled_ball.mp4")
+```
+
+The circle and letter share the group's position. Their names stay the same in
+both moments, so both move together.

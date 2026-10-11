@@ -16,8 +16,8 @@ def measure(text: str, size: float = 16.0) -> tuple[float, float]:
     For drawing a box around a label without guessing::
 
         w, h = cm.measure(label, size=30)
-        scene.rect("box", x=x, y=y, w=w + 24, h=h + 12, radius=6)
-        scene.text("label", label, x=x, y=y, size=30)
+        scene.rect("box", w=w + 24, h=h + 12, at=(x, y)).round(6)
+        scene.text("label", label, size=30, at=(x, y))
 
     Measured by the engine with the real fonts, including fallback, so it is
     right for Khmer and anything else that is not plain ASCII — which is why
@@ -32,7 +32,7 @@ def measure(text: str, size: float = 16.0) -> tuple[float, float]:
 
 
 def ngon(sides: int, r: float, at=(0.0, 0.0), turn: float = 0.0) -> list:
-    """The corners of a regular polygon, for :meth:`Scene.polygon`.
+    """The corners of a regular polygon, for `Group.polygon`.
 
         scene.polygon("tri", cm.ngon(3, r=60, at=(640, 360)))
 
@@ -56,9 +56,9 @@ def ngon(sides: int, r: float, at=(0.0, 0.0), turn: float = 0.0) -> list:
 
 def star(points: int, r: float, inner: float = None, at=(0.0, 0.0),
          turn: float = 0.0) -> list:
-    """The corners of a star, for :meth:`Scene.polygon`.
+    """The corners of a star, for `Group.polygon`.
 
-        scene.polygon("s", cm.star(5, r=80, at=(640, 360)), color="yellow")
+        scene.polygon("s", cm.star(5, r=80, at=(640, 360))).fill("yellow")
 
     ``inner`` is the radius of the valleys; it defaults to a proportion that
     looks like a star rather than a gear.

@@ -50,7 +50,7 @@ shapes do not. Follow [the formula recipe](recipes.md#add-a-formula).
 | A curve or polygon jumps between states | Does its point count change? | Keep the point count fixed across events. |
 | Unknown-color error | Is the name supported? | Use a documented color or `#rrggbb`. |
 
-Read [How names work](concepts.md#names-decide-what-moves) and
+Read [How names work](concepts.md#names-how-codimate-recognizes-things) and
 [coordinate placement](drawing.md#place-a-shape) for worked explanations.
 
 ## The result is not where you expected
