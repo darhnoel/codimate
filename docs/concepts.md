@@ -1,250 +1,165 @@
-# How Codimate Thinks
+# How it works
 
-Chapter 3 of [the guide](../README.md#more). By now you have built an animation
-and know what you can draw. This chapter is about why the library is shaped the
-way it is, and it is worth reading before you write anything substantial.
+Codimate connects **saved data** to **pictures**. It matches shapes between
+pictures and animates whatever changed.
 
-Codimate is fastest when you do not start by drawing frames.
+Read [First animation](tutorial.md) first if you have not run a program yet.
+This page explains the decisions you make when building a larger explanation.
 
-Start with the concept:
+## The four pieces
 
-```text
-State → Algorithm → Trace → View → Scene → Timing → Video
-```
+| Piece | Your job | Example |
+| --- | --- | --- |
+| Algorithm | Calculate what happens and record important moments. | Increment a count, then `emit("counted")`. |
+| View | Draw one saved moment as a `Scene`. | Turn the count into a bar height. |
+| Motion | Choose the path for objects whose positions change. | Let swapped bars travel over each other. |
+| Timing | Decide how long events take in the video. | Give `"swap"` 0.9 seconds. |
 
-```python
-cm.explain(
-    trace=cm.trace(merge_sort, cm.items([38, 27, 43, 3, 9, 82, 10, 15])),
-    view=merge_sort_view,
-    motion=[cm.Rule("*", position="lift_carry_drop")],
-    timing=cm.Timing(default=0.5, events={"merge": 0.9}),
-).render("merge_sort.mp4")
-```
-
-Change the data or the algorithm and the video regenerates from the concept,
-instead of being manually re-edited. That is the whole point: the video cannot
-drift from the code it describes, because a human never decides what the
-picture shows.
-
-## Why This Works
-
-The One Law is still:
-
-```text
-f(t) → Scene
-```
-
-The authoring model explains where `f` comes from:
-
-```text
-algorithm:  State → Trace
-view:       State + Trace Event → Scene
-motion:     which items travel, and along what path
-timing:     Trace Event → duration
-```
-
-Nothing you write knows what a frame is. The Engine composes those four pieces
-into a pure function of time, and a frame is computed from scratch at `t` —
-never played forward, never accumulated. Any moment can be rendered in any
-order, and twice the same way.
-
-## Motion Is Derived, Not Authored
-
-This is the idea that makes the Python surface small.
-
-In a keyframe tool you say *"move this bar from here to there over 0.6s."* In
-Codimate you never say that. You describe two moments, and the Engine works out
-what changed:
-
-```text
-scene at event i        scene at event i+1
-     3 at x=420  ─────▶  3 at x=550     "3 travelled"
-     1 at x=550  ─────▶  1 at x=420     "1 travelled"
-     4 at x=680  ─────▶  4 at x=680     "4 stayed"
-```
-
-Whatever differs becomes a tween — position, size, colour, opacity. Whatever
-matches holds. A shape present in only one of the two moments fades.
-
-**The cost of this trade is identity.** The Engine can only pair shapes it can
-recognise across two moments, and the only thing it has to go on is the name
-you gave them.
-
-## Identity: The One Decision
-
-Every shape carries a name — the identity of the thing you are talking about,
-not an arbitrary id.
+Motion is optional. The default path works for many explanations.
 
 ```python
-scene.group(item.id, slot)              # keyed by the thing
-scene.group(("cell", row, col), slot)   # keyed by the place
-```
-
-| Keyed by | The Engine sees | The viewer sees |
-|---|---|---|
-| **the thing** | item 3 moved from x=420 to x=550 | the bar **slides across** |
-| **the place** | slot 0 stayed at x=420 and got shorter | bars **morph in place** |
-
-Both are correct for different explanations. Sorting, routing, and anything
-where a *thing* travels wants identity keyed to the thing. A heatmap, a
-progress bar, or a grid of cells wants identity keyed to the position, because
-the cell is the thing and the value is just its state.
-
-The Engine cannot check this. A wrong choice is not an error, it is a
-confusing video. When an explanation reads badly, this is the first thing to
-look at.
-
-A corollary: **names must be stable.** If a name changes between moments, the
-Engine sees one thing leave and a different thing arrive, and fades them
-instead of moving anything.
-
-`cm.items()` exists for the first case. A bare `3` cannot be an identity —
-two 3s in a list are two different bars, and only a wrapper can say so. An
-Item compares by value, so the algorithm stays ordinary Python, and is equal
-by id, so it survives the snapshot taken at every event. The second case needs
-nothing: `("cell", row, col)` is already unique and already stable.
-
-## Groups: A Thing Made Of Several Shapes
-
-A bar is a rectangle *and* a label. If those are two independent names, they
-are two independent things, and a motion rule can pull them apart — the bar
-arcs over while the label slides underneath.
-
-A Group makes that unrepresentable:
-
-```python
-bar = scene.group(item.id, slot)
-bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
-bar.text("label", item.value, at=cm.at(top=20))
-```
-
-The Engine sees `3/bar` and `3/label` — one name, two shapes. Whatever the
-group does, both do.
-
-**Inside a Group, `0` is the Group's own point.** Nothing is inherited from the
-parent and nothing is decided implicitly; `bottom=0` and `top=20` say exactly
-where they mean, and the same rule holds at any depth of nesting.
-
-## The Four Pieces
-
-### Algorithm — State → Trace
-
-Write the real logic. Call `emit()` after you change your data; the Trace
-records a snapshot of the result.
-
-```python
-def bubble_sort(values, emit):
-    for i in range(len(values)):
-        for j in range(len(values) - 1 - i):
-            emit("compare", items=[values[j], values[j + 1]])
-            if values[j] > values[j + 1]:
-                values[j], values[j + 1] = values[j + 1], values[j]
-                emit("swap", items=[values[j], values[j + 1]])
-```
-
-The View does not invent concept logic. If the picture needs to know something,
-the Algorithm should have emitted it.
-
-### View — State + Trace Event → Scene
-
-One moment, one picture. Pure: no timing, no memory of the moment before, no
-knowledge of frames.
-
-```python
-def bars(frame):
-    scene = cm.Scene()
-    active = frame.items()
-    for slot, item in cm.row(frame.state, gap=40):
-        bar = scene.group(item.id, slot)
-        bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0)) \
-           .fill("orange" if item in active else "blue")
-        bar.text("label", item.value, at=cm.at(top=20))
-    return scene
-```
-
-`cm.row()` divides the canvas into one **Slot** per item. A Slot is a place,
-not a shape — nothing draws it, and it holds no identity. Slots are where
-things sit; Items are what things are. Keeping those separate is what lets a
-bar move from one Slot to another without becoming a different bar.
-
-The View runs **once per Trace Event**, not once per frame. A 60-second video
-is 1800 frames but perhaps 50 events, so the View can be as slow as it likes.
-That asymmetry is the reason Python is the authoring language at all.
-
-### Motion — which items travel, and how
-
-Timeless. Patterns matched against shape names, first match wins. A shape in
-a group is named `group/child`, so `"3/*"` targets one group.
-
-```python
-motion=[
-    cm.Rule("*", position="lift_carry_drop", clearance=90),
-]
-```
-
-Motion contains no durations. It also cannot make something move that did not
-move — a rule only shapes the path of a shape whose position actually changed.
-
-### Timing — Trace Event → duration
-
-Pacing lives here and nowhere else. If a duration appears in your algorithm or
-your view, it is in the wrong place.
-
-```python
-timing=cm.Timing(
-    default=0.55,
-    events={"swap": 0.9, "done": 0.6},
-    opening=0.8,
-    final_hold=1.2,
+explanation = cm.explain(
+    trace=cm.trace(algorithm, initial_state),
+    view=view,
+    timing=cm.Timing(default=0.5),
 )
 ```
 
-Durations are keyed by event **name**, which is why naming events well pays off
-twice.
+Here `algorithm`, `initial_state`, and `view` refer to your own function,
+data, and drawing function. This is a connection pattern, not a standalone program.
 
-## Good Trace Events
+## State, events, and scenes are different
 
-Good events come from the concept:
+**State** is the data: a count, a list, a grid, or a simulation's values.
+An **event** names something that happened and includes a saved state.
+A **scene** is the drawing your view creates from that state.
 
-- `compare(a, b)`
-- `swap(a, b)`
-- `choose_pivot(index)`
-- `compute_cell(row, col)`
-- `fire_to_hidden(hidden)`
+```python
+def count(state, emit):
+    state["count"] += 1
+    emit("counted", amount=1)
+```
 
-Weak events come from video editing:
+For this event, the view can read:
 
-- `show_box_at_frame_12`
-- `move_thing_for_two_seconds`
-- `make_it_blue_now`
-- `keyframe_3`
+```python
+value = frame.state["count"]       # the count after the increment
+amount = frame.event.data["amount"]  # extra information about this event
+finished = frame.is_("done")       # whether this event is named "done"
+```
 
-If the event would still make sense in a *written* explanation of the concept,
-it probably belongs in the Trace.
+The first view call uses the initial state and has no event. Check
+`frame.event` before accessing its data, or use `frame.is_()` and `frame.items()`,
+which handle the opening picture for you.
 
-## Build A New Explanation
+Choose event names that describe your subject: `compare`, `swap`, `measure`,
+`add_sample`. The name also lets you assign a duration in `Timing`.
 
-1. Name the concept.
-2. Write the Algorithm as real logic.
-3. `emit()` the moments worth showing, and name them for what they mean.
-4. Decide what each thing on screen **is** — that decides your names, and
-   whether you need `cm.items()`.
-5. Write the View for one moment.
-6. Add Motion only where a straight line is not enough.
-7. Put durations in Timing.
+## Names decide what moves
 
-## Guardrails
+A shape name answers: **is this the same object as in the previous picture?**
 
-- The final animation still obeys `f(t) → Scene`.
-- The Algorithm produces the Trace; the View does not invent concept logic.
-- The View is pure — same frame in, same Scene out, every time.
-- Motion has no duration. Timing owns duration.
-- Names are stable and mean something; a thing made of parts is one Group.
-- Renderer and export concerns stay in the Engine, out of the authoring model.
+| Between two scenes | Codimate's behavior |
+| --- | --- |
+| Same name, different position | Move the shape. |
+| Same name, different size or color | Animate that change. |
+| Name only in the new scene | Fade the shape in. |
+| Name only in the old scene | Fade the shape out. |
 
-## Under The Hood
+Keep names stable. Use `"bar"`, not `f"bar-{count}"`, for one bar whose height
+changes. Names must also be unique within a scene.
 
-The Rust crates are the Engine, not a second way to author explanations. The
-split is per-event versus per-frame — see
-[ADR 0008](./adr/0008-python-authoring-surface.md) for why, and
-[CONTEXT.md](../CONTEXT.md) for the vocabulary.
+## Should a name follow an item or a position?
+
+For a sorting animation, the **item** moves. For a heatmap, the **cell** stays
+put while its value changes. Name the shapes accordingly.
+
+| Subject | Name follows | Typical name |
+| --- | --- | --- |
+| Sorting bars | Individual items | `item.id` |
+| Moving planets | Individual planets | `"earth"` |
+| Heatmap | Fixed cells | `("cell", row, col)` |
+| Growing tally | Categories | `"heads"`, `"tails"` |
+
+`cm.items()` gives values stable identities. Two equal values still represent
+two separate objects:
+
+```python
+values = cm.items([3, 1, 3])
+# Each item has .value and a different .id.
+```
+
+Items compare by value, so ordinary sorting comparisons still work.
+Create the items before recording the trace, not again inside the view.
+
+## Example: two items exchanging places
+
+Save this complete program as `swap.py` and run `python swap.py`.
+The orange and blue circles exchange places, carrying their labels with them.
+
+```python
+import codimate as cm
+
+
+def swap(values, emit):
+    values.reverse()
+    emit("swapped")
+
+
+def view(frame):
+    scene = cm.Scene()
+    for slot, item in cm.row(frame.state, gap=180, size=120,
+                             at=cm.at(y=360)):
+        group = scene.group(item.id, slot)
+        group.circle("body", r=50).fill(
+            "orange" if item.value == "A" else "blue"
+        )
+        group.text("label", item.value, size=32).fill("white")
+    return scene
+
+
+cm.explain(
+    trace=cm.trace(swap, cm.items(["A", "B"])),
+    view=view,
+    timing=cm.Timing(default=1.0, opening=0.8, final_hold=1.0),
+).render("results/swap.mp4")
+```
+
+Now try naming groups by their slot index instead of `item.id`. Each circle
+stays in its position while its color and label change. That is appropriate
+for a fixed grid, but it tells a different story from moving items.
+
+## Groups and slots
+
+A **slot** is a place to put something. It does not draw anything.
+A **group** gives several shapes a shared position and name prefix.
+
+```python
+bar = scene.group(item.id, slot)
+bar.rect("body", h=item.value * 70, at=cm.at(bottom=0)).fill("blue")
+bar.text("label", item.value, size=28, at=cm.at(top=20))
+```
+
+The bar and label share an item identity, so they travel together. Each child's
+position is relative to the group's point, rather than the canvas origin.
+See [Drawing and layout](drawing.md#use-local-coordinates-inside-a-group).
+
+## What Codimate calculates, and what you calculate
+
+You calculate the subject: a sorting decision, a planet's position, or a
+floating object's equilibrium. Your view maps those results to shapes.
+Codimate calculates the animation between the scenes you supply.
+
+It cannot verify your physics or fix a misleading mapping from data to shapes.
+Keep the view free of changes to the model: the same saved moment should
+produce the same picture each time.
+
+For continuous motion, record enough sample states to describe the path and use
+`linear` motion to avoid repeatedly slowing down between samples.
+[Motion recipes](recipes.md#choose-a-motion-path).
+
+## Further reading
+
+Use [Reference](reference.md) for signatures and defaults.
+Engine contributors can read [the architecture decisions](adr/) for the
+implementation model; animation authors do not need them to get started.

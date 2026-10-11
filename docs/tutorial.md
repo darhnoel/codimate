@@ -1,351 +1,200 @@
-# Writing Your First Animation
+# First animation
 
-Let's build something together. Over the next few pages you'll write a complete
-Codimate program from an empty file: one that flips a coin twenty times and
-shows the running tally rise as each flip lands.
+Build a chart that grows as a Python loop updates its data.
+By the end, you will know where to put your logic, drawing, and timing.
 
-It's a small thing to animate, and that's deliberate. What matters is that by
-the end you'll have met all four pieces every Codimate program is made from,
-and you'll have seen the idea the whole library rests on. You never describe
-movement. You describe moments, and Codimate works out the movement between
-them.
+**Before you start:** install Codimate with `python -m pip install codimate`.
+Use any working folder; a repository checkout is unnecessary.
 
-## Setting Up
+## 1. Record a few changes
 
-If you haven't installed Codimate yet, `pip install codimate` is the whole of
-it — see [the install steps](../README.md#install) for what `ffmpeg` and
-`typst` are for.
+Start a file named `counter.py`. This function is ordinary Python:
 
-Create a file called `coins.py` in the repository root, alongside `README.md`.
-Run every command in this chapter from that folder, so your video lands in
-`results/` with the others.
+```python
+def count(state, emit):
+    for value in range(1, 6):
+        state["count"] = value
+        emit("counted")
+```
 
-## The Shape of a Codimate Program
+`state` is a dictionary containing the current count. `emit` is a function
+Codimate passes to your algorithm. Calling it saves a moment worth showing.
 
-Before we animate anything, let's get the smallest possible program running.
-This gives us something to build on, and it proves your installation works
-before we add anything that could obscure a problem.
+**Change the state first, then call `emit()`.** Otherwise the saved moment
+contains the old value.
 
-Type this into `coins.py`:
+The event name `"counted"` describes what happened. It is separate from the
+names of shapes you will draw.
+
+## 2. Draw one saved moment
+
+Add a function called `view`:
+
+```python
+def view(frame):
+    scene = cm.Scene()
+    value = frame.state["count"]
+    scene.rect("bar", w=160, h=max(value * 70, 1),
+               at=cm.at(x=640, bottom=550)).fill("blue")
+    scene.text("label", f"Count: {value}", size=36,
+               at=(640, 610)).fill("white")
+    return scene
+```
+
+A `Scene` is the picture for this moment. `frame.state` contains a saved copy
+of your data, not the dictionary after the whole loop has finished.
+
+| Line | Meaning |
+| --- | --- |
+| `"bar"` | Keep this shape's identity across moments. |
+| `w=160` | Make the bar 160 coordinate units wide. |
+| `h=max(value * 70, 1)` | Map the count to height; keep zero visible as a thin bar. |
+| `cm.at(x=640, bottom=550)` | Center it horizontally at 640 and keep its bottom at 550. |
+| `.fill("blue")` | Color the rectangle blue. |
+| `scene.text(...)` | Place a label below the bar. |
+
+The default canvas is 1280 × 720. Its top-left corner is `(0, 0)`;
+x increases to the right and y increases downward.
+
+You draw the starting picture and the picture after each event. Codimate
+works out the pictures between them. You do not write a frame-by-frame loop.
+
+## 3. Assemble and run the complete program
+
+Replace `counter.py` with this complete version. The first two functions are
+the ones above; the final lines connect them and set the pace.
 
 ```python
 import codimate as cm
 
 
-def flip(tally, emit):
-    emit("start")
+def count(state, emit):
+    for value in range(1, 6):
+        state["count"] = value
+        emit("counted")
 
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("hello", "nothing yet", size=40,
-               at=(cm.width() / 2, cm.height() / 2))
+    value = frame.state["count"]
+    scene.rect("bar", w=160, h=max(value * 70, 1),
+               at=cm.at(x=640, bottom=550)).fill("blue")
+    scene.text("label", f"Count: {value}", size=36,
+               at=(640, 610)).fill("white")
     return scene
 
 
-cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
+explanation = cm.explain(
+    trace=cm.trace(count, {"count": 0}),
+    view=view,
+    timing=cm.Timing(default=0.5, opening=0.3, final_hold=1.0),
+)
+explanation.render("results/counter.mp4")
 ```
-
-Then run it:
 
 ```bash
-.venv/bin/python coins.py
+python counter.py
 ```
 
-The program prints nothing and writes `results/coins.mp4`. Open it and you'll
-see two seconds of the words "nothing yet" in the middle of a black frame. If
-that plays, everything is working.
+**Expected result:** `results/counter.mp4` contains a blue bar growing from
+0 through 5, with a changing count label. The file is relative to the folder
+where you ran the command. No terminal output is required for success.
 
-There isn't much on screen, but every part of a Codimate program is already
-here. `flip` is the **algorithm**: ordinary Python, handed an `emit`
-so Codimate can watch it run. `view` is the **view**: it receives one moment
-and returns one picture. And `cm.explain` gathers them together and renders.
+If the command fails, check [Troubleshooting](troubleshooting.md).
 
-The call to `emit` is how you tell Codimate that something worth showing has
-happened. Your view is asked for a picture once for each one. Right now there
-is a single moment, so you get a single unchanging picture.
+## 4. Understand the data flow
 
-## Giving the Algorithm Something to Do
+```text
+count() changes the data
+          ↓ emit("counted")
+trace saves a copy of the data
+          ↓
+view(frame) draws that saved moment
+          ↓
+Codimate animates the changes between pictures
+          ↓
+results/counter.mp4
+```
 
-Our program has the right shape but nothing happens in it. Let's write the
-actual logic.
+`cm.trace(count, {"count": 0})` runs `count` once. It records the initial count
+and five events. Your view is then called for the initial state and each event.
 
-The important thing here is that you write it the way you always would. There
-is no Codimate-shaped way to flip a coin. You add one line, calling `emit`
-**after** you change your data, because Codimate takes a snapshot of the
-result:
+The loop does not pause for half a second after each count. It runs normally.
+`Timing(default=0.5)` gives each event half a second **in the video**.
+`opening` holds the initial picture; `final_hold` holds the last picture.
+
+## 5. Make one change at a time
+
+Try these edits, then run `python counter.py` again:
+
+| Edit | Expected change |
+| --- | --- |
+| Change `"blue"` to `"orange"` | The bar changes color. |
+| Change `value * 70` to `value * 40` | The chart is shorter. |
+| Change `default=0.5` to `default=1.0` | Each count takes longer. |
+| Change `final_hold=1.0` to `final_hold=3.0` | The final count stays visible longer. |
+
+Keep `"bar"` as the shape name. A name identifies the object; it should not
+include the count or change whenever the object's value changes.
+
+## 6. Extend it to two bars
+
+Once the single bar makes sense, replace the file with this version.
+It alternates between two counters and highlights the one just updated.
 
 ```python
 import codimate as cm
-import random
+
+FRUITS = ("apples", "oranges")
 
 
-def flip(tally, emit):
-    coin = random.Random(4)
-    for toss in range(20):
-        side = "heads" if coin.random() < 0.5 else "tails"
-        tally[side] += 1
-        emit("flip", side=side)
+def count(state, emit):
+    for step in range(8):
+        fruit = FRUITS[step % 2]
+        state[fruit] += 1
+        emit("counted", fruit=fruit)
 
 
 def view(frame):
     scene = cm.Scene()
-    scene.text("count", frame.state, size=40,
-               at=(cm.width() / 2, cm.height() / 2))
+    active = frame.event.data["fruit"] if frame.event else None
+    for slot, fruit in cm.row(FRUITS, gap=100, size=160,
+                              at=cm.at(y=550)):
+        bar = scene.group(fruit, slot)
+        value = frame.state[fruit]
+        color = "orange" if fruit == active else "blue"
+        bar.rect("body", h=max(value * 70, 1),
+                 at=cm.at(bottom=0)).fill(color)
+        bar.text("label", f"{fruit}: {value}", size=28,
+                 at=cm.at(top=20)).fill("white")
     return scene
 
 
-cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
-```
-
-Run it again, and this time the numbers count upward on screen.
-
-Two things are worth noticing. The first is that `frame.state` holds your data
-as it was at that moment, not as it ended up. Codimate kept a copy each time
-you called `emit`, so the view can ask for any of them.
-
-The second is `random.Random(4)`. That's a fixed seed, so you get the same
-twenty flips every time you render. Without it, every run would produce a
-different video, and you'd have no way to tell whether a change you made was
-responsible for a difference you noticed.
-
-## Drawing Something Real
-
-Numbers on a screen aren't much of an animation. Let's replace them with two
-bars, one for heads and one for tails, that grow as the flips land.
-
-This is where you'd expect to start working out coordinates. You don't have to.
-`cm.row` divides the canvas for you and hands back a **slot** for each item:
-
-```python
-import codimate as cm
-import random
-
-SIDES = ("heads", "tails")
-
-
-def flip(tally, emit):
-    coin = random.Random(4)
-    for toss in range(20):
-        side = "heads" if coin.random() < 0.5 else "tails"
-        tally[side] += 1
-        emit("flip", side=side)
-
-
-def view(frame):
-    scene = cm.Scene()
-    for slot, side in cm.row(SIDES, gap=120, size=190):
-        count = frame.state[side]
-        bar = scene.group(side, slot)
-        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)).fill("blue")
-        bar.text("label", side, size=24, at=cm.at(top=16))
-    return scene
-
-
-cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
-```
-
-Run it and you'll see two bars rising, each labelled underneath.
-
-Let's walk through what changed. `cm.row(SIDES, gap=120, size=190)` gives us one
-slot per side, spaced evenly and centred on the canvas. Sizes come from the
-canvas unless you say otherwise, and here we do say otherwise, because two bars
-filling most of the frame look like slabs rather than bars.
-
-`scene.group(side, slot)` puts a **group** in that slot. A group is somewhere
-to draw a thing made of several shapes, and everything drawn on it moves
-together. Our bar is a rectangle and a label, and because they share a group
-they can never drift apart.
-
-Inside a group, `0` means the group's own point, which is why the rectangle
-says `bottom=0` to stand on it and the label says `top=16` to sit just below.
-You never convert an edge into a centre yourself.
-
-The call to `max(count * 22, 1)` keeps each bar at least one pixel tall. A
-rectangle with no height has nothing to draw, so without it the first flip
-would make a bar flicker into existence rather than grow.
-
-Finally, and most importantly: `scene.group(side, slot)` names each bar after
-the side it counts. Codimate pairs shapes by name between one moment and the
-next, and whatever changed becomes movement. Here the height changed, so the
-bars grow. We'll come back to this idea, because it's the one that decides
-whether anything moves at all.
-
-## Reacting to What Just Happened
-
-Our bars grow, but they don't tell you which flip caused which growth. The view
-can know that, because it receives more than your data. It also receives the
-event that produced the moment.
-
-Anything you pass to `emit` arrives as `frame.event.data`:
-
-```python
-import codimate as cm
-import random
-
-SIDES = ("heads", "tails")
-
-
-def flip(tally, emit):
-    coin = random.Random(4)
-    for toss in range(20):
-        side = "heads" if coin.random() < 0.5 else "tails"
-        tally[side] += 1
-        emit("flip", side=side)
-    emit("done")
-
-
-def view(frame):
-    scene = cm.Scene()
-    landed = frame.event.data.get("side") if frame.event else None
-
-    scene.text("title", "20 coin flips", size=38,
-               at=(cm.width() / 2, 90)).fill("grey")
-
-    for slot, side in cm.row(SIDES, gap=120, size=190):
-        count = frame.state[side]
-        bar = scene.group(side, slot)
-        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)) \
-           .fill("orange" if side == landed else "blue")
-        bar.text("label", f"{side}  {count}", size=24, at=cm.at(top=16))
-    return scene
-
-
-cm.explain(trace=cm.trace(flip, {"heads": 0, "tails": 0}), view=view).render("results/coins.mp4")
-```
-
-Run it. Now the bar that just grew turns orange, then fades back as the next
-flip lands.
-
-Notice that you didn't ask for a fade. You said the bar is orange in one moment
-and blue in the next, and Codimate worked out the transition. This is the same
-mechanism that grew the bars, applied to colour instead of height.
-
-One detail worth remembering: `frame.event` is `None` for the opening moment,
-before anything has happened. That's what the `if frame.event` is guarding
-against.
-
-## Controlling the Pace
-
-Our animation is complete, but it reads too quickly, and it ends the instant
-the last flip lands. Let's fix the timing.
-
-In Codimate, duration lives in exactly one place. Your algorithm doesn't know
-how long anything takes, and neither does your view. `Timing` holds all of it,
-keyed by the event names you chose earlier:
-
-```python
-import codimate as cm
-import random
-
-SIDES = ("heads", "tails")
-
-
-def flip(tally, emit):
-    coin = random.Random(4)
-    for toss in range(20):
-        side = "heads" if coin.random() < 0.5 else "tails"
-        tally[side] += 1
-        emit("flip", side=side)
-    emit("done")
-
-
-def view(frame):
-    scene = cm.Scene()
-    landed = frame.event.data.get("side") if frame.event else None
-    finished = frame.is_("done")
-
-    scene.text("title", "20 coin flips", size=38,
-               at=(cm.width() / 2, 90)).fill("grey")
-
-    for slot, side in cm.row(SIDES, gap=120, size=190):
-        count = frame.state[side]
-        bar = scene.group(side, slot)
-        colour = "orange" if side == landed else "blue"
-        bar.rect("box", h=max(count * 22, 1), at=cm.at(bottom=0)) \
-           .fill("green" if finished else colour)
-        bar.text("label", f"{side}  {count}", size=24, at=cm.at(top=16))
-    return scene
-
-
-cm.explain(
-    trace=cm.trace(flip, {"heads": 0, "tails": 0}),
+explanation = cm.explain(
+    trace=cm.trace(count, {"apples": 0, "oranges": 0}),
     view=view,
-    timing=cm.Timing(default=0.35, events={"done": 1.0}, opening=0.8, final_hold=2.0),
-).render("results/coins.mp4", fps=60, scale=1.5)
+    timing=cm.Timing(default=0.5, opening=0.3, final_hold=1.0),
+)
+explanation.render("results/fruit.mp4")
 ```
 
-Run it once more. The flips are slower now, both bars turn green when the
-tally is complete, and the final picture is held long enough to read.
+**Expected result:** two labeled bars grow to 4. The most recently updated
+bar is orange. The output is now `results/fruit.mp4`.
 
-The two arguments to `render` are new. `fps=60, scale=1.5` produces a 1080p60
-video. Resolution is a render-time decision rather than something your view
-knows about, so your coordinates still mean what `cm.canvas()` says they mean.
+Three new tools do the work:
 
-## Experiments Worth Running
+- `emit("counted", fruit=fruit)` records extra event data for highlighting.
+- `cm.row(...)` supplies one place, called a **slot**, for each bar.
+- `scene.group(fruit, slot)` keeps each bar and its label together.
 
-Before moving on, change one thing at a time in `coins.py` and re-render. Each
-of these exercises a different one of the four pieces, and each takes a few
-seconds to see.
+Inside a group, coordinates are local. `bottom=0` puts the bar on the group's
+anchor point; `top=20` puts the label's top 20 units below that point.
 
-**Change the data.** Make it a hundred flips instead of twenty. The video
-regenerates from the algorithm; you don't touch the view.
+The opening picture has no event, so `frame.event` is `None`. That is why the
+highlighting line checks it before reading event data.
 
-```python
-for toss in range(100):
-```
+## Next steps
 
-**Change the timing.** Give the final moment room to breathe.
-
-```python
-timing=cm.Timing(default=0.15, events={"done": 2.5}, final_hold=3.0)
-```
-
-**Change the view.** Colour by which side is winning rather than by which just
-landed.
-
-```python
-color="green" if count == max(frame.state.values()) else "blue"
-```
-
-**Then break it deliberately.** In the view, name each bar after its position
-instead of after the side it counts:
-
-```python
-for i, (slot, side) in enumerate(cm.row(SIDES, gap=120, size=190)):
-    bar = scene.group(i, slot)              # was scene.group(side, slot)
-```
-
-Re-render. Nothing looks different, because with two fixed bars a position and
-a side identify the same thing. Now swap the order of `SIDES` as well. The bars
-jump rather than sliding, because you renamed them: Codimate believes the
-heads bar left and a different bar arrived in its place.
-
-No error, just a different video. That is the most important thing to
-understand about Codimate, and it's worth provoking once on purpose.
-
-## What You Didn't Have to Write
-
-Look back over what you wrote. There's no keyframe anywhere in it. No duration
-attached to a shape. No tween, no interpolation, no frame number. You wrote
-down what happened and what a single moment looks like, and everything between
-the moments was worked out for you.
-
-That's the whole idea, and it asks one thing of you in return. Because Codimate
-matches shapes between moments by **name**, the names you choose are what
-decide whether something moves or merely changes shape. Our bars were named
-after the side they count, so they grew in place. Had they been named after
-their position, something quite different would have happened.
-
-That idea is worth understanding before you write a second animation, and it's
-the first link below.
-
-## Where to Go Next
-
-- [The one thing to understand](../README.md#the-one-thing-to-understand):
-  how names decide what moves.
-- [What you have to work with](drawing.md): the shapes Codimate gives you,
-  what they're enough for, and a car built out of them.
-- [Reference](reference.md): every call and parameter, on one page.
-- [How Codimate Thinks](concepts.md): why the library is shaped this way.
-- [codimate-examples](https://github.com/darhnoel/codimate-examples): worked examples, each with notes.
+Read [How it works](concepts.md) to learn why names decide what moves.
+Use [Drawing and layout](drawing.md) to place your own diagrams, or jump to
+[a recipe](recipes.md) for a specific task.

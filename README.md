@@ -3,339 +3,139 @@
 [![PyPI](https://img.shields.io/pypi/v/codimate)](https://pypi.org/project/codimate/)
 [![Python](https://img.shields.io/pypi/pyversions/codimate)](https://pypi.org/project/codimate/)
 
-![Planets tracing helices around the Sun's path through the galaxy](https://raw.githubusercontent.com/darhnoel/codimate/main/docs/media/helical_solar_system.gif)
+**Make an explainer video from Python data and logic.**
 
-*Two seconds of [`helical_solar_system/`](https://github.com/darhnoel/codimate-examples/tree/main/helical_solar_system)*
+Write the calculation or algorithm. Choose the moments worth showing. Draw
+what those moments look like. Codimate animates the changes between them.
 
-Turn a running algorithm into an explainer video.
+Use it for sorting demonstrations, growing charts, mathematical explanations,
+and scientific models. You supply the model; Codimate supplies the animation.
 
-You write your algorithm as normal Python and say what each step looks like.
-Codimate works out the motion, the timing, and every frame.
+![Planets tracing helices around the Sun's path through the galaxy](docs/media/helical_solar_system.gif)
+
+[Source for this animation](https://github.com/darhnoel/codimate-examples/tree/main/helical_solar_system)
+
+## Start here
+
+| What you want | Where to go |
+| --- | --- |
+| Make your first video | [First animation](docs/tutorial.md) |
+| Understand how data becomes movement | [How it works](docs/concepts.md) |
+| Draw and place shapes | [Drawing and layout](docs/drawing.md) |
+| Add highlighting, motion, formulas, or audio | [Recipes](docs/recipes.md) |
+| Look up an argument or method | [Reference](docs/reference.md) |
+| Fix an error or unexpected picture | [Troubleshooting](docs/troubleshooting.md) |
+
+You only need basic Python: functions, loops, and dictionaries.
+Start with the tutorial; you do not need to read the whole reference first.
+
+## Install
+
+Use Python 3.9 or newer. In a terminal:
+
+```bash
+python -m pip install codimate
+```
+
+You can work in any folder. You do **not** need to clone this repository or
+install Rust to make animations.
+
+Codimate needs FFmpeg to encode video. It uses an installed FFmpeg if one is
+available, otherwise the copy supplied by its Python dependency.
+[Installation help](docs/troubleshooting.md#installation-and-tools).
+
+Typst is optional: install it only when you want LaTeX formulas.
+[Formula setup](docs/recipes.md#add-a-formula).
+
+## Try a complete program
+
+Save this as `counter.py` in your working folder:
 
 ```python
 import codimate as cm
 
-def bubble_sort(values, emit):
-    for i in range(len(values)):
-        for j in range(len(values) - 1 - i):
-            emit("compare", items=[values[j], values[j + 1]])
-            if values[j] > values[j + 1]:
-                values[j], values[j + 1] = values[j + 1], values[j]
-                emit("swap", items=[values[j], values[j + 1]])
 
-def bars(frame):
+def count(state, emit):
+    for value in range(1, 6):
+        state["count"] = value
+        emit("counted")
+
+
+def view(frame):
     scene = cm.Scene()
-    active = frame.items()
-
-    for slot, item in cm.row(frame.state, gap=40):
-        bar = scene.group(item.id, slot)
-        bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0)) \
-           .fill("orange" if item in active else "blue")
-        bar.text("label", item.value, size=32, at=cm.at(top=20))
-
+    value = frame.state["count"]
+    scene.rect("bar", w=160, h=max(value * 70, 1),
+               at=cm.at(x=640, bottom=550)).fill("blue")
+    scene.text("label", f"Count: {value}", size=36,
+               at=(640, 610)).fill("white")
     return scene
 
-cm.explain(
-    trace=cm.trace(bubble_sort, cm.items([3, 1, 4, 2])),
-    view=bars,
-    motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)],
-    timing=cm.Timing(default=0.55, events={"swap": 0.9}),
-).render("results/bubble_sort.mp4")
+
+explanation = cm.explain(
+    trace=cm.trace(count, {"count": 0}),
+    view=view,
+    timing=cm.Timing(default=0.5, opening=0.3, final_hold=1.0),
+)
+explanation.render("results/counter.mp4")
 ```
 
-That is the whole program. Run it, get `results/bubble_sort.mp4`.
-
-## Install
+Run it with the same Python you used to install Codimate:
 
 ```bash
-pip install codimate
+python counter.py
 ```
 
-Codimate is a Rust engine with a Python front end, but the wheels are
-prebuilt, so there is no Rust toolchain to install. One wheel covers every
-Python from 3.9 up, on Linux, macOS and Windows.
+Open `results/counter.mp4`. A blue bar grows through five values while its
+label counts from 0 to 5. Codimate creates the output folder for you.
 
-### Working on the engine
+## What just happened?
 
-Only if you are changing the Rust, rather than using Codimate:
+1. `count()` changed the data and called `emit()` after each change.
+2. `cm.trace()` saved the starting data and each emitted moment.
+3. `view()` drew a bar and a label for each saved moment.
+4. Codimate matched shapes with the same name and animated their differences.
+5. `Timing` set the pace, and `render()` wrote the video.
+
+The name `"bar"` stays the same, so Codimate knows it is the same bar growing.
+Changing that name at every event would make separate bars fade in and out.
+
+Continue with [First animation](docs/tutorial.md) for a step-by-step walkthrough.
+
+## Examples and documentation
+
+[Read the documentation site](https://darhnoel.github.io/codimate/).
+The [examples repository](https://github.com/darhnoel/codimate-examples)
+contains complete programs for physics, mathematics, and algorithms.
+Each example has its own explanation and run instructions.
+
+## Contributing to the engine
+
+These commands are for developing Codimate itself. Animation authors can use
+`pip install codimate` instead.
 
 ```bash
-git clone https://github.com/darhnoel/codimate && cd codimate
-python3 -m venv .venv && .venv/bin/pip install maturin
+git clone https://github.com/darhnoel/codimate
+cd codimate
+python3 -m venv .venv
+.venv/bin/python -m pip install maturin
 .venv/bin/maturin develop --release
-.venv/bin/python python/tests/run.py       # the fast checks
+.venv/bin/python python/tests/run.py
 ```
 
-**Use `--release`.** Without it the Rust engine is unoptimized and renders
-roughly 17x slower — a scene that draws in 6ms takes 100ms. Only leave it off
-if you are debugging the engine itself.
+Use a release build for normal rendering. Debug builds render much more slowly.
+See [the architecture decisions](docs/adr/) for engine design.
 
-### What else you need
-
-`ffmpeg` does the video encoding. Codimate uses the one on your PATH if you
-have it (`brew install ffmpeg`, `apt install ffmpeg`) and otherwise falls back
-to the copy that comes with `imageio-ffmpeg`, which pip installs for you. Point
-`CODIMATE_FFMPEG` at a binary to override both.
-
-`typst` is needed **only** if you use `scene.formula` to typeset LaTeX maths
-(`brew install typst`). Everything else renders without it.
-
-## The four pieces
-
-```text
-algorithm   your normal code, with emit() where something happens
-view        what one moment looks like
-motion      how things travel between moments
-timing      how long each moment lasts
-```
-
-**algorithm** — write it the way you normally would. Call `emit()` *after* you
-change your data; Codimate snapshots the result for you.
-
-**view** — a function from one moment to a picture. It receives `frame.state`
-(your data at that moment) and `frame.event` (what just happened). It runs once
-per event, not once per frame, so it can be as slow as you like.
-
-**motion** — patterns matched against shape names. First match wins, and a
-straight line is the default, so most explanations need no rules at all.
-
-```python
-motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
-```
-
-A shape inside a group is named `group/child`, so `"3/*"` targets one group.
-A rule cannot make something move that did not move.
-
-| path | |
-|---|---|
-| `straight` | a straight line, easing in and out — the default |
-| `linear` | a straight line at constant speed, for things mid-journey at every event |
-| `lift_carry_drop` | arcs up and over, then falls; takes `clearance` |
-
-Use `linear` when something turns or orbits: easing would make it accelerate
-and stop inside every segment.
-
-Every path eases in and out. `cm.ease(t)` calls into the Engine if you need
-the curve itself — to draw it, or to pace something by hand — so you never
-keep a second copy that can drift.
-
-**timing** — seconds per event, by event name.
-
-```python
-cm.Timing(default=0.55, events={"swap": 0.9}, opening=0.8, final_hold=1.2)
-```
-
-## The one thing to understand
-
-Codimate has no idea what a "swap" looks like. It only knows *this thing was
-here, and now it is there.* **The name you give each shape is how you tell it
-what moved.**
-
-```python
-scene.group(item.id, slot)    # the name follows the THING
-scene.group(position, slot)   # the name follows the PLACE
-```
-
-Same algorithm, same data, completely different video:
-
-| | what you see |
-|---|---|
-| name follows the thing | bar "3" is in slot 0, then slot 1 — it **slides across** |
-| name follows the place | slot 0 stays put and changes height — bars **morph in place** |
-
-Both are useful. Sorting wants the first. A grid, a heatmap or a matrix
-multiply wants the second — cells don't travel, they light up:
-
-```python
-scene.group(("cell", row, col), slot)
-```
-
-Codimate cannot tell you which you meant, so this is the one decision worth
-thinking about.
-
-**`cm.items()` is how a plain value gets a name of its own.** Two 3s in a list
-are two different bars, and only an identity can say so:
-
-```python
-values = cm.items([3, 1, 4, 2])   # each gets an .id and a .value
-```
-
-Items compare by value, so your algorithm stays ordinary Python
-(`values[j] > values[j + 1]`), and they stay themselves across every moment of
-the trace. You only need them for things that **move** — a grid keyed by
-position doesn't.
-
-## What you can draw
-
-```python
-scene.rect(name, h=, w=, at=)
-scene.circle(name, r=, at=)
-scene.text(name, content, size=, at=)
-scene.polygon(name, points)                             # cm.ngon, cm.star
-scene.curve(name, points, w=)                           # smooth, through the points
-scene.arc(name, r=, sweep=(0, 120))                     # an arc, a dial, a pie slice
-scene.svg(name, "logo.svg", size=)                       # vector art, as real geometry
-scene.image(name, "photo.jpg", size=)                    # a picture: PNG or JPEG
-scene.line(name, start=slot_or_point, end=slot_or_point, w=)
-scene.formula(name, r"\frac{a}{b}", size=, at=)         # LaTeX, needs `typst`
-cm.measure(text, size) -> (w, h)                        # to size a box around text
-scene.group(name, slot)      # a place to draw a thing made of several shapes
-```
-
-Each takes only what decides *what the shape is*. Everything else — colour,
-outline, rotation, layer, opacity — is said afterwards on the handle it hands
-back, so no call grows past five arguments:
-
-```python
-scene.circle("bob", r=28, at=(x, y)).fill("orange").on(layer=4)
-scene.rect("card", h=120, w=200).fill("#243046", edge="grey").round(8)
-scene.polygon("tri", cm.ngon(3, r=60)).grow(1.8).turn(12)
-```
-
-**Place things by whichever edge you actually mean.** `at=` takes a point, a
-`Slot`, or `cm.at(...)` when an edge is what you mean:
-
-```python
-scene.rect("bar", h=200, w=90, at=(640, 460))               # a point
-scene.rect("bar", h=200, w=90, at=cm.at(x=640, bottom=560)) # sits on a line
-scene.text("label", 3, size=32, at=cm.at(x=640, top=580))   # under something
-```
-
-No baselines, no `y - h/2`. Give both `y` and `top` and you get an error, not
-a silent winner.
-
-Colors are names (`white`, `black`, `red`, `orange`, `blue`, `green`, `grey`,
-`yellow`, `cyan`) or `#rrggbb`. Higher `layer` draws on top.
-
-Shapes that appear or disappear between moments fade, and shapes that change
-size, colour or position tween. You do not ask for any of that.
-
-## Where things sit
-
-You should not be inventing layout arithmetic. `cm.row()` and `cm.column()`
-divide the canvas and hand back one **slot** per item; `scene.group()` puts a
-thing in one:
-
-```python
-for slot, item in cm.row(frame.state, gap=40):
-    bar = scene.group(item.id, slot)
-    bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
-    bar.text("label", item.value, at=cm.at(top=20))
-```
-
-**Inside a group, `0` is the group's own point.** `cm.at(bottom=0)` stands the
-bar on it; `cm.at(top=20)` puts the label 20 below it. `w` defaults to the
-group's width and
-`x` to its centre, so the only thing left to say is the one thing a bar and a
-label disagree about.
-
-**A name can be built from other names.** Nested keys flatten, so you never
-concatenate tuples by hand — and a line takes Slots directly rather than making
-you pull `.x` and `.y` out of them:
-
-```python
-scene.line(("edge", src, dst), start=at[src], end=at[dst])   # -> "edge/0/1/1/2"
-```
-
-**Everything on a group moves as one thing.** The bar and its label cannot come
-apart, because the Engine sees them as `3/bar` and `3/label` — one name, two
-shapes. Groups nest, so a thing made of a thing made of a thing still travels
-as a unit.
-
-A slot is a place, not a shape — nothing draws it. Hand one to `group()` and
-you never take it apart; read `slot.x`, `slot.bottom`, `slot.left`, `slot.top`,
-`slot.right`, `slot.w`, `slot.h` for the odd case that needs it.
-
-`cm.column()` stacks instead of spreading — layers of a network, levels of a
-tree — and its slots anchor at their centre rather than a baseline:
-
-```python
-for slot in cm.column(4, gap=44, at=cm.at(x=640)):
-    scene.group(("neuron", 1, i), slot).circle("body", r=30)
-```
-
-Widths, spacing and the baseline come from the canvas unless you override them
-(`size=`, `at=`, `within=`). The canvas is 1280x720 by default:
-
-```python
-cm.canvas(1920, 1080)     # everything below follows
-cm.width(), cm.height()   # for the odd thing you place by hand
-```
-
-**Output resolution is separate from your coordinates.** `scale` only changes
-how many pixels each coordinate becomes, so nothing in your view has to move:
-
-```python
-.render("out.mp4", fps=60, scale=1.5)   # 1080p60 from the default canvas
-```
-
-Frames are rasterized at the larger size rather than upscaled afterwards, so
-1080p is genuinely drawn at 1080p.
-
-## How it works
-
-```text
-Python (once per event)          Rust (once per frame)
-──────────────────────           ─────────────────────
-algorithm + emit()
-view → a Scene per event
-motion rules, durations
-        │
-        └─ hands over ONCE ───▶  pair shapes by item
-                                 build tweens
-                                 rasterize
-                                 pipe to ffmpeg
-                                        │
-                                        ▼
-                                    out.mp4
-```
-
-One handover, not one per frame. A frame is never played forward — it is
-computed from scratch at time `t`, so any moment can be rendered in any order,
-and twice the same way.
-
-## Under the hood
-
-The Rust crates are the Engine. You do not need to read them to use Codimate,
-and the Rust API is not a second way to author explanations — see
-[ADR 0008](https://github.com/darhnoel/codimate/blob/main/docs/adr/0008-python-authoring-surface.md).
-
-```text
-crates/codimate-core/      pure animation model — f(t) → Scene
-crates/codimate-animation/ duration and composition
-crates/codimate-render/    tiny-skia CPU raster
-crates/codimate-export/    raw RGBA → ffmpeg
-crates/codimate-glyph/     text → glyph outlines
-crates/codimate-py/        the bindings — the diff lives here
-python/codimate/           the Python package
-```
-
-## More
-
-All of this is also a site — **<https://darhnoel.github.io/codimate/>** — with
-the API reference generated from the docstrings alongside it. Build it locally
-with `python docs/build_site.py`.
-
-**The guide, in order.** Four chapters; read them front to back the first time.
-
-1. [Writing Your First Animation](https://github.com/darhnoel/codimate/blob/main/docs/tutorial.md) — build one from an empty
-   file, meeting all four pieces on the way.
-2. [What You Have to Work With](https://github.com/darhnoel/codimate/blob/main/docs/drawing.md) — the shapes, what they
-   are enough for, and a car built out of them.
-3. [How Codimate Thinks](https://github.com/darhnoel/codimate/blob/main/docs/concepts.md) — why motion is derived rather than
-   authored, and the one decision you have to make.
-4. [Reference](https://github.com/darhnoel/codimate/blob/main/docs/reference.md) — every call and parameter, on one page.
-
-Then the worked examples, with notes, in [codimate-examples](https://github.com/darhnoel/codimate-examples), and
-[the decisions](https://github.com/darhnoel/codimate/tree/main/docs/adr) behind the design.
+To build the documentation site locally:
 
 ```bash
-cargo test                                  # the Engine
-.venv/bin/python python/tests/run.py             # the Authoring Surface
+python -m pip install markdown pygments pdoc
+python docs/build_site.py
+python docs/check_links.py
 ```
+
+Open `site/index.html` after the build.
 
 ## License
 
-[MIT](https://github.com/darhnoel/codimate/blob/main/LICENSE). The fonts compiled into Codimate keep their own licenses —
-the SIL Open Font License, the DejaVu license and Apache 2.0 — listed in
-[`crates/codimate-fonts/fonts/LICENSES`](https://github.com/darhnoel/codimate/blob/main/crates/codimate-fonts/fonts/LICENSES/README.md).
+[MIT](LICENSE). Bundled fonts retain their own licenses, listed in
+[the font license directory](crates/codimate-fonts/fonts/LICENSES/README.md).

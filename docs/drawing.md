@@ -1,211 +1,198 @@
-# What You Have to Work With
+# Drawing and layout
 
-Sooner or later you'll want to animate something particular. A car, a queue, a
-molecule. And the first question is always the same: what can I actually draw?
+Use this page when you know what you want to show and need to put it on screen.
+The snippets are drawing fragments: use them inside your `view(frame)` function.
 
-The answer is shorter than you might expect, and it's better to hear it now
-than to discover it halfway through building something. Codimate gives you four
-shapes. There is no arbitrary Bezier path and no image.
+## Choose a shape
 
-That sounds limiting, and for about ten minutes it is. Then you notice that a
-thick line is a rectangle at any angle, that two circles make a ring, and that
-a wing can be filled one column at a time. This chapter is the complete
-inventory, what a handful of shapes turn out to be enough for, and a car built out of
-them.
+| What you want | Method | Example |
+| --- | --- | --- |
+| A bar, box, or background | `scene.rect` | `scene.rect("bar", w=100, h=200, at=(640, 360))` |
+| A dot, disc, or ring | `scene.circle` | `scene.circle("dot", r=30, at=(640, 360))` |
+| A label | `scene.text` | `scene.text("title", "Hello", size=36, at=(640, 80))` |
+| A line between points | `scene.line` | `scene.line("line", start=(200, 360), end=(900, 360), w=4)` |
+| A force or direction | `scene.arrow` | `scene.arrow("force", start=(640, 400), end=(640, 200))` |
+| A triangle or other outline | `scene.polygon` | Supply a list of `(x, y)` corners. |
+| A smooth plotted line | `scene.curve` | Supply sample points on the curve. |
+| An arc or sector | `scene.arc` | Supply a radius and a pair of angles. |
+| A formula | `scene.formula` | Supply a LaTeX string; requires Typst. |
+| Vector artwork | `scene.svg` | Supply an SVG file. |
+| A photograph or bitmap | `scene.image` | Supply a PNG or JPEG file. |
 
-## The Four Shapes
+All drawing methods are available on groups as well as scenes.
+For argument details, see [Reference: Drawing](reference.md#drawing).
 
-Every one of these exists on a `Scene` and on any `Group`.
+## Place a shape
 
-| | you give it | it draws |
-|---|---|---|
-| `scene.rect(name, h=, w=)` | a width and height | a rectangle — `.round(r)` for the corners |
-| `scene.circle(name, r=)` | a radius | a circle |
-| `scene.text(name, content, size=)` | some text | centred text, no baselines |
-| `scene.line(name, start=, end=, w=)` | two points and a **thickness** | a stroked line |
-| `scene.formula(name, latex, size=)` | LaTeX maths | typeset glyph outlines |
-| `scene.polygon(name, points)` | corners | a filled shape with straight edges |
-| `scene.curve(name, points, w=)` | samples | a smooth line through all of them |
-| `scene.arc(name, r=, sweep=)` | a radius and two angles | an arc, or a pie slice |
-| `scene.svg(name, file, size=)` | a file | vector art, as geometry you can animate |
-| `scene.image(name, file, size=)` | a PNG or JPEG | a picture, placed and transformed |
-| `scene.arrow(name, start=, end=)` | two points | a shaft and a head, as one shape |
-| `scene.group(name, slot)` | a place | not a shape — somewhere to put several |
+The default canvas is **1280 × 720**. Coordinates start at the top-left:
 
-Each one hands back a **handle**, and the rest of what a shape looks like is
-said on that: `.fill(color, edge=, edge_w=)`, `.round(r)`, `.turn(deg)`,
-`.grow(scale)`, `.on(layer=, opacity=)`, `.write(reveal=, pen=)`.
+```text
+(0, 0) ───────────────────────→ x
+  │
+  │           (640, 360)
+  │              center
+  ↓
+  y                         (1280, 720)
+```
 
-All of them also take `color`, `layer`, `opacity`, and
-[anchors](reference.md#anchors).
-
-**That is the complete list.** There is no arbitrary
-path, no image, no gradient, and no rotation.
-
----
-
-## What Four Shapes Are Enough For
-
-Every technique below comes from a working example in this repository, and none
-of them needed a shape that doesn't exist.
-
-**A ring — from one stroked circle.** `.fill("none", edge=…)` outlines a shape
-without filling it, so a band is one circle at the mean radius, stroked at the
-band's width:
+`at=(x, y)` places the shape by its center:
 
 ```python
-scene.circle("rim", r=188, at=(cx, cy)).fill("none", edge="gold", edge_w=32)
+scene.circle("dot", r=30, at=(640, 360)).fill("orange")
 ```
 
-`dharma_wheel` predates that and still stacks four discs — a big one with a
-smaller background-coloured one on top. It works, and it is four shapes and
-three layers where one will do.
-
-**An angled bar — from a thick line.** `line` strokes a path, so a short span
-at a large width draws a **rectangle at any angle**. This is how you get
-anything that is not axis-aligned:
+Use `cm.at` when an edge should stay fixed. This bar grows upward from y=550:
 
 ```python
-scene.line("spoke", start=(x1, y1), end=(x2, y2), w=24.0).fill("gold")
+scene.rect("bar", w=100, h=200,
+           at=cm.at(x=640, bottom=550)).fill("blue")
 ```
 
-**A filled outline — one polygon.** `scene.polygon(name, points)` fills any
-closed run of corners, and `cm.ngon`/`cm.star` produce the regular ones.
-[`bernoulli_lift`](https://github.com/darhnoel/codimate-examples/tree/main/bernoulli_lift) predates it and still
-fills its aerofoil with 140 vertical lines, one per column, the way a
-rasteriser would — correct, and no longer necessary.
-
-**A curve — with `scene.curve`.** Hand it samples and it draws a smooth line
-through all of them:
+A label whose top is at y=580:
 
 ```python
-scene.curve("plot", [(x, f(x)) for x in xs], w=2.5).fill("cyan")
+scene.text("label", "Count", size=28,
+           at=cm.at(x=640, top=580)).fill("white")
 ```
 
-The points are *on* the curve, not control points, so plotting a function is
-the obvious thing rather than a fitting exercise. `bernoulli_lift` predates it
-and still draws its streamlines as hundreds of straight pieces, which is
-correct and no longer necessary.
+At scene level, specify both axes. Inside a group, omitted coordinates use
+the group's own point. Give only one of `y`, `top`, or `bottom` per placement.
 
-**Rotation — from positions over time.** There is no `rotate`. Emit the angle
-at each moment and let the Engine work out everything between, exactly as it
-does for a bar sliding sideways. [`dharma_wheel`](https://github.com/darhnoel/codimate-examples/tree/main/dharma_wheel)
-turns a wheel this way; the car below turns its wheels.
+## Style a shape
 
----
-
-## What You Genuinely Cannot Do
-
-| you wanted | do this instead |
-|---|---|
-| a triangle or polygon | `scene.polygon(name, points)`, or `cm.ngon` for a regular one |
-| a smooth curve | a run of short lines |
-| an image or sprite | not supported — build it from shapes |
-| `rotate=` on a group | emit the rotated positions; the Engine tweens them |
-| a gradient | several shapes with stepped colours |
-| a ball, a planet, an orbit | `codimate.science` — spheres and orbits, drawn flat in the right order ([reference](reference.md#the-science-kit)) |
-| true 3D with solids passing through each other | not supported — only convex bodies that stay apart sort correctly |
-
----
-
-## Building a Car
-
-Let's put all of that together. This is a complete program: paste it into
-`car.py` at the repository root and run it.
+The drawing method returns a handle. Chain styling methods onto it:
 
 ```python
-import math
-import codimate as cm
-
-ROAD, SPAN = 560.0, (120.0, 1160.0)
-WHEEL_R, STEPS = 28.0, 40
-
-
-def drive(car, emit):
-    for step in range(STEPS):
-        car["x"] = SPAN[0] + (SPAN[1] - SPAN[0]) * step / (STEPS - 1)
-        emit("roll")
-
-
-def view(frame):
-    scene = cm.Scene()
-    scene.line("road", start=(0, ROAD), end=(1280, ROAD), w=3.0).fill("#3a465e")
-
-    x = frame.state["x"]
-    car = scene.group("car", at=cm.at(x=x, bottom=ROAD))
-
-    car.rect("body", w=230, h=62, at=cm.at(bottom=-16)).fill("#e05a4a")
-    car.rect("roof", w=126, h=50, at=cm.at(x=-14, bottom=-78)).fill("#c94b3c")
-    car.rect("window", w=104, h=34, at=cm.at(x=-14, bottom=-86)).fill("#2b3648")
-
-    turn = x / WHEEL_R                       # rolling without slipping
-    for side, wx in (("rear", -70), ("front", 70)):
-        wheel = car.group(side, at=cm.at(x=wx, bottom=0))
-        wheel.circle("tyre", r=WHEEL_R, at=cm.at(y=-WHEEL_R)) \
-             .fill("#222832").on(layer=2)
-        wheel.circle("hub", r=9, at=cm.at(y=-WHEEL_R)) \
-             .fill("#8b93a3").on(layer=4)
-        for spoke in range(3):
-            a = turn + spoke * math.pi / 3
-            dx, dy = WHEEL_R * 0.82 * math.cos(a), WHEEL_R * 0.82 * math.sin(a)
-            wheel.line(("spoke", spoke),
-                       start=(-dx, -WHEEL_R - dy), end=(dx, -WHEEL_R + dy),
-                       w=4.0).fill("#8b93a3").on(layer=3)
-
-    return scene
-
-
-cm.explain(trace=cm.trace(drive, {"x": SPAN[0]}), view=view,
-           motion=[cm.Rule("*", position="linear")],
-           timing=cm.Timing(default=0.09, opening=0.5, final_hold=1.2),
-           ).render("results/car.mp4", fps=60, scale=1.5)
-
+scene.rect("card", w=240, h=120, at=(640, 360)).fill(
+    "#243046", edge="white", edge_w=2
+).round(12)
 ```
 
-```bash
-.venv/bin/python car.py
-```
+| Method | Purpose |
+| --- | --- |
+| `.fill("blue")` | Set the fill or line color. |
+| `.fill("none", edge="blue", edge_w=4)` | Draw an outline without a fill. |
+| `.round(12)` | Round rectangle corners. |
+| `.on(layer=3, opacity=0.5)` | Set drawing order and transparency. |
+| `.turn(30)` | Rotate supported geometry by 30 degrees. |
+| `.grow(1.5)` | Scale a shape. |
+| `.write(reveal=0.5, pen=2)` | Reveal supported formulas or imported SVG paths. |
 
-### Walking Through It
+Use named colors such as `blue`, `orange`, `white`, `grey`, or hex colors
+such as `#087FC4`. Do not assume every CSS color name is supported.
+Text glyphs stay upright when a text handle is turned.
 
-**The car is a group, so it moves as one thing.** `scene.group("car",
-at=cm.at(x=x, bottom=ROAD))` is placed once; the body, roof, window and both
-wheels are drawn on it and can never come apart.
+## Put related shapes in a group
 
-**Inside a group, `0` is the group's own point.** The group sits on the road,
-so `cm.at(bottom=0)` puts the wheels on the road and `cm.at(bottom=-16)` lifts
-the body clear of it. Negative is upwards.
-
-**Groups nest.** Each wheel is a group inside the car, so a spoke is placed
-relative to its own wheel rather than to the road.
-
-**The wheels turn without a rotate.** `turn = x / WHEEL_R` is rolling without
-slipping — the angle a wheel of that radius has turned after travelling `x`.
-The spokes are drawn at that angle each moment, and the Engine fills in the
-rest.
-
-**`linear`, not the default.** The car is mid-journey at every moment, so
-easing would make it accelerate and stop once per tick.
-
-### One Thing That Will Catch You
-
-Within a single `layer`, shapes are drawn **in name order**. The first version
-of this car had invisible spokes, because `hub` and `spoke` sort alphabetically
-before `tyre`, so the tyre was painted over both of them. When one thing has to
-cover another, say so:
+A group is useful for a bar with a label, a planet with a name, or a car with wheels.
+Place the group once, then draw its children relative to that point:
 
 ```python
-wheel.circle("tyre", r=WHEEL_R, at=cm.at(y=-WHEEL_R)).on(layer=2)
-wheel.line(("spoke", i), ...).on(layer=3)
-wheel.circle("hub", r=9, at=cm.at(y=-WHEEL_R)).on(layer=4)
+bar = scene.group("sales", at=(640, 550), w=160)
+bar.rect("body", h=210, at=cm.at(bottom=0)).fill("blue")
+bar.text("label", "Sales", size=28, at=cm.at(top=20)).fill("white")
 ```
 
----
+The complete shape names are `sales/body` and `sales/label`.
+Keep the group name stable so the object retains its identity between moments.
 
-## Where to Go Next
+## Use local coordinates inside a group
 
-- [Tutorial](tutorial.md) — the four pieces, from an empty file
-- [Reference](reference.md) — every call and parameter
-- [The one thing to understand](../README.md#the-one-thing-to-understand) —
-  names decide what moves
-- [codimate-examples](https://github.com/darhnoel/codimate-examples) — worked ones, with notes
+In the example above, the group's point is `(640, 550)` on the canvas.
+Inside the group:
+
+| Local placement | Canvas meaning |
+| --- | --- |
+| `at=(0, 0)` | The group's point, `(640, 550)`. |
+| `bottom=0` | Put the bar's bottom at y=550. |
+| `top=20` | Put the label's top at y=570. |
+| `at=(-50, -100)` | Move 50 left and 100 up from the group point. |
+
+Positive y goes downward in both coordinate systems. A negative local y moves
+upward; it does not mean a negative canvas coordinate.
+
+## Arrange a row or column
+
+`cm.row` supplies places for items from left to right. A row's slots anchor at
+bottom-center, which is useful for bars sharing a baseline:
+
+```python
+for slot, category in cm.row(("A", "B", "C"), gap=40, size=120,
+                             at=cm.at(y=550)):
+    bar = scene.group(category, slot)
+    bar.rect("body", h=200, at=cm.at(bottom=0)).fill("blue")
+    bar.text("label", category, size=28, at=cm.at(top=20)).fill("white")
+```
+
+Here `size=120` sets each slot's width. `gap=40` is the space between slots.
+A slot is layout data, not a visible box.
+
+`cm.column` stacks slots vertically and anchors them at their center:
+
+```python
+for slot, label in cm.column(("Input", "Compute", "Output"), gap=24,
+                            size=90, at=cm.at(x=640)):
+    card = scene.group(label, slot)
+    card.rect("body", w=240, h=70).fill("#243046").round(8)
+    card.text("label", label, size=28).fill("white")
+```
+
+## Control which shape covers another
+
+Higher layers draw on top. Set layers explicitly when overlapping matters:
+
+```python
+scene.rect("background", w=1280, h=720, at=(640, 360)).fill(
+    "#0B1420"
+).on(layer=-10)
+scene.circle("planet", r=80, at=(640, 360)).fill("blue").on(layer=1)
+scene.text("name", "Earth", size=28, at=(640, 360)).fill("white").on(layer=2)
+```
+
+Within a layer, names determine drawing order. Creation order alone does not
+ensure that a label appears above a shape.
+
+## Draw a curve or import artwork
+
+A curve passes through your supplied samples:
+
+```python
+scene.curve("wave", [(200, 360), (400, 250), (600, 360), (800, 470)],
+            w=4).fill("blue")
+```
+
+Keep the sample count the same across events if you want the curves to animate
+smoothly between states. The same point-count rule applies to polygons.
+
+```python
+scene.image("photo", "photo.png", size=(320, 240), at=(640, 360))
+scene.svg("logo", "logo.svg", size=180, at=(640, 360))
+```
+
+These snippets require your own files. SVGs import as geometry; images remain
+bitmaps. For supported SVG features, see [the reference](reference.md#drawing).
+
+## Canvas size and export resolution
+
+Set the canvas before constructing your explanation:
+
+```python
+cm.canvas(1280, 720)
+```
+
+Choose output resolution at export:
+
+```python
+explanation.render("results/video.mp4", fps=60, scale=1.5)
+```
+
+A 1280 × 720 canvas at scale 1.5 produces 1920 × 1080 pixels. Your view's
+coordinates stay the same. To make a square composition, change the canvas
+itself, for example `cm.canvas(1024, 1024)`.
+
+## Next steps
+
+[Recipes](recipes.md) cover highlighting, formulas, audio, camera framing, and
+inspection. [Reference](reference.md) lists the complete API, including the
+science kit for projected planets and orbits. Codimate is a 2D renderer;
+projected scientific diagrams do not provide general 3D solid rendering.
