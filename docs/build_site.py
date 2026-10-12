@@ -123,7 +123,14 @@ html[data-theme="dark"] .theme-toggle:hover { background:#222a38; color:#e8eef7;
 .theme-toggle .icon-sun { display:none; }
 html[data-theme="dark"] .theme-toggle .icon-sun { display:block; }
 html[data-theme="dark"] .theme-toggle .icon-moon { display:none; }
-.theme-toggle:focus-visible { outline:2px solid #6ea8ff; outline-offset:2px; }
+.header-links { width:min(860px,92vw); min-height:4rem; margin:0 auto;
+  padding-right:3.5rem; display:flex; flex-wrap:wrap; align-items:center;
+  gap:1.25rem; font-size:.9rem; }
+.header-links a { color:var(--muted); text-decoration:none; }
+.header-links a:hover, .header-links a.here { color:var(--text); }
+.header-links .brand { color:var(--text); font-weight:700; margin-right:auto; }
+.site-header .theme-toggle { position:absolute; top:50%; right:1.25rem;
+  transform:translateY(-50%); }
 </style>"""
 
 SHELL = """<!doctype html>
@@ -141,12 +148,13 @@ SHELL = """<!doctype html>
 body {{ margin:0; background:var(--bg); color:var(--ink); line-height:1.65;
         font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
 header {{ border-bottom:1px solid var(--line); position:sticky; top:0;
-          background:var(--bg); z-index:2; }}
-nav {{ max-width:min(860px, 92vw); margin:0 auto; display:flex; flex-wrap:wrap;
-       gap:1.25rem; padding:.9rem 0; font-size:.93rem; }}
-nav a {{ color:var(--dim); text-decoration:none; }}
-nav a.here, nav a:hover {{ color:var(--ink); }}
-nav .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
+          background:var(--bg); z-index:2; min-height:4rem; }}
+.header-links {{ width:min(860px,92vw); min-height:4rem; margin:0 auto;
+  padding-right:3.5rem; display:flex; flex-wrap:wrap; align-items:center;
+  gap:1.25rem; font-size:.93rem; }}
+.header-links a {{ color:var(--dim); text-decoration:none; }}
+.header-links a.here, .header-links a:hover {{ color:var(--ink); }}
+.header-links .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
 .theme-toggle {{ display:inline-flex; align-items:center; justify-content:center;
   width:2.5rem; height:2.5rem; flex:none; border:0; border-radius:50%; padding:0;
   background:transparent; color:var(--dim); cursor:pointer; }}
@@ -157,6 +165,8 @@ nav .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
 .theme-toggle .icon-sun {{ display:none; }}
 :root[data-theme="dark"] .theme-toggle .icon-sun {{ display:block; }}
 :root[data-theme="dark"] .theme-toggle .icon-moon {{ display:none; }}
+.site-header .theme-toggle {{ position:absolute; top:50%; right:1.25rem;
+  transform:translateY(-50%); }}
 .layout {{ max-width:min(860px, 92vw); margin:0 auto; }}
 main {{ min-width:0; padding:2.5rem 0 5rem; }}
 details {{ margin:1rem 0; }}
@@ -190,7 +200,7 @@ img {{ max-width:100%; }}
 {highlight}
 </style>
 </head><body>
-<header><nav>{nav}</nav></header>
+<header class="site-header"><div class="header-links">{nav}</div>{theme_toggle}</header>
 <div class="layout"><main>{toc}{body}{next_page}</main></div>
 {theme_script}
 <script>
@@ -222,7 +232,11 @@ def nav_html(here: str, depth: int) -> str:
     for href, label in NAV:
         mark = ' class="here"' if href == here else ""
         out.append(f'<a href="{up}{href}"{mark}>{label}</a>')
-    out.append('''<button class="theme-toggle" type="button"
+    return "\n".join(out)
+
+
+def theme_toggle() -> str:
+    return '''<button class="theme-toggle" type="button"
   aria-label="Switch to night mode" title="Switch to night mode" aria-pressed="false">
   <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
     <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>
@@ -234,8 +248,7 @@ def nav_html(here: str, depth: int) -> str:
       M2 12h2m16 0h2
       M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>
   </svg>
-</button>''')
-    return "\n".join(out)
+</button>'''
 
 
 def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
@@ -303,7 +316,8 @@ def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
            if dest == "reference.html" else "")
     title = re.search(r"^#\s+(.+)$", text, re.M)
     return SHELL.format(title=title.group(1) if title else "Codimate",
-                        nav=nav_html(dest, depth), body=body,
+                        nav=nav_html(dest, depth), theme_toggle=theme_toggle(),
+                        body=body,
                         highlight=HIGHLIGHT, toc=toc,
                         next_page=next_page, theme_script=THEME_SCRIPT,
                         theme_boot=THEME_BOOT)
@@ -338,13 +352,10 @@ def main() -> int:
     # never seen. `header` is the element pdoc's own layout leaves room for.
     for page in (OUT / "api").rglob("*.html"):
         depth = len(page.relative_to(OUT).parts) - 1
-        bar = nav_html("api/codimate.html", depth).replace(
-            'class="brand"', 'style="font-weight:700;margin-right:auto"')
-        page.write_text(page.read_text().replace(
-            "<body>",
-            '<body><header style="display:flex;flex-wrap:wrap;gap:1.25rem;'
-            'align-items:baseline;font-size:.9rem;padding-bottom:0">'
-            + bar + "</header>", 1))
+        bar = nav_html("api/codimate.html", depth)
+        header = ('<header class="site-header"><div class="header-links">'
+                  + bar + "</div>" + theme_toggle() + "</header>")
+        page.write_text(page.read_text().replace("<body>", "<body>" + header, 1))
         html = page.read_text()
         html = html.replace("</head>", THEME_BOOT + PDOC_THEME + "\n</head>", 1)
         html = html.replace("</body>", THEME_SCRIPT + "\n</body>", 1)
