@@ -61,28 +61,72 @@ PAGES = {
     DOCS / "troubleshooting.md": "troubleshooting.html",
 }
 
-# Pygments paints the code blocks. Both themes are emitted and the dark one is
-# scoped to the media query, so a page carries its own highlighting rather than
-# fetching a stylesheet the CDN might not have.
+# Keep both syntax themes available so the toggle can override the OS theme.
 HIGHLIGHT = (
     HtmlFormatter(style="default").get_style_defs(".codehilite")
-    + "\n@media (prefers-color-scheme: dark) {\n"
-    + HtmlFormatter(style="github-dark").get_style_defs(".codehilite")
-    + "\n}"
+    + "\n"
+    + HtmlFormatter(style="github-dark").get_style_defs(
+        'html[data-theme="dark"] .codehilite')
 )
+
+THEME_SCRIPT = """<script>
+(() => {
+  const root = document.documentElement;
+  const key = 'codimate-theme';
+  const button = document.querySelector('.theme-toggle');
+  const update = () => {
+    const dark = root.dataset.theme === 'dark';
+    button.textContent = dark ? 'Light mode' : 'Night mode';
+    button.setAttribute('aria-pressed', String(dark));
+  };
+  update();
+  button.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch {}
+    update();
+  });
+})();
+</script>"""
+
+THEME_BOOT = """<script>
+try {
+  const saved = localStorage.getItem('codimate-theme');
+  document.documentElement.dataset.theme = saved ||
+    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+} catch {
+  document.documentElement.dataset.theme =
+    matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+</script>"""
+
+PDOC_THEME = """<style>
+html[data-theme="dark"] { --pdoc-background:#12161f; color-scheme:dark; }
+html[data-theme="dark"] .pdoc {
+  --text:#e8eef7; --muted:#9aa4b8; --link:#6ea8ff; --link-hover:#a6c8ff;
+  --code:#1a202b; --active:#394052; --accent:#222a38; --accent2:#394355;
+  --nav-hover:rgba(255,255,255,.12); --name:#8cc8ff; --def:#8ad49b;
+  --annotation:#b1d6a7;
+}
+html[data-theme="dark"] .pdoc pre,
+html[data-theme="dark"] .pdoc code { background-color:#1a202b; color:#d5deeb; }
+.theme-toggle { border:1px solid #c1c1c1; border-radius:6px; padding:.3rem .6rem;
+  background:#f8f8f8; color:#212529; font:inherit; cursor:pointer; }
+html[data-theme="dark"] .theme-toggle { border-color:#394355; background:#1a202b;
+  color:#e8eef7; }
+.theme-toggle:focus-visible { outline:2px solid #6ea8ff; outline-offset:2px; }
+</style>"""
 
 SHELL = """<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title} — Codimate</title>
+{theme_boot}
 <style>
-:root {{ color-scheme: light dark; --ink:#1b2332; --dim:#5b6478; --bg:#fff;
+:root {{ color-scheme: light; --ink:#1b2332; --dim:#5b6478; --bg:#fff;
          --panel:#f5f6f8; --line:#e3e6ec; --link:#1f6feb; }}
-@media (prefers-color-scheme: dark) {{
-  :root {{ --ink:#e8eef7; --dim:#9aa4b8; --bg:#12161f; --panel:#1a202b;
-           --line:#2a3140; --link:#6ea8ff; }}
-}}
+:root[data-theme="dark"] {{ color-scheme:dark; --ink:#e8eef7; --dim:#9aa4b8;
+  --bg:#12161f; --panel:#1a202b; --line:#2a3140; --link:#6ea8ff; }}
 * {{ box-sizing: border-box; }}
 body {{ margin:0; background:var(--bg); color:var(--ink); line-height:1.65;
         font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
@@ -93,6 +137,9 @@ nav {{ max-width:min(860px, 92vw); margin:0 auto; display:flex; flex-wrap:wrap;
 nav a {{ color:var(--dim); text-decoration:none; }}
 nav a.here, nav a:hover {{ color:var(--ink); }}
 nav .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
+.theme-toggle {{ border:1px solid var(--line); border-radius:6px; padding:.3rem .6rem;
+  background:var(--panel); color:var(--ink); font:inherit; cursor:pointer; }}
+.theme-toggle:focus-visible {{ outline:2px solid var(--link); outline-offset:2px; }}
 .layout {{ max-width:min(860px, 92vw); margin:0 auto; }}
 main {{ min-width:0; padding:2.5rem 0 5rem; }}
 details {{ margin:1rem 0; }}
@@ -128,6 +175,7 @@ img {{ max-width:100%; }}
 </head><body>
 <header><nav>{nav}</nav></header>
 <div class="layout"><main>{toc}{body}{next_page}</main></div>
+{theme_script}
 <script>
 document.querySelectorAll('.codehilite').forEach(block => {{
   const button = document.createElement('button');
@@ -157,6 +205,8 @@ def nav_html(here: str, depth: int) -> str:
     for href, label in NAV:
         mark = ' class="here"' if href == here else ""
         out.append(f'<a href="{up}{href}"{mark}>{label}</a>')
+    out.append('<button class="theme-toggle" type="button" aria-pressed="false">'
+               'Night mode</button>')
     return "\n".join(out)
 
 
@@ -227,7 +277,8 @@ def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
     return SHELL.format(title=title.group(1) if title else "Codimate",
                         nav=nav_html(dest, depth), body=body,
                         highlight=HIGHLIGHT, toc=toc,
-                        next_page=next_page)
+                        next_page=next_page, theme_script=THEME_SCRIPT,
+                        theme_boot=THEME_BOOT)
 
 
 def main() -> int:
@@ -266,6 +317,10 @@ def main() -> int:
             '<body><header style="display:flex;flex-wrap:wrap;gap:1.25rem;'
             'align-items:baseline;font-size:.9rem;padding-bottom:0">'
             + bar + "</header>", 1))
+        html = page.read_text()
+        html = html.replace("</head>", THEME_BOOT + PDOC_THEME + "\n</head>", 1)
+        html = html.replace("</body>", THEME_SCRIPT + "\n</body>", 1)
+        page.write_text(html)
     print("  api/")
 
     # GitHub Pages runs Jekyll over an artifact unless told not to, and Jekyll
