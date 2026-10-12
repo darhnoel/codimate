@@ -196,7 +196,7 @@ th, td {{ border:1px solid var(--line); padding:.5rem .7rem; text-align:left; }}
 th {{ background:var(--panel); }}
 blockquote {{ border-left:3px solid var(--line); margin:1rem 0; padding:0 1rem;
               color:var(--dim); }}
-img {{ max-width:100%; }}
+img {{ display:block; max-width:100%; height:auto; margin-inline:auto; }}
 {highlight}
 </style>
 </head><body>
