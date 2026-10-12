@@ -112,6 +112,16 @@ html[data-theme="dark"] .pdoc {
 html[data-theme="dark"] .pdoc pre,
 html[data-theme="dark"] .pdoc code { background-color:#1a202b; color:#d5deeb; }
 .pdoc main { font-size:1.0625rem; line-height:1.7; }
+.site-header { position:sticky; top:0; z-index:20; display:block; width:100%;
+  max-width:none; min-height:4rem; padding:0; background:var(--pdoc-background);
+  border-bottom:1px solid var(--accent2); }
+.header-links a { color:#6c757d; }
+.header-links a:hover, .header-links a.here { color:#212529; }
+.header-links .brand { color:#212529; }
+html[data-theme="dark"] .header-links a { color:#adb8ca; }
+html[data-theme="dark"] .header-links a:hover,
+html[data-theme="dark"] .header-links a.here,
+html[data-theme="dark"] .header-links .brand { color:#e8eef7; }
 .theme-toggle { display:inline-flex; align-items:center; justify-content:center;
   width:2.5rem; height:2.5rem; flex:none; border:0; border-radius:50%;
   padding:0; background:transparent; color:#6c757d; cursor:pointer; }
