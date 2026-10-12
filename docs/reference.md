@@ -127,8 +127,6 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 
 `frame.event.data` holds whatever you passed to `emit()`.
 
----
-
 <a id="drawing"></a>
 
 ## Draw shapes, text, and images
