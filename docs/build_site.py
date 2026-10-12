@@ -111,6 +111,7 @@ html[data-theme="dark"] .pdoc {
 }
 html[data-theme="dark"] .pdoc pre,
 html[data-theme="dark"] .pdoc code { background-color:#1a202b; color:#d5deeb; }
+.pdoc main { font-size:1.0625rem; line-height:1.7; }
 .theme-toggle { display:inline-flex; align-items:center; justify-content:center;
   width:2.5rem; height:2.5rem; flex:none; border:0; border-radius:50%;
   padding:0; background:transparent; color:#6c757d; cursor:pointer; }
@@ -145,8 +146,8 @@ SHELL = """<!doctype html>
 :root[data-theme="dark"] {{ color-scheme:dark; --ink:#e8eef7; --dim:#9aa4b8;
   --bg:#12161f; --panel:#1a202b; --line:#2a3140; --link:#6ea8ff; }}
 * {{ box-sizing: border-box; }}
-body {{ margin:0; background:var(--bg); color:var(--ink); line-height:1.65;
-        font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
+body {{ margin:0; background:var(--bg); color:var(--ink); line-height:1.7;
+        font:17px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
 header {{ border-bottom:1px solid var(--line); position:sticky; top:0;
           background:var(--bg); z-index:2; min-height:4rem; }}
 .header-links {{ width:min(860px,92vw); min-height:4rem; margin:0 auto;
@@ -168,7 +169,7 @@ header {{ border-bottom:1px solid var(--line); position:sticky; top:0;
 .site-header .theme-toggle {{ position:absolute; top:50%; right:1.25rem;
   transform:translateY(-50%); }}
 .layout {{ max-width:min(860px, 92vw); margin:0 auto; }}
-main {{ min-width:0; padding:2.5rem 0 5rem; }}
+main {{ min-width:0; max-width:76ch; margin-inline:auto; padding:2.5rem 0 5rem; }}
 details {{ margin:1rem 0; }}
 summary {{ cursor:pointer; color:var(--dim); }}
 .contents {{ padding:1rem; background:var(--panel); border-radius:8px; }}
