@@ -76,7 +76,9 @@ THEME_SCRIPT = """<script>
   const button = document.querySelector('.theme-toggle');
   const update = () => {
     const dark = root.dataset.theme === 'dark';
-    button.textContent = dark ? 'Light mode' : 'Night mode';
+    const label = dark ? 'Switch to light mode' : 'Switch to night mode';
+    button.setAttribute('aria-label', label);
+    button.title = label;
     button.setAttribute('aria-pressed', String(dark));
   };
   update();
@@ -109,10 +111,18 @@ html[data-theme="dark"] .pdoc {
 }
 html[data-theme="dark"] .pdoc pre,
 html[data-theme="dark"] .pdoc code { background-color:#1a202b; color:#d5deeb; }
-.theme-toggle { border:1px solid #c1c1c1; border-radius:6px; padding:.3rem .6rem;
-  background:#f8f8f8; color:#212529; font:inherit; cursor:pointer; }
-html[data-theme="dark"] .theme-toggle { border-color:#394355; background:#1a202b;
-  color:#e8eef7; }
+.theme-toggle { display:inline-flex; align-items:center; justify-content:center;
+  width:2.5rem; height:2.5rem; flex:none; border:0; border-radius:50%;
+  padding:0; background:transparent; color:#6c757d; cursor:pointer; }
+.theme-toggle:hover { background:#eee; color:#212529; }
+html[data-theme="dark"] .theme-toggle { color:#adb8ca; }
+html[data-theme="dark"] .theme-toggle:hover { background:#222a38; color:#e8eef7; }
+.theme-toggle:focus-visible { outline:2px solid #6ea8ff; outline-offset:2px; }
+.theme-toggle svg { width:1.25rem; height:1.25rem; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.theme-toggle .icon-sun { display:none; }
+html[data-theme="dark"] .theme-toggle .icon-sun { display:block; }
+html[data-theme="dark"] .theme-toggle .icon-moon { display:none; }
 .theme-toggle:focus-visible { outline:2px solid #6ea8ff; outline-offset:2px; }
 </style>"""
 
@@ -137,9 +147,16 @@ nav {{ max-width:min(860px, 92vw); margin:0 auto; display:flex; flex-wrap:wrap;
 nav a {{ color:var(--dim); text-decoration:none; }}
 nav a.here, nav a:hover {{ color:var(--ink); }}
 nav .brand {{ font-weight:700; color:var(--ink); margin-right:auto; }}
-.theme-toggle {{ border:1px solid var(--line); border-radius:6px; padding:.3rem .6rem;
-  background:var(--panel); color:var(--ink); font:inherit; cursor:pointer; }}
+.theme-toggle {{ display:inline-flex; align-items:center; justify-content:center;
+  width:2.5rem; height:2.5rem; flex:none; border:0; border-radius:50%; padding:0;
+  background:transparent; color:var(--dim); cursor:pointer; }}
+.theme-toggle:hover {{ background:var(--panel); color:var(--ink); }}
 .theme-toggle:focus-visible {{ outline:2px solid var(--link); outline-offset:2px; }}
+.theme-toggle svg {{ width:1.25rem; height:1.25rem; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }}
+.theme-toggle .icon-sun {{ display:none; }}
+:root[data-theme="dark"] .theme-toggle .icon-sun {{ display:block; }}
+:root[data-theme="dark"] .theme-toggle .icon-moon {{ display:none; }}
 .layout {{ max-width:min(860px, 92vw); margin:0 auto; }}
 main {{ min-width:0; padding:2.5rem 0 5rem; }}
 details {{ margin:1rem 0; }}
@@ -205,8 +222,19 @@ def nav_html(here: str, depth: int) -> str:
     for href, label in NAV:
         mark = ' class="here"' if href == here else ""
         out.append(f'<a href="{up}{href}"{mark}>{label}</a>')
-    out.append('<button class="theme-toggle" type="button" aria-pressed="false">'
-               'Night mode</button>')
+    out.append('''<button class="theme-toggle" type="button"
+  aria-label="Switch to night mode" title="Switch to night mode" aria-pressed="false">
+  <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>
+  </svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2m0 16v2
+      M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42
+      M2 12h2m16 0h2
+      M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>
+  </svg>
+</button>''')
     return "\n".join(out)
 
 
