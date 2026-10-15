@@ -72,6 +72,23 @@ cm.trace(fn, state, *, snapshot=None) -> Trace
 Runs `fn(state, emit)` and records what happened. `snapshot(state)` returns the
 data worth showing; it defaults to a deep copy of the state.
 
+`state` can be any object Codimate can deep-copy; a `@dataclass` is recommended:
+
+```python
+@dataclass
+class Ball:
+    x: float = 100
+    trail: list[float] = field(default_factory=list)
+
+
+cm.trace(move, Ball())
+```
+
+The view reads it as `frame.state.x`. A list or dict field needs
+`field(default_factory=...)`, as with any dataclass. The state is copied at every
+moment, so keep it to plain data, or pass `snapshot=` to save only the part worth
+showing. See [ADR 0021](adr/0021-state-is-a-dataclass.md).
+
 ```python
 emit(name, **data) -> None
 ```
@@ -119,7 +136,7 @@ need it.
 The view is called once per event with a `Frame`, and returns a `Scene`.
 
 ```python
-frame.state           # your data at that moment
+frame.state           # your state at that moment, e.g. frame.state.x
 frame.event           # what just happened, or None for the opening moment
 frame.is_(name)       # did this moment come from an event called `name`?
 frame.items(key="items")   # the list an `items=[...]` event named; [] if none
@@ -864,26 +881,33 @@ This is the tutorial's ball with a label that travels with it. Save it as
 `labeled_ball.py` and run `python labeled_ball.py`.
 
 ```python
+from dataclasses import dataclass
+
 import codimate as cm
 
 cm.canvas(640, 360)
 
 
-def move(state, emit):
-    state["x"] = 540
+@dataclass
+class Ball:
+    x: float = 100
+
+
+def move(ball, emit):
+    ball.x = 540
     emit("moved")
 
 
 def view(frame):
     scene = cm.Scene()
-    ball = scene.group("ball", at=(frame.state["x"], 180))
+    ball = scene.group("ball", at=(frame.state.x, 180))
     ball.circle("body", r=30).fill("blue")
     ball.text("label", "A", size=24)
     return scene
 
 
 cm.explain(
-    trace=cm.trace(move, {"x": 100}),
+    trace=cm.trace(move, Ball()),
     view=view,
     timing=cm.Timing(default=2.0, opening=0.5, final_hold=0.5),
 ).render("labeled_ball.mp4")

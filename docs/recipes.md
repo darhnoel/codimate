@@ -4,6 +4,41 @@ Use these small changes after completing [First animation](tutorial.md).
 Unless marked otherwise, the snippets assume you already have `import codimate
 as cm`, an algorithm, and a `view(frame)` function.
 
+## Keep the state in a dataclass
+
+List everything that changes, with its starting value, in one dataclass:
+
+```python
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Counting:
+    total: int = 0
+    seen: list[str] = field(default_factory=list)
+
+
+def count(state, emit):
+    for fruit in ("apple", "pear", "apple"):
+        state.total += 1
+        state.seen.append(fruit)
+        emit("counted", fruit=fruit)
+
+
+trace = cm.trace(count, Counting())
+```
+
+The view reads `frame.state.total` and `frame.state.seen`. A list or dict field
+needs `field(default_factory=...)`, or every `Counting()` would share one list.
+
+Codimate saves a deep copy of the state at every event, so keep it to plain data:
+numbers, strings, lists, small objects. If the state holds something large that
+the view does not need, pass `snapshot=` to save only the part worth showing:
+
+```python
+trace = cm.trace(count, Counting(), snapshot=lambda state: state.total)
+```
+
 ## Highlight the item involved in an event
 
 Pass information with the event after updating your state:

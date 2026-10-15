@@ -5,6 +5,7 @@ Run explicitly with: python docs/examples/build_ball_media.py
 
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 import codimate as cm
@@ -14,13 +15,18 @@ HERE = Path(__file__).resolve().parent
 MEDIA = HERE.parent / "media"
 
 
+@dataclass
+class Ball:
+    x: float
+
+
 def picture(name, x, radius, color):
     def view(frame):
         scene = cm.Scene()
-        scene.circle("ball", r=radius, at=(frame.state["x"], 180)).fill(color)
+        scene.circle("ball", r=radius, at=(frame.state.x, 180)).fill(color)
         return scene
 
-    explanation = cm.explain(trace=cm.trace(lambda state, emit: None, {"x": x}),
+    explanation = cm.explain(trace=cm.trace(lambda ball, emit: None, Ball(x)),
                              view=view)
     explanation.frame_at(0, str(MEDIA / name))
 

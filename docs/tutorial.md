@@ -14,24 +14,31 @@ python -m pip install codimate
 Save this program as `ball.py` in any folder:
 
 ```python
+from dataclasses import dataclass
+
 import codimate as cm
 
 cm.canvas(640, 360)
 
 
-def move(state, emit):
-    state["x"] = 540
+@dataclass
+class Ball:
+    x: float = 100
+
+
+def move(ball, emit):
+    ball.x = 540
     emit("moved")
 
 
 def view(frame):
     scene = cm.Scene()
-    scene.circle("ball", r=30, at=(frame.state["x"], 180)).fill("blue")
+    scene.circle("ball", r=30, at=(frame.state.x, 180)).fill("blue")
     return scene
 
 
 explanation = cm.explain(
-    trace=cm.trace(move, {"x": 100}),
+    trace=cm.trace(move, Ball()),
     view=view,
     timing=cm.Timing(default=2.0, opening=0.5, final_hold=0.5),
 )
@@ -77,15 +84,26 @@ cm.canvas(640, 360)
 The screen is 640 units wide and 360 units tall. The top-left corner is `(0, 0)`.
 Moving right makes x bigger. Moving down makes y bigger.
 
+### Describe what can change
+
+```python
+@dataclass
+class Ball:
+    x: float = 100
+```
+
+`Ball` lists everything that changes in this film: here, only the ball's x
+position, starting at 100. Codimate saves a copy of it at every moment.
+
 ### Say what changes
 
 ```python
-def move(state, emit):
-    state["x"] = 540
+def move(ball, emit):
+    ball.x = 540
     emit("moved")
 ```
 
-`state` holds the ball's position. Change it, then call `emit()` to save that moment.
+`move` gets the ball. Change it, then call `emit()` to save that moment.
 `"moved"` is the event's name. It tells us what happened.
 
 ### Draw a moment
@@ -93,11 +111,11 @@ def move(state, emit):
 ```python
 def view(frame):
     scene = cm.Scene()
-    scene.circle("ball", r=30, at=(frame.state["x"], 180)).fill("blue")
+    scene.circle("ball", r=30, at=(frame.state.x, 180)).fill("blue")
     return scene
 ```
 
-`frame.state` is the data saved for this moment. `Scene()` starts an empty picture.
+`frame.state` is the `Ball` saved for this moment. `Scene()` starts an empty picture.
 The circle's name is `"ball"`, its radius is 30, and its height on screen is y=180.
 
 This function draws one moment. It does not move the ball itself.
@@ -106,13 +124,13 @@ This function draws one moment. It does not move the ball itself.
 
 ```python
 explanation = cm.explain(
-    trace=cm.trace(move, {"x": 100}),
+    trace=cm.trace(move, Ball()),
     view=view,
     timing=cm.Timing(default=2.0, opening=0.5, final_hold=0.5),
 )
 ```
 
-The ball starts at x=100. `trace` runs `move()` and saves what happens.
+`Ball()` is the ball at its start, x=100. `trace` runs `move()` and saves what happens.
 `view` draws the saved moments. `Timing` gives the move two seconds.
 
 `opening` holds the first picture for half a second. `final_hold` holds the last
@@ -132,7 +150,7 @@ small `.index.bin` file used by the previewer. You can leave that file alone.
 Change just the final part of the circle line:
 
 ```python
-scene.circle("ball", r=30, at=(frame.state["x"], 180)).fill("orange")
+scene.circle("ball", r=30, at=(frame.state.x, 180)).fill("orange")
 ```
 
 Run `python ball.py` again. **The movement stays the same; the ball is now orange.**
@@ -144,7 +162,7 @@ Run `python ball.py` again. **The movement stays the same; the ball is now orang
 Keep the orange color and change `r=30` to `r=50`:
 
 ```python
-scene.circle("ball", r=50, at=(frame.state["x"], 180)).fill("orange")
+scene.circle("ball", r=50, at=(frame.state.x, 180)).fill("orange")
 ```
 
 Run it again. **The ball is bigger, but still moves to the same place.**
@@ -167,10 +185,10 @@ Its final picture is unchanged; only the time changes.
 Replace just the `move()` function:
 
 ```python
-def move(state, emit):
-    state["x"] = 320
+def move(ball, emit):
+    ball.x = 320
     emit("moved")
-    state["x"] = 540
+    ball.x = 540
     emit("moved")
 ```
 

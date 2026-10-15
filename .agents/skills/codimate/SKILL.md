@@ -28,6 +28,7 @@ are useful; choosing wrong gives a confusing video, not an error.
 
 ```python
 import random
+from dataclasses import dataclass
 
 import codimate as cm
 
@@ -35,9 +36,18 @@ SIDES = ("heads", "tails")
 coin = random.Random(7)          # seeded: the same video every run
 
 
+@dataclass
+class Tally:                     # the state: a dataclass, read as tally.heads
+    heads: int = 0
+    tails: int = 0
+
+
 def flip(tally, emit):
     for _ in range(20):
-        tally[coin.choice(SIDES)] += 1
+        if coin.choice(SIDES) == "heads":
+            tally.heads += 1
+        else:
+            tally.tails += 1
         emit("flip")             # after changing the data — it snapshots the result
 
 
@@ -45,14 +55,14 @@ def view(frame):
     scene = cm.Scene()
     for slot, side in cm.row(SIDES, gap=120, size=190):
         bar = scene.group(side, slot)
-        bar.rect("box", h=max(frame.state[side] * 22, 1),
+        bar.rect("box", h=max(getattr(frame.state, side) * 22, 1),
                  at=cm.at(bottom=0)).fill("blue")
         bar.text("label", side, size=24, at=cm.at(top=16))
     return scene
 
 
 cm.explain(
-    trace=cm.trace(flip, {"heads": 0, "tails": 0}),
+    trace=cm.trace(flip, Tally()),
     view=view,
     timing=cm.Timing(default=0.35, opening=0.8, final_hold=2.0),
 ).render("results/coins.mp4", fps=60, scale=1.5)

@@ -113,6 +113,18 @@ def trace(fn, state, /, *, snapshot=None) -> "Trace":
     stays ordinary Python: `bubble_sort(values, print)` runs it and prints the
     events.
 
+    Write the state as a dataclass, so the algorithm and the view read it as
+    `state.x` and a misspelled field is an error rather than a new key::
+
+        @dataclass
+        class Ball:
+            x: float = 100
+
+        cm.trace(move, Ball())
+
+    Any object that `copy.deepcopy` handles works; a list of Items is the
+    usual state for things that move, and a dict is fine for a quick sketch.
+
     `snapshot(state)` returns the part worth showing, if a deep copy of the
     whole state is not what you want. Items keep their identity through the
     default copy.

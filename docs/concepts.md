@@ -10,15 +10,21 @@ Here are the main ideas, using that same ball each time.
 State is the information your program works with. Our ball only needs an x position:
 
 ```python
-state = {"x": 100}
+@dataclass
+class Ball:
+    x: float = 100
 ```
+
+Write the state as a dataclass. You read it as `ball.x`, a misspelled field is an
+error instead of a silent new key, and every field and its starting value is in one
+place. A plain dict works too, for a quick sketch.
 
 ## Algorithm: what changes
 
 An algorithm is your Python logic. Ours changes the ball's position:
 
 ```python
-state["x"] = 540
+ball.x = 540
 ```
 
 Codimate does not decide where a ball should go or calculate your physics.
@@ -29,7 +35,7 @@ Your code does that.
 Call `emit()` after a change you want to show:
 
 ```python
-state["x"] = 540
+ball.x = 540
 emit("moved")
 ```
 
@@ -41,7 +47,7 @@ says what happened; it does not identify a shape.
 A trace holds the starting data and a copy saved at each event:
 
 ```python
-trace = cm.trace(move, {"x": 100})
+trace = cm.trace(move, Ball())
 ```
 
 For our ball, the trace saves **x=100 → x=540**. `move` is the function from the
@@ -52,7 +58,7 @@ For our ball, the trace saves **x=100 → x=540**. `move` is the function from t
 Read its state to find where the ball belongs:
 
 ```python
-x = frame.state["x"]
+x = frame.state.x
 ```
 
 A `Frame` here is a saved moment from the trace, not every image in the exported
@@ -65,7 +71,7 @@ The view is a function that turns saved data into a picture:
 ```python
 def view(frame):
     scene = cm.Scene()
-    scene.circle("ball", r=30, at=(frame.state["x"], 180)).fill("blue")
+    scene.circle("ball", r=30, at=(frame.state.x, 180)).fill("blue")
     return scene
 ```
 

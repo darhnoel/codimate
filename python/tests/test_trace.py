@@ -81,3 +81,25 @@ def test_an_algorithm_is_ordinary_python():
 
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
+
+
+def test_a_dataclass_state_is_snapshotted_and_read_by_attribute():
+    """The documented way to write a state (ADR 0021)."""
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class Ball:
+        x: float = 100
+        trail: list = field(default_factory=list)
+
+    def move(ball, emit):
+        for x in (320, 540):
+            ball.trail.append(ball.x)
+            ball.x = x
+            emit("moved")
+
+    t = cm.trace(move, Ball())
+    assert t.initial.x == 100 and t.initial.trail == []
+    assert [e.state.x for e in t.events] == [320, 540]
+    assert t.events[0].state.trail == [100], "each moment keeps its own copy"
+    assert t.events[1].state.trail == [100, 320]
