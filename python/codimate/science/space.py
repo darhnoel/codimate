@@ -693,9 +693,11 @@ class World:
         minor = math.sqrt(max((a + c) / 2 - spread, 0.0))
         angle = math.degrees(0.5 * math.atan2(2 * b, a - c))
 
-        # Where the light is, seen on the unit ball: brightest toward `l`.
+        # The brightest spot is where the surface faces the light. On the body
+        # a normal is stretch⁻ᵀ·u, so it points at the light where u is along
+        # stretchᵀ·light: that is the highlight's direction on the unit ball.
         to_light = light.toward(body.centre)
-        lit = _unit(_apply(unstretch, to_light))
+        lit = _unit(tuple(_dot(col, to_light) for col in cols))
         lx, ly = _dot(lit, p_), _dot(lit, q_)
         reach = math.hypot(lx, ly)
         # The way to the light across the disc; straight-on light has none, and
@@ -704,25 +706,49 @@ class World:
         base, shade = _rgb(body.color), _rgb(light.shadow)
         count = max(1, body.levels)
 
+        # The highlight is where the surface faces the light: `reach` out from
+        # the middle, toward the light. The outer discs lean all the way that
+        # way, touching the rim on the lit side, so each shows only as a
+        # crescent on the dark side; the inner ones close in on the highlight.
+        # Lit straight from the front there is no lit side, and they centre.
+        highlight = min(reach / 0.87, 1.0)
+        lean = min(reach / 0.3, 1.0)
+
         def disc(n):
             """(size, offset along p, offset along q) of disc n, on the unit ball."""
             t = n / (count - 1) if count > 1 else 0.0
-            return 1.0 - 0.87 * t, 0.87 * t * lx, 0.87 * t * ly
+            share = (1 - t * t) * lean + t * t * highlight
+            out = 0.87 * t * share
+            return 1.0 - 0.87 * t, out * ax, out * ay
 
         items = []
         for n in range(count):
             size, ox, oy = disc(n)
             inner, ix, iy = disc(n + 1) if n + 1 < count else (0.0, ox, oy)
-            # The middle of this disc's crescent: between its far edge and the
-            # next disc's, on the side away from the light.
-            px = (ox - ax * size + ix - ax * inner) / 2
-            py = (oy - ay * size + iy - ay * inner) / 2
-            pz = math.sqrt(max(0.0, 1.0 - px * px - py * py))
-            spot = tuple(px * a_ + py * b_ + pz * c_ for a_, b_, c_ in zip(p_, q_, w))
-            # The surface faces along the stretch's inverse-transpose.
-            normal = _unit(tuple(_dot(col, spot) for col in zip(*unstretch)))
-            facing = max(0.0, _dot(normal, to_light))
-            bright = light.ambient + (1 - light.ambient) * facing
+            # What shows of this disc is a band between its edge and the next
+            # disc's: a wide crescent away from the light, a thin sliver toward
+            # it. Its shade is the light at the middle of each, weighted by how
+            # wide each is, so the lit rim is not painted the dark side's shade.
+            step = (ix - ox) * ax + (iy - oy) * ay
+            far = (size - inner) + step
+            near = max((size - inner) - step, 0.0)
+            bright = 0.0
+            # The smallest disc is the highlight: shade it by its own middle.
+            sides = ((-1.0, far), (1.0, near)) if n + 1 < count else ((0.0, 1.0),)
+            for side, weight in sides:
+                px = (ox + side * ax * size + ix + side * ax * inner) / 2
+                py = (oy + side * ay * size + iy + side * ay * inner) / 2
+                rim = math.hypot(px, py)
+                if rim > 0.97:  # just inside the outline, where the normal is sure
+                    px, py = px * 0.97 / rim, py * 0.97 / rim
+                pz = math.sqrt(max(0.0, 1.0 - px * px - py * py))
+                spot = tuple(px * a_ + py * b_ + pz * c_
+                             for a_, b_, c_ in zip(p_, q_, w))
+                # The surface faces along the stretch's inverse-transpose.
+                normal = _unit(tuple(_dot(col, spot) for col in zip(*unstretch)))
+                facing = max(0.0, _dot(normal, to_light))
+                bright += weight * (light.ambient + (1 - light.ambient) * facing)
+            bright /= sum(weight for _, weight in sides) or 1.0
             rgb = tuple(s + (v - s) * bright for s, v in zip(shade, base))
             color = "#%02x%02x%02x" % tuple(int(round(v)) for v in rgb)
             dx, dy = screen(tuple(ox * a_ + oy * b_ for a_, b_ in zip(p_, q_)))
