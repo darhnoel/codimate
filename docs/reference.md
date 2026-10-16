@@ -508,7 +508,7 @@ and beside the tip. Returns the tip, or `None` if the arrow is too short to draw
 
 ```python
 science.Camera(azimuth=45.0, elevation=35.264, distance=1800.0, scale=0.7,
-               target=(0, 0, 0), centre=None)
+               target=(0, 0, 0), centre=None, orthographic=False)
 
 cam.project(point) -> ((x, y), depth)
 cam.at(point) -> (x, y)
@@ -526,7 +526,9 @@ on, the middle of the canvas by default.
 **Distance is how much perspective there is.** A sphere far from the middle of the
 picture stretches into an egg — measured at ratio 1.36 close in against 1.02 far
 back — so if a round thing looks oval, stand further away rather than moving the
-thing. A very large `distance` is an orthographic camera.
+thing. `orthographic=True` takes the perspective out exactly: every unit is `scale`
+pixels at any depth, so near and far are the same size. That is the flat view an
+engineering drawing or a depth illusion needs. See [ADR 0022](adr/0022-an-exact-orthographic-camera.md).
 
 **To pull back, `dolly`.** It keeps the lens, so things shrink. `moved(distance=)`
 keeps `scale`, so nothing shrinks and only the perspective changes.

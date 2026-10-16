@@ -79,7 +79,13 @@ class Camera:
     dramatic, and a sphere far from the middle of the picture stretches into an
     egg — measured on a real orbit at ratio 1.36 close in against 1.02 far
     back. If a round thing looks oval, stand further back, not move the
-    thing. A very large ``distance`` is an orthographic camera.
+    thing.
+
+    ``orthographic=True`` takes the perspective out exactly: every unit is
+    ``scale`` pixels at any depth, so near and far are the same size, and
+    ``distance`` only says where the camera stands for depth order. It is the
+    flat view an engineering drawing, a map or a depth illusion needs, without
+    standing a camera a million units away and trusting the rounding.
 
     It is a map, in the sense of `cm.axes` (ADR 0016): it hands back pixels
     and draws nothing. ``moved`` returns a changed copy, which is how a camera
@@ -92,6 +98,7 @@ class Camera:
     scale: float = 0.7
     target: tuple = (0.0, 0.0, 0.0)
     centre: "tuple | None" = None
+    orthographic: bool = False
 
     def __post_init__(self):
         if not -90.0 <= self.elevation <= 90.0:
@@ -125,9 +132,22 @@ class Camera:
         """Where the camera is, in space."""
         return self._frame[0]
 
+    def _per_unit(self, depth: float) -> float:
+        """Pixels per unit of space at ``depth``: the same everywhere when
+        orthographic, fewer further off otherwise."""
+        return self.scale if self.orthographic else self.focal / depth
+
+    def _toward_eye(self, point) -> tuple:
+        """The unit direction from ``point`` to the viewer. Orthographic, the
+        viewer is at infinity, so it is the same for every point."""
+        if self.orthographic:
+            forward = self._frame[3]
+            return (-forward[0], -forward[1], -forward[2])
+        return _unit(_sub(self.position, point))
+
     def moved(self, **changes) -> "Camera":
         """A copy with some of ``azimuth``, ``elevation``, ``distance``,
-        ``scale``, ``target`` or ``centre`` changed."""
+        ``scale``, ``target``, ``centre`` or ``orthographic`` changed."""
         return replace(self, **changes)
 
     def dolly(self, distance: float) -> "Camera":
@@ -154,7 +174,7 @@ class Camera:
         position, right, up, forward = self._frame
         rel = _sub(point, position)
         depth = max(_dot(rel, forward), 1.0)
-        s = self.focal / depth
+        s = self._per_unit(depth)
         cx, cy = self.origin
         return (cx + _dot(rel, right) * s, cy - _dot(rel, up) * s), depth
 
@@ -169,7 +189,7 @@ class Camera:
         viewing axis" is only right for a camera at infinity, and drops visible
         faces near the edge of a close body.
         """
-        return _dot(normal, _sub(self.position, point)) > 0
+        return _dot(normal, self._toward_eye(point)) > 0
 
     def hidden_by(self, point, centre, r: float) -> bool:
         """Is ``point`` behind the sphere at ``centre`` with radius ``r``, seen
@@ -180,6 +200,14 @@ class Camera:
         ring much larger than the body it answers a different question and
         wrongly hides about half of what the sphere never covered.
         """
+        if self.orthographic:
+            # The line of sight is parallel to the view: from the point, back
+            # toward the viewer, does it meet the sphere?
+            back = self._toward_eye(point)
+            w = _sub(point, centre)
+            b = _dot(w, back)
+            disc = b * b - (_dot(w, w) - r * r)
+            return disc >= 0 and -b + math.sqrt(disc) > 1e-6
         pos = self.position
         d = _sub(point, pos)
         dist = math.sqrt(_dot(d, d))
@@ -513,7 +541,7 @@ class World:
 
     def _silhouette(self, body):
         centre, depth = self.camera.project(body.centre)
-        return centre, body.r * self.camera.focal / depth
+        return centre, body.r * self.camera._per_unit(depth)
 
     def _body(self, light, key, body):
         cam = self.camera
@@ -548,7 +576,7 @@ class World:
             if body.style == "star":
                 # Limb darkening (rim dimmer) plus a fixed per-face mottle,
                 # which belongs to the surface and so turns with `spin`.
-                eye = _unit(_sub(cam.position, middle))
+                eye = cam._toward_eye(middle)
                 limb = max(0.0, _dot(normal, eye)) ** 0.5
                 mottle = ((n * 2654435761) % 1000) / 1000 - 0.5
                 bright = min(1.0, 0.55 + 0.45 * limb + 0.16 * mottle)

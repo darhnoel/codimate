@@ -78,6 +78,29 @@ def test_a_very_far_camera_has_no_perspective():
     assert abs(near - far) < 1e-3, "orthographic: depth does not change size"
 
 
+
+def test_an_orthographic_camera_has_no_perspective_at_any_distance():
+    cm.canvas(1280, 720)
+    for distance in (50.0, 1800.0):
+        cam = science.Camera(azimuth=0.0, elevation=0.0, distance=distance,
+                             scale=2.0, orthographic=True)
+        near = cam.at((30.0, 100.0, 0.0))[0] - 640
+        far = cam.at((-30.0, 100.0, 0.0))[0] - 640
+        assert near == far == 200.0, "exactly scale pixels per unit, near or far"
+
+
+def test_an_orthographic_camera_still_knows_what_faces_it_and_what_is_hidden():
+    cam = science.Camera(azimuth=0.0, elevation=0.0, orthographic=True)
+    toward = cam._toward_eye((0.0, 0.0, 0.0))
+    assert cam.facing((500.0, 0.0, 0.0), toward)
+    assert not cam.facing((500.0, 0.0, 0.0), tuple(-t for t in toward))
+    behind = tuple(-300 * t for t in toward)
+    before = tuple(300 * t for t in toward)
+    assert cam.hidden_by(behind, (0.0, 0.0, 0.0), 100.0)
+    assert not cam.hidden_by(before, (0.0, 0.0, 0.0), 100.0)
+    assert not cam.hidden_by((0.0, 0.0, 500.0), (0.0, 0.0, 0.0), 100.0)
+
+
 def test_the_default_view_is_isometric():
     """All three axes 120 degrees apart on screen — the engineering drawing."""
     cm.canvas(1280, 720)
@@ -719,12 +742,6 @@ def test_the_kit_is_reachable_from_the_package():
     assert "science" in cm.__all__
 
 
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(support.run(globals()))
-
-
 def test_a_star_is_dimmer_at_the_rim_and_its_mottle_turns_with_spin():
     def colours(spin):
         scene = cm.Scene()
@@ -735,3 +752,9 @@ def test_a_star_is_dimmer_at_the_rim_and_its_mottle_turns_with_spin():
     a, b = colours(0.0), colours(40.0)
     assert len(set(a.values())) > 5, "not one flat colour"
     assert a != b, "the surface turns"
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(support.run(globals()))
