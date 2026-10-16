@@ -536,6 +536,8 @@ keeps `scale`, so nothing shrinks and only the perspective changes.
 ```python
 science.Sphere(centre, r, color="#58c4dd", style="solid", spin=0.0, tilt=0.0,
                detail=None)
+science.Ellipsoid(centre, radii, color="#58c4dd", style="solid",
+                  turn=(0.0, 0.0, 0.0), detail=None)
 science.Light(direction=(0.4, 0.3, 0.85), source=None, ambient=0.12,
               shadow="#000000")
 science.Orbit(a, e=0.0, inclination=0.0, around=(0, 0, 0), color="#4a5568",
@@ -565,6 +567,15 @@ shade the `Light` gives the ball's surface where that disc shows. Forty balls is
 surface, so `spin` and `tilt` show nothing, and two balls are ordered as wholes,
 so one sinking deep into another is drawn simply in front. See
 [ADR 0023](adr/0023-a-smooth-sphere-of-stacked-discs.md).
+
+**`Ellipsoid` for a squished ball.** Three `radii` along x, y and z, then `turn`
+degrees about x, then y, then z. It is drawn by the same `World`, sorted with the
+spheres, in `"solid"`, `"smooth"`, `"flat"` or `"wire"` (not `"star"`). A smooth
+egg's discs are ellipses, worked out from its real shape and shaded by its real
+surface; a solid one is the sphere's mesh, stretched. With perspective its outline
+is only nearly an ellipse; with `orthographic=True` it is exactly one. Where one
+radius is needed, an orbit hiding behind it, the largest stands in. See
+[ADR 0024](adr/0024-an-ellipsoid.md).
 
 A `Light` is a `direction` — rays all parallel — or a `source` point, so light
 arrives *from* it and the lit side follows a body round its orbit. Faces are

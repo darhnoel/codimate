@@ -822,6 +822,70 @@ def test_a_smooth_ball_keeps_its_size_with_an_orthographic_camera():
 
 
 
+
+# ------------------------------------------------------------- ellipsoid
+
+
+def _oval(egg, camera):
+    cm.canvas(1280, 720)
+    scene = cm.Scene()
+    science.World(camera).draw(scene, {"egg": egg})
+    return scene
+
+
+def test_an_ellipsoid_with_equal_radii_draws_as_its_sphere():
+    cam = science.Camera(azimuth=30.0, elevation=20.0)
+    ball = science.Sphere((10.0, 0.0, 5.0), 80.0, "#e0d8c8", "smooth", detail=8)
+    egg = science.Ellipsoid((10.0, 0.0, 5.0), (80.0, 80.0, 80.0), "#e0d8c8", "smooth",
+                            turn=(20.0, 40.0, 60.0), detail=8)
+    a = sorted(_by_kind(_oval(ball, cam), "circle"), key=lambda s: s.layer)
+    b = sorted(_by_kind(_oval(egg, cam), "circle"), key=lambda s: s.layer)
+    for one, other in zip(a, b):
+        assert abs(one.x - other.x) < 1e-6 and abs(one.y - other.y) < 1e-6
+        assert abs(one.r - other.r) < 1e-6 and one.color == other.color
+
+
+def test_a_smooth_egg_seen_side_on_is_an_ellipse_of_its_radii():
+    """Long along x, seen from the y axis with no perspective: an ellipse 60
+    across and 20 high, lying flat."""
+    cam = science.Camera(azimuth=90.0, elevation=0.0, scale=2.0, orthographic=True)
+    egg = science.Ellipsoid((0.0, 0.0, 0.0), (60.0, 20.0, 20.0), "#e0d8c8", "smooth",
+                            detail=4)
+    outline = min(_by_kind(_oval(egg, cam), "circle"), key=lambda s: s.layer)
+    assert abs(outline.r - 120.0) < 1e-6, "60 units at 2 px a unit"
+    assert abs(outline.scale_y - 1 / 3) < 1e-6, "a third as high as wide"
+    assert abs(math.sin(math.radians(outline.rotate))) < 1e-6, "lying flat"
+
+
+def test_turning_an_egg_end_on_makes_its_outline_round():
+    cam = science.Camera(azimuth=90.0, elevation=0.0, scale=2.0, orthographic=True)
+    egg = science.Ellipsoid((0.0, 0.0, 0.0), (60.0, 20.0, 20.0), "#e0d8c8", "smooth",
+                            turn=(0.0, 0.0, 90.0), detail=4)
+    outline = min(_by_kind(_oval(egg, cam), "circle"), key=lambda s: s.layer)
+    assert abs(outline.r - 40.0) < 1e-6 and abs(outline.scale_y - 1.0) < 1e-6
+
+
+def test_a_solid_egg_is_a_stretched_mesh():
+    cam = science.Camera(azimuth=90.0, elevation=0.0, scale=1.0, orthographic=True)
+    egg = science.Ellipsoid((0.0, 0.0, 0.0), (60.0, 20.0, 20.0), "#e0d8c8", detail=2)
+    faces = _by_kind(_oval(egg, cam), "polygon")
+    xs = [x for f in faces for x in f.points[::2]]
+    ys = [y for f in faces for y in f.points[1::2]]
+    assert abs((max(xs) - min(xs)) - 120.0) < 2.0, "120 across"
+    assert abs((max(ys) - min(ys)) - 40.0) < 2.0, "40 high"
+
+
+def test_an_ellipsoid_refuses_nonsense():
+    for bad in ({"radii": (1.0, 2.0)}, {"radii": (1.0, 0.0, 2.0)},
+                {"radii": (1.0, 1.0, 1.0), "style": "star"}):
+        try:
+            science.Ellipsoid((0.0, 0.0, 0.0), **bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"{bad} should have been refused")
+
+
+
 if __name__ == "__main__":
     import sys
 

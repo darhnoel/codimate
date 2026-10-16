@@ -28,6 +28,9 @@ ABOVE = 100_000
 
 STYLES = ("solid", "smooth", "flat", "star", "wire")
 
+# What an Ellipsoid can be drawn as: no "star", whose mottle needs a spin.
+OVAL_STYLES = ("solid", "smooth", "flat", "wire")
+
 
 def _dot(a, b):
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
@@ -47,6 +50,26 @@ def _unit(v):
     if m == 0:
         raise ValueError("a direction needs a length")
     return (v[0] / m, v[1] / m, v[2] / m)
+
+
+def _apply(rows, v):
+    """A 3x3 matrix, given as rows, times a vector."""
+    return tuple(_dot(row, v) for row in rows)
+
+
+def _columns(rows):
+    return tuple(zip(*rows))
+
+
+def _turned(turn):
+    """Rows of the rotation that turns by ``turn`` degrees about x, then y,
+    then z."""
+    ax, ay, az = (math.radians(a) for a in turn)
+    cx, sx, cy, sy = math.cos(ax), math.sin(ax), math.cos(ay), math.sin(ay)
+    cz, sz = math.cos(az), math.sin(az)
+    return ((cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx),
+            (sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx),
+            (-sy, cy * sx, cy * cx))
 
 
 def _tilt(p, degrees):
@@ -384,6 +407,17 @@ class Sphere:
         local = _tilt((math.cos(a), math.sin(a), 0.0), self.tilt)
         return tuple(c + reach * self.r * v for c, v in zip(self.centre, local))
 
+    def _place(self, unit):
+        """The point on the surface in the direction ``unit`` of the mesh."""
+        return tuple(c + self.r * v for c, v in zip(self.centre, unit))
+
+    def _stretch(self):
+        """Rows of the matrix that turns the unit ball into this one: for a
+        sphere, just its radius. A smooth ball's discs are worked out through
+        it, so a sphere and an Ellipsoid share one drawing."""
+        r = self.r
+        return ((r, 0.0, 0.0), (0.0, r, 0.0), (0.0, 0.0, r))
+
     def _posed(self):
         """The unit mesh after spin and tilt."""
         verts = icosphere(self.levels)[0]
@@ -394,6 +428,70 @@ class Sphere:
             x, y = x * cs - y * sn, x * sn + y * cs
             out.append((x, y * ct - z * st, y * st + z * ct))
         return out
+
+
+@dataclass(frozen=True)
+class Ellipsoid:
+    """A squished ball: a sphere stretched to three ``radii`` along x, y and z,
+    then turned by ``turn`` degrees about x, then y, then z. A value, not a
+    drawing: a `World` draws it, sorted together with spheres.
+
+        egg = science.Ellipsoid((0, 0, 0), radii=(40, 30, 55),
+                                color="#ece6da", style="smooth", turn=(0, 20, 35))
+
+    ``style`` is ``"solid"``, ``"smooth"``, ``"flat"`` or ``"wire"``, as for a
+    `Sphere`; ``detail`` likewise. Seen in perspective its outline is only
+    nearly an ellipse; with an orthographic `Camera` it is exactly one.
+
+    Where something needs a single radius — an orbit hiding behind it, a wire
+    mesh fading with depth — the largest of the three stands in, which is a
+    little generous for a flat one.
+    """
+
+    centre: tuple
+    radii: tuple
+    color: str = "#58c4dd"
+    style: str = "solid"
+    turn: tuple = (0.0, 0.0, 0.0)
+    detail: "int | None" = None
+
+    def __post_init__(self):
+        if self.style not in OVAL_STYLES:
+            raise ValueError(
+                f"unknown style {self.style!r} — use {', '.join(OVAL_STYLES)}")
+        if len(self.radii) != 3 or min(self.radii) <= 0:
+            raise ValueError(f"radii are three positive lengths, got {self.radii}")
+
+    @property
+    def r(self) -> float:
+        """The largest radius, for whatever needs just one."""
+        return max(self.radii)
+
+    @property
+    def levels(self) -> int:
+        if self.detail is not None:
+            return int(self.detail)
+        if self.style == "smooth":
+            return 32
+        return 2 if self.style == "wire" else 3
+
+    def moved(self, **changes) -> "Ellipsoid":
+        """A copy with some of ``centre``, ``radii``, ``color``, ``style``,
+        ``turn`` or ``detail`` changed."""
+        return replace(self, **changes)
+
+    def _stretch(self):
+        """Rows of the matrix that turns the unit ball into this one: stretch
+        by the radii, then turn."""
+        turned = _turned(self.turn)
+        return tuple(tuple(turned[i][j] * self.radii[j] for j in range(3))
+                     for i in range(3))
+
+    def _place(self, unit):
+        return tuple(c + v for c, v in zip(self.centre, _apply(self._stretch(), unit)))
+
+    def _posed(self):
+        return icosphere(self.levels)[0]
 
 
 # --------------------------------------------------------------------------
@@ -542,7 +640,10 @@ class World:
                 scene.polygon(name, geom).fill(color, edge=color, edge_w=0.4) \
                     .on(layer=layer)
             elif kind == "disc":
-                scene.circle(name, r=geom[1], at=geom[0]).fill(color).on(layer=layer)
+                at, major, minor, angle = geom
+                disc = scene.circle(name, r=major, at=at).fill(color).on(layer=layer)
+                if major - minor > 1e-9 * major:  # an ellipse, not a circle
+                    disc.grow((1.0, minor / major)).turn(angle)
             else:
                 scene.line(name, start=geom[0], end=geom[1], w=width) \
                     .fill(color).on(layer=layer, opacity=opacity)
@@ -553,28 +654,58 @@ class World:
         return centre, body.r * self.camera._per_unit(depth)
 
     def _smooth(self, light, key, body):
-        """A ball as stacked discs, each smaller, nearer the light, and
-        brighter. Each disc shows as a crescent on the side away from the light;
-        it takes the shade the `Light` gives the ball's surface in the middle of
-        that crescent, so the result is the solid style's shading without the
-        mesh. All the discs share the ball's depth, stacked in order, so the
-        ball sorts as one thing among the others."""
+        """A ball, or a squished one, as stacked discs: each smaller, nearer the
+        light, and brighter. Each disc shows as a crescent on the side away from
+        the light, and takes the shade the `Light` gives the surface in the
+        middle of that crescent, so this is the solid style's shading without
+        the mesh. All the discs share the body's depth, stacked in order, so it
+        sorts among the others as one thing.
+
+        The work is done on the unit ball the body is stretched from
+        (``_stretch``). There, the outline seen from the camera is a circle
+        square to ``w``, the discs are circles in that plane, and the stretch
+        carries each to the same ellipse on screen. For a sphere the stretch is
+        its radius, and the ellipses are circles.
+        """
         cam = self.camera
-        (cx, cy), radius = self._silhouette(body)
-        depth = cam.project(body.centre)[1]
+        (cx, cy), depth = cam.project(body.centre)
+        k = cam._per_unit(depth)
         _, right, up, _ = cam._frame
+        stretch = body._stretch()
+        cols = _columns(stretch)
+        # The stretch's inverse, for a turn times a scale: unscale, unturn.
+        unstretch = tuple(tuple(cols[i][j] / _dot(cols[i], cols[i]) for j in range(3))
+                          for i in range(3))
+        w = _unit(_apply(unstretch, cam._toward_eye(body.centre)))
+        p_ = _unit(_cross(w, (0.0, 0.0, 1.0) if abs(w[2]) < 0.9 else (1.0, 0.0, 0.0)))
+        q_ = _cross(w, p_)
+
+        def screen(offset):
+            """Pixels across and down for an offset on the unit ball."""
+            v = _apply(stretch, offset)
+            return _dot(v, right) * k, -_dot(v, up) * k
+
+        # The disc's outline on screen: a circle through the stretch, an ellipse.
+        (m00, m10), (m01, m11) = screen(p_), screen(q_)
+        a, b, c = m00 * m00 + m01 * m01, m00 * m10 + m01 * m11, m10 * m10 + m11 * m11
+        spread = math.hypot((a - c) / 2, b)
+        major = math.sqrt((a + c) / 2 + spread)
+        minor = math.sqrt(max((a + c) / 2 - spread, 0.0))
+        angle = math.degrees(0.5 * math.atan2(2 * b, a - c))
+
+        # Where the light is, seen on the unit ball: brightest toward `l`.
         to_light = light.toward(body.centre)
-        lx, ly = _dot(to_light, right), _dot(to_light, up)
-        lz = _dot(to_light, cam._toward_eye(body.centre))
+        lit = _unit(_apply(unstretch, to_light))
+        lx, ly = _dot(lit, p_), _dot(lit, q_)
         reach = math.hypot(lx, ly)
-        # The way to the light on screen (y up); straight-on light has none, and
+        # The way to the light across the disc; straight-on light has none, and
         # any way will do, the discs then sitting one inside the other.
         ax, ay = (lx / reach, ly / reach) if reach > 1e-9 else (1.0, 0.0)
         base, shade = _rgb(body.color), _rgb(light.shadow)
         count = max(1, body.levels)
 
         def disc(n):
-            """(size, offset x, offset y) of disc n, in ball radii, y up."""
+            """(size, offset along p, offset along q) of disc n, on the unit ball."""
             t = n / (count - 1) if count > 1 else 0.0
             return 1.0 - 0.87 * t, 0.87 * t * lx, 0.87 * t * ly
 
@@ -587,13 +718,17 @@ class World:
             px = (ox - ax * size + ix - ax * inner) / 2
             py = (oy - ay * size + iy - ay * inner) / 2
             pz = math.sqrt(max(0.0, 1.0 - px * px - py * py))
-            bright = light.ambient + (1 - light.ambient) * max(
-                0.0, px * lx + py * ly + pz * lz)
+            spot = tuple(px * a_ + py * b_ + pz * c_ for a_, b_, c_ in zip(p_, q_, w))
+            # The surface faces along the stretch's inverse-transpose.
+            normal = _unit(tuple(_dot(col, spot) for col in zip(*unstretch)))
+            facing = max(0.0, _dot(normal, to_light))
+            bright = light.ambient + (1 - light.ambient) * facing
             rgb = tuple(s + (v - s) * bright for s, v in zip(shade, base))
             color = "#%02x%02x%02x" % tuple(int(round(v)) for v in rgb)
-            at = (cx + ox * radius, cy - oy * radius)
+            dx, dy = screen(tuple(ox * a_ + oy * b_ for a_, b_ in zip(p_, q_)))
             items.append((depth - n * 1e-6, "disc", _name(self.name, key, "disc", n),
-                          (at, size * radius), color, 1.0, 0))
+                          ((cx + dx, cy + dy), size * major, size * minor, angle),
+                          color, 1.0, 0))
         return items
 
     def _body(self, light, key, body):
@@ -602,7 +737,7 @@ class World:
         cam = self.camera
         _, faces, edges = icosphere(body.levels)
         posed = body._posed()
-        world = [tuple(c + body.r * v for c, v in zip(body.centre, p)) for p in posed]
+        world = [body._place(p) for p in posed]
         screen = [cam.project(p) for p in world]
         items = []
 
@@ -622,7 +757,7 @@ class World:
         to_light = light.toward(body.centre)
         for n, (a, b, c) in enumerate(faces):
             normal = _unit(_cross(_sub(world[b], world[a]), _sub(world[c], world[a])))
-            if _dot(normal, posed[a]) < 0:
+            if _dot(normal, _sub(world[a], body.centre)) < 0:
                 normal = (-normal[0], -normal[1], -normal[2])
             middle = tuple((world[a][k] + world[b][k] + world[c][k]) / 3
                            for k in range(3))
