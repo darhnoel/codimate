@@ -33,8 +33,12 @@ framed by `focus`, and can be aimed at by a motion Rule.
 from __future__ import annotations
 
 from .marks import Bracket, ForceScale, Glow, Tag, tag, wave
-from .space import (ABOVE, Camera, Ellipsoid, Light, Orbit, RingArrows, Sphere,
-                    World, icosphere)
+from ._meshes import icosphere
+from .bodies import Ellipsoid, Sphere
+from .camera import Camera
+from .light import Light
+from .orbits import Orbit, RingArrows
+from .world import ABOVE, World
 
 __all__ = [
     # marks
