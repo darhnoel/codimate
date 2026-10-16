@@ -547,12 +547,24 @@ body.on_equator(angle, reach=1.0) -> (x, y, z)
 body.moved(**changes), orbit.moved(**changes)
 ```
 
-A `Sphere` is a value, not a drawing. `style` is `"solid"` (shaded), `"flat"` (one
+A `Sphere` is a value, not a drawing. `style` is `"solid"` (shaded), `"smooth"`
+(shaded the same way, but drawn as stacked discs: perfectly smooth, about a fifth of
+the shapes, ordered as one whole ball; `detail` is the number of discs, 32 by
+default), `"flat"` (one
 colour: for something that is itself the light), `"star"` (lit from within: dimmer
 toward the rim, mottled, the mottle turning with `spin`) or `"wire"` (its mesh only,
 see-through, faded with depth). `spin` turns it about its own axis; `tilt` leans
 that axis and stays put as the body orbits, which is what makes seasons. Colours
 for shaded bodies must be hex.
+
+**`"smooth"` for many balls.** A `"solid"` ball is a mesh of faces, every one
+shaded, named and sorted: 40 of them is over 6,000 shapes a frame. A `"smooth"`
+ball is its discs: each smaller, nearer the light and brighter, each taking the
+shade the `Light` gives the ball's surface where that disc shows. Forty balls is
+1,280 shapes, and nothing to re-sort inside a ball. What it gives up: it has no
+surface, so `spin` and `tilt` show nothing, and two balls are ordered as wholes,
+so one sinking deep into another is drawn simply in front. See
+[ADR 0023](adr/0023-a-smooth-sphere-of-stacked-discs.md).
 
 A `Light` is a `direction` — rays all parallel — or a `source` point, so light
 arrives *from* it and the lit side follows a body round its orbit. Faces are

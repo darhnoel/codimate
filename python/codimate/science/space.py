@@ -26,7 +26,7 @@ from .marks import _name
 # Above any body a World will draw, for marks that must sit on top of one.
 ABOVE = 100_000
 
-STYLES = ("solid", "flat", "star", "wire")
+STYLES = ("solid", "smooth", "flat", "star", "wire")
 
 
 def _dot(a, b):
@@ -322,7 +322,10 @@ class Light:
 class Sphere:
     """A ball in space. A value, not a drawing: a `World` draws it.
 
-    ``style`` is how it is drawn: ``"solid"`` shaded by a `Light`; ``"flat"``
+    ``style`` is how it is drawn: ``"solid"`` shaded by a `Light`;
+    ``"smooth"`` shaded by a `Light` too, but drawn as stacked discs instead of
+    a mesh — perfectly smooth and about a fifth of the shapes, ordered as one
+    whole ball, with no surface for ``spin`` to turn; ``"flat"``
     one colour, for something that is itself the light; ``"star"`` a lit-from-within
     ball, dimmer toward its rim and mottled, the mottling turning with ``spin``;
     ``"wire"``
@@ -334,8 +337,10 @@ class Sphere:
 
     ``detail`` is mesh fineness. It defaults to 2 for ``wire`` (480 edges) and
     3 for the others (1280 faces) — enough that flat shading does not show
-    facets at a few hundred pixels across. Every face is a named shape, and a
-    dense scene is a lot of them: see ADR 0019 on ``render(index=...)``.
+    facets at a few hundred pixels across. For ``smooth`` it is the number of
+    discs, 32 by default: 8 shows bands like contour lines, 32 reads as smooth.
+    Every face is a named shape, and a dense scene is a lot of them: see
+    ADR 0019 on ``render(index=...)``.
     """
 
     centre: tuple
@@ -357,6 +362,8 @@ class Sphere:
     def levels(self) -> int:
         if self.detail is not None:
             return int(self.detail)
+        if self.style == "smooth":
+            return 32
         return 2 if self.style == "wire" else 3
 
     @property
@@ -534,6 +541,8 @@ class World:
             if kind == "face":
                 scene.polygon(name, geom).fill(color, edge=color, edge_w=0.4) \
                     .on(layer=layer)
+            elif kind == "disc":
+                scene.circle(name, r=geom[1], at=geom[0]).fill(color).on(layer=layer)
             else:
                 scene.line(name, start=geom[0], end=geom[1], w=width) \
                     .fill(color).on(layer=layer, opacity=opacity)
@@ -543,7 +552,53 @@ class World:
         centre, depth = self.camera.project(body.centre)
         return centre, body.r * self.camera._per_unit(depth)
 
+    def _smooth(self, light, key, body):
+        """A ball as stacked discs, each smaller, nearer the light, and
+        brighter. Each disc shows as a crescent on the side away from the light;
+        it takes the shade the `Light` gives the ball's surface in the middle of
+        that crescent, so the result is the solid style's shading without the
+        mesh. All the discs share the ball's depth, stacked in order, so the
+        ball sorts as one thing among the others."""
+        cam = self.camera
+        (cx, cy), radius = self._silhouette(body)
+        depth = cam.project(body.centre)[1]
+        _, right, up, _ = cam._frame
+        to_light = light.toward(body.centre)
+        lx, ly = _dot(to_light, right), _dot(to_light, up)
+        lz = _dot(to_light, cam._toward_eye(body.centre))
+        reach = math.hypot(lx, ly)
+        # The way to the light on screen (y up); straight-on light has none, and
+        # any way will do, the discs then sitting one inside the other.
+        ax, ay = (lx / reach, ly / reach) if reach > 1e-9 else (1.0, 0.0)
+        base, shade = _rgb(body.color), _rgb(light.shadow)
+        count = max(1, body.levels)
+
+        def disc(n):
+            """(size, offset x, offset y) of disc n, in ball radii, y up."""
+            t = n / (count - 1) if count > 1 else 0.0
+            return 1.0 - 0.87 * t, 0.87 * t * lx, 0.87 * t * ly
+
+        items = []
+        for n in range(count):
+            size, ox, oy = disc(n)
+            inner, ix, iy = disc(n + 1) if n + 1 < count else (0.0, ox, oy)
+            # The middle of this disc's crescent: between its far edge and the
+            # next disc's, on the side away from the light.
+            px = (ox - ax * size + ix - ax * inner) / 2
+            py = (oy - ay * size + iy - ay * inner) / 2
+            pz = math.sqrt(max(0.0, 1.0 - px * px - py * py))
+            bright = light.ambient + (1 - light.ambient) * max(
+                0.0, px * lx + py * ly + pz * lz)
+            rgb = tuple(s + (v - s) * bright for s, v in zip(shade, base))
+            color = "#%02x%02x%02x" % tuple(int(round(v)) for v in rgb)
+            at = (cx + ox * radius, cy - oy * radius)
+            items.append((depth - n * 1e-6, "disc", _name(self.name, key, "disc", n),
+                          (at, size * radius), color, 1.0, 0))
+        return items
+
     def _body(self, light, key, body):
+        if body.style == "smooth":
+            return self._smooth(light, key, body)
         cam = self.camera
         _, faces, edges = icosphere(body.levels)
         posed = body._posed()

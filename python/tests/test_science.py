@@ -754,6 +754,74 @@ def test_a_star_is_dimmer_at_the_rim_and_its_mottle_turns_with_spin():
     assert a != b, "the surface turns"
 
 
+
+# ---------------------------------------------------------------- smooth
+
+
+def _smooth(light=None, camera=None, **ball):
+    cm.canvas(1280, 720)
+    scene = cm.Scene()
+    world = science.World(camera or science.Camera(), light=light)
+    sphere = science.Sphere((0.0, 0.0, 0.0), 100.0, "#e0d8c8", "smooth", **ball)
+    world.draw(scene, {"ball": sphere})
+    return sorted(_by_kind(scene, "circle"), key=lambda s: s.layer)
+
+
+def _sum(colour):
+    return sum(int(colour[i : i + 2], 16) for i in (1, 3, 5))
+
+
+def test_a_smooth_ball_is_stacked_discs_inner_on_top():
+    discs = _smooth(detail=12)
+    assert len(discs) == 12
+    sizes = [d.r for d in discs]
+    assert sizes == sorted(sizes, reverse=True), "each disc smaller, and drawn above"
+    assert len(_smooth()) == 32, "32 discs unless told otherwise"
+
+
+def test_a_smooth_ball_is_brightest_toward_the_light_and_dark_at_its_rim():
+    cam = science.Camera(azimuth=0.0, elevation=0.0)
+    _, right, up, forward = cam._frame
+    # A light up and to the left of the viewer, and a little in front.
+    way = tuple(0.6 * u - 0.6 * r - 0.5 * f for r, u, f in zip(right, up, forward))
+    discs = _smooth(light=science.Light(direction=way), camera=cam)
+    outer, highlight = discs[0], discs[-1]
+    assert highlight.x < outer.x and highlight.y < outer.y, "toward upper left"
+    assert _sum(highlight.color) > _sum(outer.color), "the rim is darker"
+
+
+def test_a_light_straight_from_the_viewer_lights_the_middle():
+    cam = science.Camera(azimuth=30.0, elevation=20.0)
+    head_on = science.Light(direction=cam._toward_eye((0, 0, 0)))
+    discs = _smooth(light=head_on, camera=cam)
+    assert all(abs(d.x - discs[0].x) < 1e-6 and abs(d.y - discs[0].y) < 1e-6
+               for d in discs), "one inside the other"
+    colours = [_sum(d.color) for d in discs]
+    assert colours == sorted(colours), "brighter toward the middle"
+
+
+def test_smooth_balls_sort_as_whole_balls():
+    cm.canvas(1280, 720)
+    cam = science.Camera(azimuth=0.0, elevation=0.0)
+    toward = cam._toward_eye((0, 0, 0))
+    near = tuple(300 * t for t in toward)
+    scene = cm.Scene()
+    science.World(cam).draw(scene, {
+        "far": science.Sphere((0.0, 0.0, 0.0), 80.0, style="smooth", detail=8),
+        "near": science.Sphere(near, 80.0, style="smooth", detail=8),
+    })
+    discs = _by_kind(scene, "circle")
+    far = [d.layer for d in discs if "far" in d.item]
+    nearer = [d.layer for d in discs if "near" in d.item]
+    assert max(far) < min(nearer), "every disc of the near ball over the far one"
+
+
+def test_a_smooth_ball_keeps_its_size_with_an_orthographic_camera():
+    cam = science.Camera(azimuth=0.0, elevation=0.0, scale=1.5, orthographic=True)
+    assert abs(_smooth(camera=cam, detail=4)[0].r - 150.0) < 1e-9
+
+
+
 if __name__ == "__main__":
     import sys
 
