@@ -79,6 +79,11 @@ class World:
             if kind == "face":
                 scene.polygon(name, geom).fill(color, edge=color, edge_w=0.4) \
                     .on(layer=layer)
+            elif kind == "image":
+                at, size, squash, angle, path = geom
+                picture = scene.image(name, path, size=size, at=at).on(layer=layer)
+                if abs(1.0 - squash) > 1e-9:  # an egg: stretch the ball to it
+                    picture.grow((1.0, squash)).turn(angle)
             elif kind == "disc":
                 at, major, minor, angle = geom
                 disc = scene.circle(name, r=major, at=at).fill(color).on(layer=layer)
@@ -93,20 +98,16 @@ class World:
         centre, depth = self.camera.project(body.centre)
         return centre, body.reach * self.camera._per_unit(depth)
 
-    def _smooth(self, light, key, body):
-        """A ball, or a squished one, as stacked discs: each smaller, nearer the
-        light, and brighter. Each disc shows as a crescent on the side away from
-        the light, and takes the shade the `Light` gives the surface in the
-        middle of that crescent, so this is the solid style's shading without
-        the mesh. All the discs share the body's depth, stacked in order, so it
-        sorts among the others as one thing.
+    def _unit_view(self, body):
+        """How a round body looks from the camera, worked out on the unit ball
+        it is stretched from (``_stretch``): its outline on screen, and the
+        frame the round styles work in.
 
-        The work is done on the unit ball the body is stretched from
-        (``_stretch``). There, the outline seen from the camera is a circle
-        square to ``w``, the discs are circles in that plane, and the stretch
-        carries each to the same ellipse on screen. For a sphere the stretch is
-        its radius, and the ellipses are circles.
-        """
+        Returns ``(cx, cy, depth, major, minor, angle)`` (the outline is an
+        ellipse with those semi-axes, turned by ``angle`` degrees) and
+        ``(stretch, cols, unstretch, w, p, q, screen)``: on the unit ball the
+        outline is the circle square to ``w``, spanned by ``p`` and ``q``, and
+        ``screen`` takes an offset there to pixels across and down."""
         cam = self.camera
         (cx, cy), depth = cam.project(body.centre)
         k = cam._per_unit(depth)
@@ -125,13 +126,61 @@ class World:
             v = _apply(stretch, offset)
             return _dot(v, right) * k, -_dot(v, up) * k
 
-        # The disc's outline on screen: a circle through the stretch, an ellipse.
+        # A circle through the stretch: an ellipse, by its two axes and angle.
         (m00, m10), (m01, m11) = screen(p_), screen(q_)
         a, b, c = m00 * m00 + m01 * m01, m00 * m10 + m01 * m11, m10 * m10 + m11 * m11
         spread = math.hypot((a - c) / 2, b)
         major = math.sqrt((a + c) / 2 + spread)
         minor = math.sqrt(max((a + c) / 2 - spread, 0.0))
         angle = math.degrees(0.5 * math.atan2(2 * b, a - c))
+        outline = (cx, cy, depth, major, minor, angle)
+        return outline, (stretch, cols, unstretch, w, p_, q_, screen)
+
+    def _painted(self, light, key, body):
+        """A round body as one picture: a ball painted with true shading, once
+        per look and cached (`_paint`), placed at the body, sized to it, and
+        stretched and turned to its outline. The light is given to the painting
+        in the picture's own terms (across, up, toward the eye), so a light
+        that is still relative to the camera reuses one painting all film.
+
+        An egg is the painted ball stretched to its outline, which is close to
+        its true shading but not exact: the stretch leans the lit side a
+        little."""
+        from . import _paint
+
+        cx, cy, depth, major, minor, angle = self._unit_view(body)[0]
+        cam = self.camera
+        _, right, up, _ = cam._frame
+        to_light = light.toward(body.centre)
+        across, rise = _dot(to_light, right), _dot(to_light, up)
+        toward = _dot(to_light, cam._toward_eye(body.centre))
+        # The picture is drawn turned by `angle` (clockwise on screen), so the
+        # light is turned back the other way into its terms.
+        t = math.radians(angle)
+        light_in_picture = (math.cos(t) * across - math.sin(t) * rise,
+                            math.sin(t) * across + math.cos(t) * rise, toward)
+        path = _paint.ball(body.color, light.shadow, light_in_picture, light.ambient)
+        geom = ((cx, cy), 2 * major, minor / major, angle, path)
+        return [(depth, "image", _name(self.name, key, "ball"), geom,
+                 body.color, 1.0, 0)]
+
+    def _smooth(self, light, key, body):
+        """A ball, or a squished one, as stacked discs: each smaller, nearer the
+        light, and brighter. Each disc shows as a crescent on the side away from
+        the light, and takes the shade the `Light` gives the surface in the
+        middle of that crescent, so this is the solid style's shading without
+        the mesh. All the discs share the body's depth, stacked in order, so it
+        sorts among the others as one thing.
+
+        The work is done on the unit ball the body is stretched from
+        (``_stretch``). There, the outline seen from the camera is a circle
+        square to ``w``, the discs are circles in that plane, and the stretch
+        carries each to the same ellipse on screen. For a sphere the stretch is
+        its radius, and the ellipses are circles.
+        """
+        outline, frame = self._unit_view(body)
+        cx, cy, depth, major, minor, angle = outline
+        stretch, cols, unstretch, w, p_, q_, screen = frame
 
         # The brightest spot is where the surface faces the light. On the body
         # a normal is stretch⁻ᵀ·u, so it points at the light where u is along
@@ -200,6 +249,8 @@ class World:
     def _body(self, light, key, body):
         if body.style == "smooth":
             return self._smooth(light, key, body)
+        if body.style == "painted":
+            return self._painted(light, key, body)
         cam = self.camera
         world, faces, edges = body._mesh()
         screen = [cam.project(p) for p in world]

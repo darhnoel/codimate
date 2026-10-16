@@ -22,10 +22,10 @@ from dataclasses import dataclass, replace
 from ._meshes import edges_of, icosphere, lathe, ring, square_to, stack
 from ._vectors import _apply, _cross, _dot, _sub, _tilt, _turned, _unit
 
-STYLES = ("solid", "smooth", "flat", "star", "wire")
+STYLES = ("solid", "smooth", "painted", "flat", "star", "wire")
 
 # What an Ellipsoid can be drawn as: no "star", whose mottle needs a spin.
-OVAL_STYLES = ("solid", "smooth", "flat", "wire")
+OVAL_STYLES = ("solid", "smooth", "painted", "flat", "wire")
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,9 @@ class Sphere:
     ``style`` is how it is drawn: ``"solid"`` shaded by a `Light`;
     ``"smooth"`` shaded by a `Light` too, but drawn as stacked discs instead of
     a mesh — perfectly smooth and about a fifth of the shapes, ordered as one
-    whole ball, with no surface for ``spin`` to turn; ``"flat"``
+    whole ball, with no surface for ``spin`` to turn; ``"painted"`` one
+    picture with a truly smooth gradient, painted once per look and reused
+    (needs ``pip install "codimate[painted]"``); ``"flat"``
     one colour, for something that is itself the light; ``"star"`` a lit-from-within
     ball, dimmer toward its rim and mottled, the mottling turning with ``spin``;
     ``"wire"``

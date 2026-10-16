@@ -572,6 +572,16 @@ surface, so `spin` and `tilt` show nothing, and two balls are ordered as wholes,
 so one sinking deep into another is drawn simply in front. See
 [ADR 0023](adr/0023-a-smooth-sphere-of-stacked-discs.md).
 
+**`"painted"` for the best-looking balls.** A ball as one picture: its shading
+painted pixel by pixel, a truly smooth gradient with a soft sheen and a clean
+edge, then placed, sized and stretched like any image. Each look (colour, light,
+ambient) is painted once and kept in `~/.cache/codimate/balls`, so a light that
+is still relative to the camera, a turntable, costs one painting for the whole
+film. It needs numpy and Pillow: `pip install "codimate[painted]"`, and says so
+if they are missing. An `Ellipsoid` in this style is the painted ball stretched
+to its outline, close to its true shading but not exact. See
+[ADR 0026](adr/0026-a-painted-ball.md).
+
 **`Ellipsoid` for a squished ball.** Three `radii` along x, y and z, then `turn`
 degrees about x, then y, then z. It is drawn by the same `World`, sorted with the
 spheres, in `"solid"`, `"smooth"`, `"flat"` or `"wire"` (not `"star"`). A smooth

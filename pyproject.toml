@@ -34,6 +34,11 @@ classifiers = [
     "Topic :: Education",
 ]
 
+# The science kit's "painted" style paints each ball's shading as an image, with
+# numpy and Pillow: `pip install "codimate[painted]"`. Nothing else needs them.
+[project.optional-dependencies]
+painted = ["numpy>=1.21", "pillow>=9"]
+
 [tool.maturin]
 manifest-path = "crates/codimate-py/Cargo.toml"
 python-source = "python"

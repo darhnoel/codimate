@@ -974,6 +974,71 @@ def test_mesh_shapes_refuse_nonsense():
         raise AssertionError("should have been refused")
 
 
+
+# --------------------------------------------------------------- painted
+
+
+def _painted(bodies, camera=None, light=None):
+    import os
+    import tempfile
+
+    os.environ["XDG_CACHE_HOME"] = tempfile.mkdtemp()  # never the real cache
+    cm.canvas(1280, 720)
+    scene = cm.Scene()
+    science.World(camera or science.Camera(), light=light).draw(scene, bodies)
+    return _by_kind(scene, "image")
+
+
+def test_a_painted_ball_is_one_picture_the_size_of_the_ball():
+    cam = science.Camera(azimuth=0.0, elevation=0.0, scale=1.5, orthographic=True)
+    (ball,) = _painted({"b": science.Sphere((0, 0, 0), 40.0, "#ece6da", "painted")},
+                       camera=cam)
+    assert (ball.w, ball.h) == (120.0, 120.0), "40 units at 1.5 px, across"
+    assert (ball.x, ball.y) == (640.0, 360.0), "on the ball's centre"
+    from PIL import Image
+
+    picture = Image.open(ball.text)
+    assert picture.mode == "RGBA"
+    assert picture.getpixel((0, 0))[3] == 0, "outside the ball is see-through"
+    middle = picture.getpixel((picture.width // 2, picture.height // 2))
+    assert middle[3] == 255, "inside it is solid"
+
+
+def test_one_look_is_painted_once():
+    cam = science.Camera(azimuth=30.0, elevation=20.0)
+    a, b = _painted({"one": science.Sphere((0, 0, 0), 40.0, "#ece6da", "painted"),
+                     "two": science.Sphere((0, 0, 0), 25.0, "#ece6da", "painted")},
+                    camera=cam)
+    assert a.text == b.text, "the same colour and light: the same painting"
+    (c,) = _painted({"red": science.Sphere((0, 0, 0), 40.0, "#cc3333", "painted")},
+                    camera=cam)
+    assert c.text != a.text
+
+
+def test_a_painted_egg_is_the_ball_stretched_to_its_outline():
+    cam = science.Camera(azimuth=90.0, elevation=0.0, scale=2.0, orthographic=True)
+    egg = science.Ellipsoid((0, 0, 0), (60.0, 20.0, 20.0), "#ece6da", "painted")
+    (picture,) = _painted({"egg": egg}, camera=cam)
+    assert picture.w == 240.0, "60 units at 2 px, either side"
+    assert abs(picture.scale_y - 1 / 3) < 1e-6
+    assert abs(math.sin(math.radians(picture.rotate))) < 1e-6, "lying flat"
+
+
+def test_painting_without_numpy_says_what_to_install():
+    import sys
+
+    saved = sys.modules.get("numpy")
+    sys.modules["numpy"] = None  # as if it were not installed
+    try:
+        _painted({"b": science.Sphere((0, 0, 0), 40.0, "#123456", "painted")})
+    except ImportError as error:
+        assert "codimate[painted]" in str(error)
+    else:
+        raise AssertionError("painting without numpy should say what to install")
+    finally:
+        sys.modules["numpy"] = saved
+
+
 if __name__ == "__main__":
     import sys
 
