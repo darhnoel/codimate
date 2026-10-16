@@ -886,6 +886,94 @@ def test_an_ellipsoid_refuses_nonsense():
 
 
 
+
+# ----------------------------------------------------------- mesh shapes
+
+
+def _volume(shape):
+    """The signed volume a mesh encloses: right only if every face is wound
+    outward, so a flipped face shows up as a wrong total."""
+    points, faces, _ = shape._mesh()
+    total = 0.0
+    for face in faces:
+        p0 = points[face[0]]
+        for i in range(1, len(face) - 1):
+            p1, p2 = points[face[i]], points[face[i + 1]]
+            total += (p0[0] * (p1[1] * p2[2] - p1[2] * p2[1])
+                      - p0[1] * (p1[0] * p2[2] - p1[2] * p2[0])
+                      + p0[2] * (p1[0] * p2[1] - p1[1] * p2[0])) / 6
+    return total
+
+
+def test_a_box_encloses_its_volume_and_turning_it_changes_nothing():
+    plain = science.Box((10.0, 20.0, 30.0), (40.0, 50.0, 60.0))
+    turned = plain.moved(turn=(20.0, 35.0, 50.0))
+    assert abs(_volume(plain) - 120_000.0) < 1e-6
+    assert abs(_volume(turned) - 120_000.0) < 1e-6
+
+
+def test_a_cylinder_encloses_its_volume_with_flat_or_round_ends():
+    rod = science.Cylinder((0.0, 0.0, 0.0), (30.0, 40.0, 0.0), 10.0, sides=24)
+    across = 24 / 2 * 10.0 ** 2 * math.sin(2 * math.pi / 24)  # the 24-gon's area
+    assert abs(_volume(rod) - across * 50.0) < 1e-6
+    capsule = rod.moved(caps="round")
+    ball = 4 / 3 * math.pi * 10.0 ** 3
+    assert across * 50.0 < _volume(capsule) < across * 50.0 + ball, "ends add a ball"
+
+
+def test_an_arrow_is_a_shaft_and_a_wider_head():
+    arrow = science.Arrow((0.0, 0.0, 0.0), (0.0, 0.0, 90.0), 3.0)
+    assert _volume(arrow) > 0, "wound outward"
+    points, _, _ = arrow._mesh()
+    widest = max(math.hypot(x, y) for x, y, _ in points)
+    assert abs(widest - 3.0 * arrow.spread) < 1e-9
+    assert max(z for _, _, z in points) == 90.0, "the tip is at the end"
+
+
+def test_a_closed_tube_is_a_ring_of_the_right_volume():
+    """A circle of radius 100 swept by a tube of radius 10 is a torus,
+    2 pi^2 R r^2, and the frames close up with no seam twist."""
+    path = [(100 * math.cos(t), 100 * math.sin(t), 0.0)
+            for t in (2 * math.pi * k / 120 for k in range(120))]
+    tube = science.Tube(path, 10.0, closed=True, sides=16)
+    torus = 2 * math.pi ** 2 * 100.0 * 10.0 ** 2
+    assert abs(_volume(tube) - torus) / torus < 0.03
+
+
+def test_an_open_tube_is_capped_and_wound_outward():
+    path = [(t * 10.0, 30 * math.sin(t / 3), 5.0 * t) for t in range(30)]
+    assert _volume(science.Tube(path, 4.0)) > 0
+
+
+def test_the_world_draws_mesh_shapes_like_any_body():
+    cm.canvas(1280, 720)
+    scene = cm.Scene()
+    science.World(science.Camera()).draw(scene, {
+        "rod": science.Cylinder((0, 0, 0), (0, 0, 120), 10.0, "#c9d3e0"),
+        "push": science.Arrow((200, 0, 0), (200, 0, 120), 6.0, "#ff6b6b"),
+        "crate": science.Box((-200, 0, 50), (80, 80, 80), "#d9a066"),
+        "wire": science.Box((0, 250, 50), (60, 60, 60), "#ffffff", "wire"),
+    })
+    faces = _by_kind(scene, "polygon")
+    assert {f.item.split("/")[1] for f in faces} == {"rod", "push", "crate"}
+    assert any("wire" in line.item for line in _by_kind(scene, "line"))
+
+
+def test_mesh_shapes_refuse_nonsense():
+    bad = [lambda: science.Cylinder((0, 0, 0), (0, 0, 0), 5.0),
+           lambda: science.Cylinder((0, 0, 0), (0, 0, 1), 5.0, caps="pointy"),
+           lambda: science.Arrow((0, 0, 0), (0, 0, 1), -1.0),
+           lambda: science.Tube([(0, 0, 0)], 2.0),
+           lambda: science.Box((0, 0, 0), (1.0, 0.0, 1.0)),
+           lambda: science.Box((0, 0, 0), (1, 1, 1), style="smooth")]
+    for make in bad:
+        try:
+            make()
+        except ValueError:
+            continue
+        raise AssertionError("should have been refused")
+
+
 if __name__ == "__main__":
     import sys
 

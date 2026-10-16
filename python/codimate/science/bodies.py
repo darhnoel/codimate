@@ -19,8 +19,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, replace
 
-from ._meshes import icosphere
-from ._vectors import _apply, _tilt, _turned
+from ._meshes import edges_of, icosphere, lathe, ring, square_to, stack
+from ._vectors import _apply, _cross, _dot, _sub, _tilt, _turned, _unit
 
 STYLES = ("solid", "smooth", "flat", "star", "wire")
 
@@ -190,3 +190,254 @@ class Ellipsoid:
         points = [tuple(c + v for c, v in zip(self.centre, _apply(stretch, unit)))
                   for unit in verts]
         return points, faces, edges
+
+
+# --------------------------------------------------------------------------
+# Shapes made of a mesh: rods, arrows, tubes, boxes
+# --------------------------------------------------------------------------
+
+# What a mesh shape can be drawn as. "smooth" is for round bodies only.
+MESH_STYLES = ("solid", "flat", "wire")
+
+
+def _check(shape, sides=None):
+    if shape.style not in MESH_STYLES:
+        raise ValueError(
+            f"unknown style {shape.style!r} — use {', '.join(MESH_STYLES)}")
+    if sides is not None and sides < 3:
+        raise ValueError(f"a round cross-section needs at least 3 sides, got {sides}")
+
+
+def _with_edges(mesh):
+    points, faces = mesh
+    return points, faces, edges_of(faces)
+
+
+@dataclass(frozen=True)
+class Cylinder:
+    """A rod from ``start`` to ``end``, ``r`` thick. ``caps="flat"`` closes its
+    ends with discs; ``caps="round"`` with half-balls, which makes a capsule:
+    a bond between two atoms, a rod-shaped bacterium.
+
+        bond = science.Cylinder((0, 0, 0), (120, 0, 40), 8, "#c9d3e0")
+
+    ``style`` is ``"solid"`` (shaded by a `Light`), ``"flat"`` or ``"wire"``.
+    ``sides`` is how many faces go round it."""
+
+    start: tuple
+    end: tuple
+    r: float
+    color: str = "#58c4dd"
+    style: str = "solid"
+    caps: str = "flat"
+    sides: int = 24
+
+    def __post_init__(self):
+        _check(self, self.sides)
+        if self.caps not in ("flat", "round"):
+            raise ValueError(f"caps are 'flat' or 'round', got {self.caps!r}")
+        if self.r <= 0 or self.start == self.end:
+            raise ValueError("a cylinder needs a length and a positive radius")
+
+    @property
+    def centre(self) -> tuple:
+        return tuple((a + b) / 2 for a, b in zip(self.start, self.end))
+
+    @property
+    def reach(self) -> float:
+        """How far its farthest point is from its centre."""
+        return math.dist(self.start, self.end) / 2 + self.r
+
+    def moved(self, **changes) -> "Cylinder":
+        return replace(self, **changes)
+
+    def _mesh(self):
+        if self.caps == "flat":
+            straight = [(0.0, self.r), (1.0, self.r)]
+            return _with_edges(lathe(self.start, self.end, straight, self.sides,
+                                     caps=True))
+        # Round ends: quarter circles of rings, the radius going to zero at the
+        # tips, which sit r beyond start and end along the axis.
+        length = math.dist(self.start, self.end)
+        d = _unit(_sub(self.end, self.start))
+        tip0 = tuple(s - self.r * x for s, x in zip(self.start, d))
+        tip1 = tuple(e + self.r * x for e, x in zip(self.end, d))
+        total = length + 2 * self.r
+        steps = max(4, self.sides // 4)
+        profile = []
+        for k in range(steps + 1):  # the start's half-ball, tip to rim
+            a = math.pi / 2 * k / steps
+            along = (self.r - self.r * math.cos(a)) / total
+            profile.append((along, self.r * math.sin(a)))
+        for k in range(steps + 1):  # the end's, rim to tip
+            a = math.pi / 2 * k / steps
+            profile.append(((self.r + length + self.r * math.sin(a)) / total,
+                            self.r * math.cos(a)))
+        return _with_edges(lathe(tip0, tip1, profile, self.sides, caps=False))
+
+
+@dataclass(frozen=True)
+class Arrow:
+    """A shaded arrow in space, from ``start`` to its tip at ``end``: a shaft
+    ``r`` thick and a cone ``head`` long and ``spread`` times as wide as the
+    shaft. A force, a velocity, a field, seen from any side.
+
+        push = science.Arrow((0, 0, 0), (0, 0, 150), 6, "#ff6b6b")
+
+    The head is a third of the length unless ``head`` says, and never more
+    than the whole arrow."""
+
+    start: tuple
+    end: tuple
+    r: float
+    color: str = "#58c4dd"
+    style: str = "solid"
+    head: "float | None" = None
+    spread: float = 2.6
+    sides: int = 20
+
+    def __post_init__(self):
+        _check(self, self.sides)
+        if self.r <= 0 or self.start == self.end:
+            raise ValueError("an arrow needs a length and a positive radius")
+
+    @property
+    def centre(self) -> tuple:
+        return tuple((a + b) / 2 for a, b in zip(self.start, self.end))
+
+    @property
+    def reach(self) -> float:
+        return math.dist(self.start, self.end) / 2 + self.r * self.spread
+
+    def moved(self, **changes) -> "Arrow":
+        return replace(self, **changes)
+
+    def _mesh(self):
+        length = math.dist(self.start, self.end)
+        head = min(self.head if self.head is not None else length / 3, length)
+        neck = 1 - head / length
+        wide = self.r * self.spread
+        profile = [(0.0, self.r), (neck, self.r), (neck, wide), (1.0, 0.0)]
+        return _with_edges(lathe(self.start, self.end, profile, self.sides, caps=True))
+
+
+@dataclass(frozen=True)
+class Tube:
+    """A thick line through space along ``points``, ``r`` thick: a strand of
+    DNA, a knot, a field line. ``closed`` joins the end back to the start.
+
+        loop = science.Tube(path, 6, "#7ad3ff", closed=True)
+
+    The ring of the tube is carried along the path without twisting, so it
+    does not corkscrew where the path bends; on a closed path the small twist
+    left over at the join is spread evenly round it."""
+
+    points: tuple
+    r: float
+    color: str = "#58c4dd"
+    style: str = "solid"
+    closed: bool = False
+    sides: int = 12
+
+    def __post_init__(self):
+        _check(self, self.sides)
+        if len(self.points) < 2 or self.r <= 0:
+            raise ValueError("a tube needs at least two points and a positive radius")
+
+    @property
+    def centre(self) -> tuple:
+        n = len(self.points)
+        return tuple(sum(p[i] for p in self.points) / n for i in range(3))
+
+    @property
+    def reach(self) -> float:
+        c = self.centre
+        return max(math.dist(c, p) for p in self.points) + self.r
+
+    def moved(self, **changes) -> "Tube":
+        return replace(self, **changes)
+
+    def _mesh(self):
+        pts = [tuple(p) for p in self.points]
+        n = len(pts)
+        if self.closed and pts[0] == pts[-1]:
+            pts, n = pts[:-1], n - 1
+        ahead = []
+        for i in range(n):  # the way the path goes at each point
+            a = pts[i - 1] if (i > 0 or self.closed) else pts[i]
+            b = pts[(i + 1) % n] if (i < n - 1 or self.closed) else pts[i]
+            ahead.append(_unit(_sub(b, a)))
+        u, _ = square_to(ahead[0])
+        frames = []
+        for i, d in enumerate(ahead):
+            if i:  # carry u along: keep it square to the new direction
+                u = _unit(_sub(u, tuple(_dot(u, d) * x for x in d)))
+            frames.append((u, _cross(d, u)))
+        if self.closed:  # spread the twist left at the join round the loop
+            u0, v0 = frames[0]
+            last_u = _unit(_sub(frames[-1][0], tuple(_dot(frames[-1][0], ahead[0]) * x
+                                                     for x in ahead[0])))
+            twist = math.atan2(_dot(last_u, v0), _dot(last_u, u0))
+            fixed = []
+            for i, ((u, v), d) in enumerate(zip(frames, ahead)):
+                a = -twist * i / n
+                c, s_ = math.cos(a), math.sin(a)
+                nu = tuple(c * x + s_ * y for x, y in zip(u, v))
+                fixed.append((nu, _cross(d, nu)))
+            frames = fixed
+        rings = [ring(p, u, v, self.r, self.sides) for p, (u, v) in zip(pts, frames)]
+        points, faces = stack(rings, self.sides, close=self.closed)
+        if not self.closed:  # flat ends
+            for ring_index, outward in ((0, -1), (n - 1, 1)):
+                first = ring_index * self.sides
+                points.append(pts[ring_index])
+                hub = len(points) - 1
+                for k in range(self.sides):
+                    k1 = (k + 1) % self.sides
+                    tri = (hub, first + k, first + k1)
+                    faces.append(tri if outward > 0 else (hub, first + k1, first + k))
+        return _with_edges((points, faces))
+
+
+@dataclass(frozen=True)
+class Box:
+    """A block: ``size`` is its width, depth and height along x, y and z,
+    centred on ``centre``, then turned by ``turn`` degrees about x, then y,
+    then z. A crystal, a container, a building block.
+
+        crate = science.Box((0, 0, 50), (100, 100, 100), "#d9a066", turn=(0, 0, 30))
+    """
+
+    centre: tuple
+    size: tuple
+    color: str = "#58c4dd"
+    style: str = "solid"
+    turn: tuple = (0.0, 0.0, 0.0)
+
+    def __post_init__(self):
+        _check(self)
+        if len(self.size) != 3 or min(self.size) <= 0:
+            raise ValueError(f"size is three positive lengths, got {self.size}")
+
+    @property
+    def reach(self) -> float:
+        return math.hypot(*self.size) / 2
+
+    def moved(self, **changes) -> "Box":
+        return replace(self, **changes)
+
+    def _mesh(self):
+        turned = _turned(self.turn)
+        half = [s / 2 for s in self.size]
+        points = []
+        for x in (-1, 1):
+            for y in (-1, 1):
+                for z in (-1, 1):
+                    local = (x * half[0], y * half[1], z * half[2])
+                    points.append(tuple(c + v for c, v in
+                                        zip(self.centre, _apply(turned, local))))
+        # Corner index = 4*(x>0) + 2*(y>0) + (z>0); each face wound outward.
+        faces = [(0, 1, 3, 2), (4, 6, 7, 5),   # -x, +x
+                 (0, 4, 5, 1), (2, 3, 7, 6),   # -y, +y
+                 (0, 2, 6, 4), (1, 5, 7, 3)]   # -z, +z
+        return _with_edges((points, faces))

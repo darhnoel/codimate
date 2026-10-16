@@ -24,6 +24,7 @@ framed by `focus`, and can be aimed at by a motion Rule.
 - `Camera` — where you look from; turns a point in space into a pixel
 - `Sphere`, `Light` — a ball, and what lights it
 - `Ellipsoid` — a squished ball, drawn by the same `World`
+- `Cylinder`, `Arrow`, `Tube`, `Box` — a rod or capsule, an arrow, a thick path, a block
 - `Orbit` — a real ellipse with the orbited body at a focus
 - `World` — draws bodies and orbits together, sorted far to near
 - `RingArrows` — arrows riding a body's equator, so its spin can be seen
@@ -34,7 +35,7 @@ from __future__ import annotations
 
 from .marks import Bracket, ForceScale, Glow, Tag, tag, wave
 from ._meshes import icosphere
-from .bodies import Ellipsoid, Sphere
+from .bodies import Arrow, Box, Cylinder, Ellipsoid, Sphere, Tube
 from .camera import Camera
 from .light import Light
 from .orbits import Orbit, RingArrows
@@ -52,6 +53,10 @@ __all__ = [
     "Camera",
     "Sphere",
     "Ellipsoid",
+    "Cylinder",
+    "Arrow",
+    "Tube",
+    "Box",
     "Light",
     "Orbit",
     "World",

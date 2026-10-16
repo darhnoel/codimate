@@ -538,6 +538,10 @@ science.Sphere(centre, r, color="#58c4dd", style="solid", spin=0.0, tilt=0.0,
                detail=None)
 science.Ellipsoid(centre, radii, color="#58c4dd", style="solid",
                   turn=(0.0, 0.0, 0.0), detail=None)
+science.Cylinder(start, end, r, color, style="solid", caps="flat", sides=24)
+science.Arrow(start, end, r, color, style="solid", head=None, spread=2.6, sides=20)
+science.Tube(points, r, color, style="solid", closed=False, sides=12)
+science.Box(centre, size, color, style="solid", turn=(0.0, 0.0, 0.0))
 science.Light(direction=(0.4, 0.3, 0.85), source=None, ambient=0.12,
               shadow="#000000")
 science.Orbit(a, e=0.0, inclination=0.0, around=(0, 0, 0), color="#4a5568",
@@ -576,6 +580,16 @@ surface; a solid one is the sphere's mesh, stretched. With perspective its outli
 is only nearly an ellipse; with `orthographic=True` it is exactly one. Where one
 radius is needed, an orbit hiding behind it, the largest stands in. See
 [ADR 0024](adr/0024-an-ellipsoid.md).
+
+**Rods, arrows, tubes and boxes.** `Cylinder` is a rod from `start` to `end`;
+`caps="round"` gives it half-ball ends, a capsule: a bond between atoms, a
+bacterium. `Arrow` is a shaded shaft and cone ending at `end`: a force or a field
+seen from any side; its head is a third of the length unless `head` says.
+`Tube` is a thick line through `points`, its ring carried along without
+twisting: a strand, a knot, a field line; `closed=True` joins it into a loop.
+`Box` is a block of `size` along x, y and z, turned by `turn`. All four are drawn
+`"solid"`, `"flat"` or `"wire"` by the same `World`, sorted face by face with
+everything else. See [ADR 0025](adr/0025-one-contract-for-every-body.md).
 
 A `Light` is a `direction` — rays all parallel — or a `source` point, so light
 arrives *from* it and the lit side follows a body round its orbit. Faces are
