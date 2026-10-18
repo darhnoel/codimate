@@ -1,107 +1,31 @@
-"""Putting it together: motion rules, timing, and the render call."""
+"""The Explanation: the moments, put together, and the render call."""
 
 from __future__ import annotations
 
-from .layout import height, width
-from .scene import Scene, _key
-from typing import Callable
+from importlib import import_module
 
-from .trace import Event, Frame, Trace
+from ..layout import height, width
+from ..scene import Scene
+from typing import Callable
+from ..trace import Frame, Trace
+from .encoder import _ffmpeg, _find_encoder, _mixing
+from .timing import Rule, Timing
 
 
 View = Callable[[Frame], Scene]
 
-PATHS = ("straight", "linear", "fall", "lift_carry_drop")
 
 # What the readable index (`index="json"`) costs: ~200 bytes an entry, measured on
 # the pretty-printed file. A film of a few thousand shapes a frame is an index of
 # hundreds of megabytes that way, which is why `render` writes the compact one.
 INDEX_ENTRY_BYTES = 200
 
-# Set by the Previewer while it runs a script: `render` hands the Explanation
-# here and stops the script, instead of drawing a video nobody asked for yet.
-_capture: "Callable[[Explanation], None] | None" = None
+
 
 
 class _Captured(BaseException):
     """Stops a script at its render call. BaseException, so a script's own
     `except Exception` cannot swallow it."""
-
-
-class Rule:
-    """How things matching ``pattern`` travel. First matching rule wins.
-
-        cm.Rule("*", position="lift_carry_drop", clearance=90)
-
-    ``pattern`` matches a shape's full name with ``*`` and ``?``. A shape
-    inside a group is named ``group/child``, so ``"3/*"`` targets one group and
-    ``"*"`` targets everything.
-
-    Paths:
-
-    * ``straight`` — a straight line, easing in and out. The default, and what
-      you want when each event is a distinct step.
-    * ``linear`` — a straight line at constant speed. Use it when a thing is
-      mid-journey at every event, like something turning: easing would make it
-      accelerate and stop inside each segment.
-    * ``fall`` — a parabola: sideways at a constant rate, downwards
-      accelerating. What a dropped thing does, and what each hop of a falling
-      ball needs, since an eased path would settle gently instead of arriving.
-    * ``lift_carry_drop`` — arcs up and over, then falls. Takes ``clearance``.
-    """
-
-    def __init__(self, pattern, position: str = "straight", **options: float) -> None:
-        if position not in PATHS:
-            raise ValueError(
-                f"unknown path {position!r} — use one of {', '.join(PATHS)}")
-        self.pattern = _key(pattern) if isinstance(pattern, tuple) else str(pattern)
-        self.position = position
-        self.options = {k: float(v) for k, v in options.items()}
-
-    def _payload(self):
-        return (self.pattern, self.position, self.options)
-
-    def __repr__(self):
-        return f"Rule({self.pattern!r}, position={self.position!r}, **{self.options})"
-
-
-class Timing:
-    """How long each event lasts, in seconds."""
-
-    def __init__(
-        self,
-        *,
-        default: float = 0.6,
-        events: "dict[str, float] | None" = None,
-        opening: float = 0.8,
-        final_hold: float = 1.2,
-    ) -> None:
-        self.default = default
-        self.events = events or {}
-        self.opening = opening
-        self.final_hold = final_hold
-
-    def for_event(self, event: Event) -> float:
-        """How long ``event`` lasts: its own entry, or ``default``.
-
-        A name with no entry takes ``default`` silently — which is what a
-        default is for, but it means a misspelled event name costs you the
-        default duration rather than an error.
-        """
-        return self.events.get(event.name, self.default)
-
-
-def ease(t: float) -> float:
-    """The easing curve the Engine applies between two moments.
-
-        cm.ease(0.5)  ->  0.5
-
-    This calls into the Engine, so it is the same curve your animation is
-    actually using — not a copy of it.
-    """
-    from . import _codimate
-
-    return _codimate.ease(float(t))
 
 
 def _quoted(name: str, room: int = 32) -> str:
@@ -115,7 +39,7 @@ def _plain(value, depth: int = 0):
     recognise becomes its `repr` rather than raising — an index that refuses to
     be written for one odd object in the State is no use to anybody.
     """
-    from .trace import Item
+    from ..trace import Item
 
     if depth > 6:
         return repr(value)
@@ -212,11 +136,14 @@ class Explanation:
         if index not in (True, False, "auto", "json"):
             # before any frame is drawn, not after a render has finished
             raise ValueError(f"index is True, False, 'auto' or 'json', not {index!r}")
-        if _capture is not None:
-            _capture(self)
+        # The hook's one home is the package (see __init__). Looked up by module
+        # name: `codimate.explain` the attribute is the explain() function.
+        package = import_module(__package__)
+        if package._capture is not None:
+            package._capture(self)
             raise _Captured
 
-        from . import _codimate  # imported here so the pure Python is testable
+        from .. import _codimate  # imported here so the pure Python is testable
 
         sounds = self.sounds()      # a missing clip fails now, not after the picture
         _find_encoder()
@@ -320,7 +247,7 @@ class Explanation:
         (ADR 0017). A collision that lasts is reported where it starts, not
         at every beat it survives.
         """
-        from .scene import covered
+        from ..scene import covered
 
         found, before = [], set()
         for i, (at, secs, _) in enumerate(self.timeline()):
@@ -384,7 +311,7 @@ class Explanation:
         """
         from pathlib import Path
 
-        from . import index as _index
+        from .. import index as _index
 
         video = Path(output)
         return _index.write(video.with_name(f"{video.stem}.index.bin"),
@@ -441,7 +368,7 @@ class Explanation:
         """
         from pathlib import Path
 
-        from . import _codimate
+        from .. import _codimate
 
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
         # Built once and kept: building the film is most of a frame's cost —
@@ -488,7 +415,7 @@ class Explanation:
         """The beats of :meth:`index`, one at a time. `shapes=False` leaves out
         what is on screen, which is most of the cost, for a table of when and
         why only."""
-        from .scene import covered
+        from ..scene import covered
 
         states = ([self.trace.initial]
                   + [e.state for e in self.trace.events]
@@ -518,7 +445,7 @@ class Explanation:
 
     def _shape_map(self, scene) -> dict:
         """What is on a scene, by name: the shape as the index records it."""
-        from .scene import box
+        from ..scene import box
 
         return {shape.item: {"name": shape.item, "kind": shape.kind,
                              "layer": shape.layer, "box": box(shape)}
@@ -548,63 +475,6 @@ class Explanation:
             out.append((round(at, 3), length, name))
             at += length
         return out
-
-
-def _mixing(sounds, first: int):
-    """ffmpeg inputs and a filter graph that lays each clip at its start and
-    sums them. `first` is the input number of the first clip. `normalize=0`
-    keeps every clip at its recorded level — amix otherwise divides by the
-    number of inputs, and the voice fades as the film gets longer."""
-    inputs = [arg for _, clip in sounds for arg in ("-i", clip)]
-    ids = range(first, first + len(sounds))
-    delays = "".join(f"[{i}:a]adelay={round(start * 1000)}:all=1[d{i}];"
-                     for i, (start, _) in zip(ids, sounds))
-    summed = "".join(f"[d{i}]" for i in ids)
-    return inputs, f"{delays}{summed}amix=inputs={len(sounds)}:normalize=0[a]"
-
-
-def _ffmpeg() -> str:
-    """The ffmpeg the render uses, for the jobs done around it."""
-    import os
-    import shutil
-
-    _find_encoder()
-    found = os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg")
-    if not found:
-        raise RuntimeError("this needs ffmpeg — install it, or set CODIMATE_FFMPEG")
-    return found
-
-
-def _find_encoder() -> None:
-    """Make sure the engine can find an ffmpeg to run.
-
-    Rendering needs ffmpeg, which pip cannot install. Rather than let
-    `pip install codimate` succeed and then fail on someone's first render —
-    the worst moment to learn about a prerequisite — fall back to the static
-    build that ships with `imageio-ffmpeg`.
-
-    A system ffmpeg is preferred: it is usually newer, hardware-accelerated,
-    and the one the author already expects to be used. The bundled copy is a
-    safety net, not the default.
-
-    Silent when nothing is found; the engine raises its own error naming both
-    the install and the override.
-    """
-    import os
-    import shutil
-
-    if os.environ.get("CODIMATE_FFMPEG") or shutil.which("ffmpeg"):
-        return
-
-    try:
-        import imageio_ffmpeg
-    except ImportError:
-        return
-
-    try:
-        os.environ["CODIMATE_FFMPEG"] = imageio_ffmpeg.get_ffmpeg_exe()
-    except Exception:  # noqa: BLE001 — a broken fallback must not mask the real error
-        pass
 
 
 def explain(

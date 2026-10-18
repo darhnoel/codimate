@@ -1,40 +1,4 @@
-"""The index: what is on screen at every beat, and what put it there.
-
-An index answers questions about a film without drawing it. It has three forms,
-behind one small interface (`Index`), so the Previewer asks the same questions of
-all of them:
-
-- **`LiveIndex`** — a film held in memory (the Previewer running a script). It keeps
-  only a small table with one entry per beat and answers "what is on screen at beat
-  k?" from the scene it already has, about a millisecond for fourteen hundred shapes.
-  Building the whole index first cost seconds and hundreds of megabytes.
-- **`CompactIndex`** — a file, `<video>.index.bin`, written by `render`. See below.
-- **`DictIndex`** — the readable `<video>.index.json`, and the dict
-  `Explanation.index()` returns. Kept so nothing written before still breaks.
-
-**The compact file.** JSON stores every number as decimal text and repeats every field
-name for every shape; for a film where everything moves each beat that is hundreds of
-megabytes. The compact file stores the same facts as columns of small integers:
-
-- A shape's box is kept to 1/16 of a pixel, and written as the difference from where
-  that shape was last. Motion is regular, so the differences repeat, and a compressor
-  finds the repetition that decimal text hides.
-- Names and kinds are written once per chunk and referred to by number.
-- Beats are grouped in chunks of `CHUNK`. A chunk begins with everything on screen
-  when it starts, so it can be read on its own: asking for beat k decodes one chunk, not
-  the film. The small per-beat table is kept apart, in a footer, so opening the file
-  reads that and nothing else.
-- Chunks are written as they are produced, so the writer's memory does not grow with
-  the film.
-
-    file   := MAGIC  chunk*  footer  footer_length(u64, little endian)
-    footer := lzma(JSON: version, canvas, chunk, quant, chunks[(offset, length)], beats)
-    chunk  := lzma(u32 header_length, JSON header, then little-endian columns:
-               int32, and int64 for boxes, which can be huge when a shape is zoomed)
-
-On `year`, whose index is about 390 MB as JSON, this comes to a few megabytes. To read
-one, `python -m codimate.preview --json film.mp4` prints it as JSON (ADR 0020).
-"""
+"""The compact index file: written in chunks, read a chunk at a time (ADR 0020)."""
 
 from __future__ import annotations
 
@@ -46,102 +10,25 @@ import threading
 from array import array
 from collections import OrderedDict
 from pathlib import Path
+from .base import Index
+
 
 MAGIC = b"CDIDX\x00\x00\x02"   # the last byte is the format version
+
+
 QUANT = 16                      # boxes are kept to 1/16 of a pixel
+
+
 CHUNK = 32                      # beats per chunk
+
+
 PRESET = 6                      # lzma: the sizes at 6 and 9 are the same, 6 is faster
+
+
 CACHED = 6                      # chunks a reader keeps decoded
 
+
 assert array("i").itemsize == 4 and array("q").itemsize == 8, "int32 and int64 columns"
-
-
-class Index:
-    """What the Previewer asks of an index.
-
-    `canvas` is the size the boxes are in; `beats` has one dict per beat — at, secs,
-    event, state, covered, and chapter where one starts — and may carry more, such as
-    the legacy `shapes`. `shapes_at(k)` is every shape on screen once beat `k` has
-    arrived, as `{"name", "kind", "layer", "box"}`, in no particular order.
-    """
-
-    canvas: "list | None" = None
-    beats: "list" = ()
-
-    def shapes_at(self, beat: int) -> list:
-        raise NotImplementedError
-
-    def changes(self, start: int = 0, stop: "int | None" = None):
-        """The beats in the shape `Explanation.index()` gives: shapes as what arrived
-        or moved and what left, so the output can be written as the JSON file."""
-        stop = len(self.beats) if stop is None else stop
-        before = {s["name"]: s for s in self.shapes_at(start - 1)} if start > 0 else {}
-        for k in range(start, stop):
-            now = {s["name"]: s for s in self.shapes_at(k)}
-            beat = {key: v for key, v in self.beats[k].items() if key != "shapes"}
-            beat["shapes"] = {"set": [s for n, s in now.items() if before.get(n) != s],
-                              "gone": [n for n in before if n not in now]}
-            yield beat
-            before = now
-
-    def starts(self) -> list:
-        """When each beat starts, in seconds, for finding the one a moment falls in."""
-        if not hasattr(self, "_starts"):
-            self._starts = [b["at"] for b in self.beats]
-        return self._starts
-
-
-class DictIndex(Index):
-    """An index held as the dict `Explanation.index()` or an `.index.json` gives.
-
-    Shapes are stored as differences, so asking for a beat replays them from the
-    nearest checkpoint, kept every 32 beats in the dict itself.
-    """
-
-    def __init__(self, data: dict):
-        self.data = data
-        self.canvas = data.get("canvas")
-        self.beats = data["beats"]
-
-    def shapes_at(self, beat: int) -> list:
-        marks = self.data.setdefault("_checkpoints", {})
-        start = max((k for k in marks if k <= beat), default=-1)
-        now = dict(marks[start]) if start >= 0 else {}
-        for k in range(start + 1, beat + 1):
-            changed = self.beats[k]["shapes"]
-            for shape in changed["set"]:
-                now[shape["name"]] = shape
-            for name in changed["gone"]:
-                now.pop(name, None)
-            if k % 32 == 31:
-                marks[k] = dict(now)
-        return list(now.values())
-
-    def changes(self, start: int = 0, stop: "int | None" = None):
-        yield from self.beats[start:stop]
-
-
-class LiveIndex(Index):
-    """The index of a film held in memory, answered from its own scenes.
-
-    Only the per-beat table is built, up front; the shapes at a beat are read off the
-    scene that beat arrives at, when asked.
-    """
-
-    def __init__(self, explanation):
-        from .layout import height, width
-        self.explanation = explanation
-        self.canvas = [width(), height()]
-        self.beats = list(explanation._index_beats(shapes=False))
-
-    def shapes_at(self, beat: int) -> list:
-        return self.explanation._shapes_after(beat)
-
-    def changes(self, start: int = 0, stop: "int | None" = None):
-        yield from list(self.explanation._index_beats())[start:stop]
-
-
-# ------------------------------------------------------------------- writing
 
 
 def _quantised(box):
@@ -244,9 +131,6 @@ def write(path, canvas, beats, chunk: int = CHUNK) -> str:
         out.write(struct.pack("<Q", len(footer)))
     partial.replace(path)
     return str(path)
-
-
-# ------------------------------------------------------------------- reading
 
 
 class CompactIndex(Index):
@@ -368,23 +252,3 @@ class CompactIndex(Index):
                     beat["shapes"] = {"set": [self._shape(*s) for s in sets],
                                       "gone": gone}
                     yield beat
-
-
-def beside(video) -> Index:
-    """The index written beside `video`: the compact one if there is one, else the
-    readable JSON."""
-    video = Path(video)
-    compact = video.with_name(f"{video.stem}.index.bin")
-    if compact.exists():
-        return CompactIndex(compact)
-    readable = video.with_name(f"{video.stem}.index.json")
-    if readable.exists():
-        return DictIndex(json.loads(readable.read_text()))
-    raise FileNotFoundError(
-        f"no index beside {video} — render with index=True, or preview the script "
-        f"itself")
-
-
-def as_index(index) -> Index:
-    """`index` as an `Index`: one already is, and a dict is wrapped."""
-    return index if isinstance(index, Index) else DictIndex(index)

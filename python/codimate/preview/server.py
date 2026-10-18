@@ -1,200 +1,13 @@
-"""The Previewer: a window onto a film, and a way to ask what is on it.
-
-    python -m codimate.preview archimedes/main.py km    # from codimate-examples
-    python -m codimate.preview results/archimedes-km.mp4
-
-Given a **script**, it runs it up to its `render` call and keeps the film in
-memory — no video is drawn. Each moment you scrub to is drawn on request, and
-saving the script (or pressing Reload) runs it again. Given an **mp4**, it
-plays the finished film, with its sound, against the index written beside it.
-
-Either way: click what is on screen, and learn its name, the event that drew
-it and the State behind it. Attach a note, copy the notes out.
-
-**It never writes.** There is no save, no edit, no path back into your Python.
-It produces words about the film; changing the film stays an edit to the one
-file, made by you or by an agent acting on the note (ADR 0018).
-
-The lookup lives here rather than in the page, so the question it answers does
-not need a window at all:
-
-    from codimate import preview
-    index = preview.load("results/archimedes-km.mp4")
-    print(preview.note(preview.at(index, 55.0, (640, 290))))
-"""
+"""The Previewer's window: a film held open, and the local page that shows it."""
 
 from __future__ import annotations
 
 import json
 import re
-import sys
 import threading
 from pathlib import Path
-
-from .index import Index, LiveIndex, as_index, beside
-
-
-def load(video: "str | Path") -> Index:
-    """The index written beside `video` by `render`: the compact `.index.bin` if
-    there is one, else the readable `.index.json`. It is read lazily, so a film
-    with an index of hundreds of megabytes as JSON opens at once."""
-    return beside(video)
-
-
-def build(script: "str | Path", args=()):
-    """Run `script` as `python script args…` would, up to its render call,
-    and hand back the Explanation it was about to render.
-
-    The script's folder is importable, as it is under `python`, and whatever
-    the script imported from that folder is forgotten afterwards — so running
-    it again picks up an edit to `vocabulary.py` as well as to `main.py`.
-    """
-    import runpy
-
-    import importlib
-    explain = importlib.import_module(f"{__package__}.explain")
-
-    script = Path(script).resolve()
-    folder = str(script.parent)
-    caught = []
-    saved_argv, saved_path, before = sys.argv, list(sys.path), set(sys.modules)
-    # No .pyc: Python trusts one whose source has the same size and the same
-    # second, which an edit made moments after the last run can easily have.
-    saved_bytecode, sys.dont_write_bytecode = sys.dont_write_bytecode, True
-    sys.argv = [str(script), *args]
-    sys.path.insert(0, folder)
-    explain._capture = caught.append
-    try:
-        runpy.run_path(str(script), run_name="__main__")
-    except explain._Captured:
-        pass
-    finally:
-        explain._capture = None
-        sys.argv, sys.path[:] = saved_argv, saved_path
-        sys.dont_write_bytecode = saved_bytecode
-        for name in set(sys.modules) - before:
-            where = getattr(sys.modules[name], "__file__", None) or ""
-            if where.startswith(folder):
-                del sys.modules[name]
-    if not caught:
-        raise RuntimeError(f"{script.name} finished without calling render()")
-    return caught[0]
-
-
-def index_of(explanation) -> dict:
-    """The same index `render` writes beside a video, without the video."""
-    from .layout import height, width
-    return {"version": 1, "canvas": [width(), height()],
-            "beats": explanation.index()}
-
-
-def on_screen(index, beat: int) -> "list[dict]":
-    """Every shape on screen once `beat` has arrived, topmost first.
-
-    How it is found depends on the index: a film in memory is read off its
-    scene, a compact file decodes one chunk, and the readable JSON replays
-    differences from the nearest checkpoint (see :mod:`codimate.index`).
-    """
-    return _under(as_index(index).shapes_at(beat), None)
-
-
-def at(index, seconds: float, point=None) -> dict:
-    """What is on screen at `seconds`, and what put it there.
-
-    Returns the beat — its event and the State behind it — and the shapes on
-    screen, **topmost first**, the order the Engine draws in reversed. Give a
-    `point` in canvas coordinates to keep only the shapes under it.
-
-    Mid-beat, a shape is between where the last beat left it and where this
-    one takes it. The nearer of the two is reported: good enough to identify
-    what was clicked, and honest about being an approximation.
-    """
-    index = as_index(index)
-    beats = index.beats
-    if not beats:
-        raise ValueError("the index has no beats")
-    i = shown_beat = beat_at(index, seconds)
-    beat = beats[i]
-    if i > 0 and seconds < beat["at"] + beat["secs"] / 2:
-        shown_beat = i - 1
-    return {"seconds": round(seconds, 3), "beat": i,
-            "event": beat["event"], "state": beat["state"],
-            "shapes": _under(on_screen(index, shown_beat), point)}
-
-
-def beat_at(index, seconds: float) -> int:
-    """The beat `seconds` falls in: the last one to have started."""
-    import bisect
-    return max(bisect.bisect_right(as_index(index).starts(), seconds) - 1, 0)
-
-
-def covered(index) -> "list[list]":
-    """Every label something is drawn on, as `[seconds, above, below]`, from
-    the index — so a rendered film answers it as well as a script does.
-    Reported where each collision starts, at the moment its beat settles."""
-    found, before = [], set()
-    for beat in as_index(index).beats:
-        now = {tuple(pair) for pair in beat.get("covered", [])}
-        found += [[round(beat["at"] + beat["secs"], 2), a, b]
-                  for a, b in sorted(now - before)]
-        before = now
-    return found
-
-
-def _under(shapes, point):
-    """The shapes at `point`, topmost first. A shape with no box cannot be hit."""
-    # The Engine draws in (layer, name) order, so the last drawn is on top.
-    ordered = sorted(shapes, key=lambda s: (s["layer"], s["name"]),
-                     reverse=True)
-    if point is None:
-        return ordered
-    x, y = point
-    hit = []
-    for shape in ordered:
-        box = shape["box"]
-        if box is None:
-            continue
-        left, top, w, h = box
-        # A line is a box with no width or no height; give it a few pixels
-        # so it can be clicked at all.
-        pad = 4.0 if min(w, h) < 4.0 else 0.0
-        if left - pad <= x <= left + w + pad and top - pad <= y <= top + h + pad:
-            hit.append(shape)
-    return hit
-
-
-def note(found: dict, words: str = "") -> str:
-    """The note a click turns into — plain text, for a person or an agent."""
-    seconds = found["seconds"]
-    stamp = f"{int(seconds // 60)}:{seconds % 60:05.2f}"
-    shapes = found["shapes"]
-    lines = [f"{stamp}  {shapes[0]['name'] if shapes else '(nothing here)'}",
-             f"  event    {found['event']}"]
-    if len(shapes) > 1:
-        lines.append("  under    " + ", ".join(s["name"] for s in shapes[1:6]))
-    lines.append(f"  state    {_brief(found['state'])}")
-    if words.strip():
-        lines.append(f"> {words.strip()}")
-    return "\n".join(lines)
-
-
-def _brief(state, room: int = 96) -> str:
-    """The State on one line, short enough to read."""
-    if isinstance(state, dict):
-        text = "  ".join(f"{k}={_short(v)}" for k, v in state.items())
-    else:
-        text = _short(state, 200)
-    return text if len(text) <= room else text[:room - 1] + "…"
-
-
-def _short(value, room: int = 24) -> str:
-    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
-    if isinstance(value, float):
-        text = f"{value:.4g}"
-    return text if len(text) <= room else text[:room - 1] + "…"
-
-
-# ------------------------------------------------------------------ the film
+from ..index import LiveIndex
+from .lookup import build, covered, load, on_screen
 
 
 class Film:
@@ -274,7 +87,7 @@ class Film:
         with self.lock, tempfile.TemporaryDirectory() as folder:
             out = f"{folder}/frame.png"
             if self.video:
-                from .explain import _ffmpeg
+                from ..explain import _ffmpeg
                 subprocess.run([_ffmpeg(), "-v", "error", "-ss", f"{seconds:.3f}",
                                 "-i", str(self.video), "-frames:v", "1", out],
                                check=True)
@@ -299,9 +112,6 @@ class Film:
                 "sound": bool(self.explanation and self.explanation.sounds()),
                 "duration": (beats[-1]["at"] + beats[-1]["secs"]) if beats else 0,
                 "beats": light}
-
-
-# ------------------------------------------------------------------ serving
 
 
 def serve(path, args=(), port: int = 0, show: bool = True) -> None:
@@ -332,7 +142,7 @@ def _handler(film: Film):
     from http.server import BaseHTTPRequestHandler
     from urllib.parse import parse_qs, urlparse
 
-    viewer = Path(__file__).with_name("viewer").resolve()
+    viewer = Path(__file__).resolve().parent.parent / "viewer"
     kinds = {".html": "text/html; charset=utf-8", ".js": "text/javascript",
              ".css": "text/css"}
 
@@ -434,56 +244,3 @@ def _handler(film: Film):
                 pass                             # the page asked for a newer frame
 
     return Handler
-
-
-def dump(path, args=(), beats: "str | None" = None) -> int:
-    """Print an index as the readable JSON `index="json"` would write: of an mp4,
-    from the file beside it, and of a script, built in memory. How a compact index
-    is read by eye."""
-    path = Path(path)
-    if path.suffix == ".mp4":
-        index = load(path)
-    else:
-        index = LiveIndex(build(path, args))
-    start, _, stop = (beats or "").partition(":")
-    count = len(index.beats)
-    first = int(start) if start else 0
-    last = int(stop) if stop else count
-    sys.stdout.write(json.dumps(
-        {"version": 1, "canvas": index.canvas,
-         "beats": list(index.changes(first, last))},
-        ensure_ascii=False, indent=2) + "\n")
-    return 0
-
-
-def main(argv=None) -> int:
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        prog="python -m codimate.preview",
-        description="Look at a film — a script, or a rendered mp4 — and ask "
-                    "what is on screen.")
-    parser.add_argument("path", help="a script that calls render(), or an mp4 "
-                                     "rendered with its index beside it")
-    parser.add_argument("args", nargs=argparse.REMAINDER,
-                        help="passed to the script, as `python script args` would")
-    parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--no-open", action="store_true",
-                        help="print the address instead of opening a browser")
-    parser.add_argument("--json", action="store_true",
-                        help="print the index as readable JSON and exit: of an mp4, "
-                             "from the file beside it; of a script, built in memory. "
-                             "Put it before the path, which takes the rest as the "
-                             "script's own arguments")
-    parser.add_argument("--beats", metavar="FROM:TO",
-                        help="with --json, only these beats (e.g. 100:120)")
-    options = parser.parse_args(argv)
-    if options.json:
-        return dump(options.path, options.args, options.beats)
-    serve(options.path, options.args, port=options.port,
-          show=not options.no_open)
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
