@@ -154,6 +154,8 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 scene.rect(name, *, h, w=None, at=None)          -> Handle
 scene.circle(name, *, r, at=None)                -> Handle
 scene.text(name, content, *, size=16.0, at=None) -> Handle
+scene.marker(name, *, w, h, at=None) -> Handle
+scene.highlight(name, content, *, size=16.0, at=None) -> (Handle, Handle)
 scene.formula(name, latex, *, size=16.0, at=None) -> Handle
 scene.polygon(name, points, *, closed=True)      -> Handle
 scene.curve(name, points, *, w=2.0, closed=False) -> Handle
@@ -417,6 +419,31 @@ scene.text("label", label, size=30, at=(x, y))
 
 The height is the line height, so it is the same for `"cat"` and `"Qgy"` and a
 row of boxes lines up instead of jittering with whatever letters it holds.
+
+A **marker** is a highlighter stroke over any box on screen, not only text,
+drawn as a hand would: straight edges, a slight tilt, chisel-cut ends, one
+even colour. The same name always draws the
+same stroke. It draws on with `.write(reveal=...)` from 0 to 1, and `.turn(...)`
+sets the angle it draws along. Its colour is one of six highlighter names —
+`yellow`, `orange`, `pink`, `green`, `blue`, `purple` — or any `#rrggbb`:
+
+```python
+note = scene.marker("note", w=260, h=70, at=(640, 300)).fill("pink").turn(-8)
+note.write(reveal=0.5)       # drawn on halfway, from its left end
+```
+
+`scene.highlight` puts a marker under some words. The words are near-black
+while marked, and drawing the marker off with `.write(reveal=0)` returns them
+to their own colour: white, or whatever `words.fill(...)` says. It returns the marker and the words as two Handles, so either can
+be restyled. Give each word its own name and
+keep its words fixed under that name, so the words never overflow their marker.
+Move the highlight by drawing one word's marker off and the next one on:
+
+```python
+band, words = scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
+band.fill("green")
+band.write(reveal=0.0)       # rubbed out; the words are white again
+```
 
 <a id="the-science-kit"></a>
 

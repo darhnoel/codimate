@@ -372,5 +372,138 @@ def test_an_overlay_is_listed_as_fixed():
     assert scene._camera()["fixed"] == ["_overlay"], scene._camera()
 
 
+def _shape(scene, name):
+    return {d["item"]: d for d in scene._payload()}[name]
+
+
+def _span(shape, axis):
+    values = shape["points"][axis::2]
+    return max(values) - min(values)
+
+
+def _area(shape):
+    p = shape["points"]
+    xs, ys = p[0::2], p[1::2]
+    n = len(xs)
+    return abs(sum(xs[i] * ys[(i + 1) % n] - xs[(i + 1) % n] * ys[i]
+                   for i in range(n))) / 2
+
+
+def test_a_marker_is_one_shape_of_one_colour():
+    scene = cm.Scene()
+    scene.marker("note", w=200, h=60, at=(640, 300)).fill("pink").on(opacity=0.6)
+    assert [d["item"] for d in scene._payload()] == ["note"]
+
+
+def test_a_marker_is_a_translucent_polygon_under_the_words():
+    scene = cm.Scene()
+    scene.marker("note", w=200, h=60, at=(640, 300))
+    note = _shape(scene, "note")
+    assert note["kind"] == "polygon" and note["layer"] == 9
+    assert note["opacity"] == 0.85
+    assert note["color"] == "#ffec4f", "yellow, the highlighter default"
+    assert (note["x"], note["y"]) == (640.0, 300.0)
+
+
+def test_a_marker_keeps_its_point_counts_while_it_draws_on():
+    scene = cm.Scene()
+    stroke = scene.marker("note", w=200, h=60, at=(640, 300))
+    full = len(_shape(scene, "note")["points"])
+    stroke.write(reveal=0.4)
+    points = len(_shape(scene, "note")["points"])
+    assert points == full, "the Engine tweens equal counts"
+
+
+def test_reveal_draws_the_marker_on_by_area():
+    scene = cm.Scene()
+    stroke = scene.marker("note", w=200, h=60, at=(640, 300))
+    whole = _area(_shape(scene, "note"))
+    assert abs(whole - 200 * 60) < 0.08 * 200 * 60, "about the box it covers"
+    stroke.write(reveal=0.5)
+    assert abs(_area(_shape(scene, "note")) / whole - 0.5) < 0.06
+    stroke.write(reveal=0.0)
+    assert _area(_shape(scene, "note")) < 1e-6, "nothing drawn at reveal 0"
+
+
+def test_a_marker_leans_a_little_but_stays_on_its_box():
+    scene = cm.Scene()
+    scene.marker("note", w=400, h=60, at=(640, 300))
+    note = _shape(scene, "note")
+    assert abs(_span(note, 0) - 400) < 0.03 * 400
+    # A tilt of at most 1.5 degrees over 400 px.
+    assert 60 < _span(note, 1) < 60 + 400 * 0.03
+
+
+def test_the_same_name_draws_the_same_stroke():
+    a, b = cm.Scene(), cm.Scene()
+    a.marker("note", w=200, h=60, at=(640, 300))
+    b.marker("note", w=200, h=60, at=(640, 300))
+    assert _shape(a, "note")["points"] == _shape(b, "note")["points"]
+
+
+def test_turn_lays_the_marker_out_at_that_angle():
+    flat, turned = cm.Scene(), cm.Scene()
+    flat.marker("note", w=200, h=60, at=(640, 300))
+    turned.marker("note", w=200, h=60, at=(640, 300)).turn(-30)
+    assert _shape(turned, "note")["rotate"] == 0.0, "laid out here, not by the Engine"
+    # Turned 30 degrees, the 200 px stroke rises about 100 px end to end.
+    assert _span(_shape(turned, "note"), 1) > _span(_shape(flat, "note"), 1) + 80
+
+
+def test_a_marker_takes_the_highlighter_colours_by_name():
+    scene = cm.Scene()
+    scene.marker("note", w=200, h=60, at=(640, 300)).fill("pink")
+    assert _shape(scene, "note")["color"] == "#ff8fc7"
+    scene.marker("other", w=200, h=60, at=(640, 300)).fill("#123456")
+    assert _shape(scene, "other")["color"] == "#123456"
+
+
+def test_a_marker_in_a_group_sits_at_the_group_point():
+    scene = cm.Scene()
+    g = scene.group("g", cm.Slot(x=300.0, y=200.0, w=60.0, h=60.0, anchor="bottom"))
+    g.marker("m", w=40, h=20, at=(0, 0))
+    shape = _shape(scene, "g/m")
+    assert (shape["x"], shape["y"]) == (300.0, 230.0)
+    xs = shape["points"][0::2]
+    centre = (min(xs) + max(xs)) / 2
+    assert abs(centre - 300.0) < 1.0, "the stroke sits round the group point"
+
+
+def test_a_highlight_is_a_marker_under_fixed_words():
+    scene = cm.Scene()
+    scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
+    w, h = cm.measure("Pivot", 30)
+    pad = 30 / 4
+    marker = _shape(scene, "pivot marker")
+    text = _shape(scene, "pivot")
+    assert text["kind"] == "text" and text["layer"] == 10
+    assert marker["layer"] < text["layer"], "the stroke is under the words"
+    assert abs(_span(marker, 0) - (w + 2 * pad)) < 0.05 * (w + 2 * pad)
+    centred = (text["x"], text["y"]) == (640.0, 360.0)
+    assert centred, "the words are centred on the stroke"
+    assert text["color"] == "#171717", "marked words are near-black"
+
+
+def test_rubbing_a_highlight_out_returns_its_words_to_their_colour():
+    scene = cm.Scene()
+    band, words = scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
+    band.write(reveal=0.0)
+    assert _shape(scene, "pivot")["color"] == "#ffffff", "white by default"
+    band.write(reveal=0.5)
+    assert _shape(scene, "pivot")["color"] == "#8b8b8b", "halfway between"
+    words.fill("#336699")             # on a white page, say
+    band.write(reveal=0.0)
+    assert _shape(scene, "pivot")["color"] == "#336699"
+    band.write(reveal=1.0)
+    assert _shape(scene, "pivot")["color"] == "#171717", "marked is always dark"
+
+
+def test_a_longer_word_gets_a_wider_marker():
+    short, long = cm.Scene(), cm.Scene()
+    short.highlight("w", "Hi", size=24, at=(0, 0))
+    long.highlight("w", "Highlighted", size=24, at=(0, 0))
+    assert _span(_shape(long, "w marker"), 0) > _span(_shape(short, "w marker"), 0)
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
