@@ -279,7 +279,7 @@ impl Scene {
         self
     }
 
-    /// Alias for [`node`](Self::node), matching the refactor-plan authoring style.
+    /// Alias for [`node`](Self::node), for builder chains that read `scene().add(...)`.
     pub fn add(self, node: impl Into<SceneNode>) -> Self {
         self.node(node)
     }
