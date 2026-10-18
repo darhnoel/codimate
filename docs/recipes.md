@@ -95,9 +95,24 @@ motion = [cm.Rule("*", position="lift_carry_drop", clearance=90)]
 | `linear` | Continuously sampled motion, such as an orbit. |
 | `fall` | A falling trajectory. |
 | `lift_carry_drop` | Items traveling over neighboring items. |
+| `arc` | A curve bowed to one side; `bend=` sets how far. |
 
 Rules match shape names; the first matching rule wins. `"*"` matches all shapes.
-A rule cannot move a shape whose position is unchanged.
+A path cannot move a shape whose position is unchanged.
+
+A rule also sets the feel and timing of a whole change — size, colour and
+opacity as well as position:
+
+```python
+motion = [
+    cm.Rule("bar/*", ease="spring", stagger=0.08),   # one after another, springy
+    cm.Rule("card", position="arc", bend=-0.4, ease="out"),
+]
+```
+
+`ease` is `linear`, `in`, `out`, `in_out`, `back`, `spring` or `bounce`.
+`delay` and `stagger` are fractions of the beat. See
+[Reference: Choose how things move](reference.md#choose-how-things-move).
 
 ## Add a formula
 

@@ -18,6 +18,8 @@ The snippets are drawing fragments: use them inside your `view(frame)` function.
 | A formula | `scene.formula` | Supply a LaTeX string; requires Typst. |
 | Vector artwork | `scene.svg` | Supply an SVG file. |
 | A photograph or bitmap | `scene.image` | Supply a PNG or JPEG file. |
+| A highlighter stroke | `scene.marker` | `scene.marker("note", w=260, h=70, at=(640, 300))` |
+| Highlighted words | `scene.highlight` | `band, words = scene.highlight("key", "pure in t", size=32)` |
 
 All drawing methods are available on groups as well as scenes.
 For argument details, see [Reference: Drawing](reference.md#drawing).
