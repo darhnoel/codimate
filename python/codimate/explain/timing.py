@@ -6,13 +6,17 @@ from ..scene import _key
 from ..trace import Event
 
 
-PATHS = ("straight", "linear", "fall", "lift_carry_drop")
+PATHS = ("straight", "arc", "linear", "fall", "lift_carry_drop")
+EASES = ("linear", "in", "out", "in_out", "back", "spring", "bounce")
+ORDERS = ("screen", "reverse", "name", "centre")
 
 
 class Rule:
-    """How things matching ``pattern`` travel. First matching rule wins.
+    """How things matching ``pattern`` change. First matching rule wins.
 
         cm.Rule("*", position="lift_carry_drop", clearance=90)
+        cm.Rule("bar/*", ease="spring", stagger=0.08)
+        cm.Rule("card", position="arc", bend=-0.4, ease="out")
 
     ``pattern`` matches a shape's full name with ``*`` and ``?``. A shape
     inside a group is named ``group/child``, so ``"3/*"`` targets one group and
@@ -29,21 +33,50 @@ class Rule:
       accelerating. What a dropped thing does, and what each hop of a falling
       ball needs, since an eased path would settle gently instead of arriving.
     * ``lift_carry_drop`` — arcs up and over, then falls. Takes ``clearance``.
+    * ``arc`` — a curve bowed to one side. ``bend`` is how far, as a fraction of
+      the distance travelled (default 0.3); negative bows the other way.
+
+    Timing and feel, for everything about the shape — where it is, its size,
+    colour, opacity, turn, and a marker's reveal — not only its position:
+
+    * ``ease`` — ``linear``, ``in``, ``out``, ``in_out``, ``back`` (overshoots and
+      settles), ``spring`` (takes ``bounciness`` 0..1) or ``bounce``. Unset, a
+      shape moves as it always has: eased position, the rest linear.
+    * ``delay`` — wait this fraction of the beat before starting.
+    * ``stagger`` — matching shapes start this fraction of the beat apart, in
+      ``order``: ``screen`` (left to right, then top to bottom; the default),
+      ``reverse``, ``name`` or ``centre`` (from the middle out). They all take
+      the same time, and the last one finishes as the beat ends.
     """
 
-    def __init__(self, pattern, position: str = "straight", **options: float) -> None:
+    def __init__(self, pattern, position: str = "straight", *, ease: str = None,
+                 order: str = "screen", **options: float) -> None:
         if position not in PATHS:
             raise ValueError(
                 f"unknown path {position!r} — use one of {', '.join(PATHS)}")
+        if ease is not None and ease not in EASES:
+            raise ValueError(f"unknown ease {ease!r} — use one of {', '.join(EASES)}")
+        if order not in ORDERS:
+            raise ValueError(
+                f"unknown order {order!r} — use one of {', '.join(ORDERS)}")
+        for name in ("delay", "stagger"):
+            if not 0.0 <= float(options.get(name, 0.0)) < 1.0:
+                raise ValueError(f"{name} is a fraction of the beat, 0 to under 1")
         self.pattern = _key(pattern) if isinstance(pattern, tuple) else str(pattern)
         self.position = position
+        self.ease = ease
+        self.order = order
         self.options = {k: float(v) for k, v in options.items()}
 
     def _payload(self):
-        return (self.pattern, self.position, self.options)
+        return (self.pattern, self.position, self.options, self.ease or "", self.order)
 
     def __repr__(self):
-        return f"Rule({self.pattern!r}, position={self.position!r}, **{self.options})"
+        extra = f", ease={self.ease!r}" if self.ease else ""
+        if self.order != "screen":
+            extra += f", order={self.order!r}"
+        return (f"Rule({self.pattern!r}, position={self.position!r}{extra}, "
+                f"**{self.options})")
 
 
 class Timing:

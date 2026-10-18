@@ -10,7 +10,7 @@ The parts:
 from typing import Callable
 
 from .timing import (
-    PATHS, Rule, Timing, ease,
+    PATHS, EASES, ORDERS, Rule, Timing, ease,
 )
 from .explanation import (
     View, INDEX_ENTRY_BYTES, _Captured, _quoted, _plain, Explanation,
@@ -21,7 +21,8 @@ from .encoder import (
 )
 
 __all__ = [
-    'Explanation', 'INDEX_ENTRY_BYTES', 'PATHS', 'Rule', 'Timing', 'View',
+    'Explanation', 'INDEX_ENTRY_BYTES', 'PATHS', 'EASES', 'ORDERS', 'Rule',
+    'Timing', 'View',
     '_Captured', '_ffmpeg', '_find_encoder', '_mixing', '_plain',
     '_quoted', 'ease', 'explain',
 ]

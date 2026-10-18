@@ -315,6 +315,39 @@ def test_the_index_survives_a_state_it_does_not_understand():
     assert written["thing"] == {} or written["thing"] == "<odd>"
 
 
+def test_a_rule_carries_ease_timing_and_order():
+    r = cm.Rule("bar/*", position="arc", ease="spring", order="centre",
+                stagger=0.1, delay=0.2, bend=-0.4, bounciness=0.8)
+    assert r._payload() == ("bar/*", "arc", {"stagger": 0.1, "delay": 0.2,
+                                             "bend": -0.4, "bounciness": 0.8},
+                            "spring", "centre")
+    assert cm.Rule("*")._payload() == ("*", "straight", {}, "", "screen")
+
+
+def test_an_unknown_ease_or_order_or_a_whole_beat_of_delay_fails_early():
+    for bad in ({"ease": "wobbly"}, {"order": "random"}, {"delay": 1.0},
+                {"stagger": -0.1}):
+        try:
+            cm.Rule("*", **bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"{bad} should be refused")
+
+
+def test_every_ease_and_path_goes_through_the_engine():
+    """Built by the Engine, not drawn: each rule must be one it accepts."""
+    from codimate import _codimate
+    from codimate.explain import EASES
+
+    for ease in EASES:
+        for rule in (cm.Rule("*", ease=ease, stagger=0.2, order="reverse"),
+                     cm.Rule("*", position="arc", ease=ease, bend=0.5)):
+            e = cm.explain(trace=cm.trace(swap_once, cm.items([3, 1])), view=view,
+                           motion=[rule], timing=cm.Timing(default=0.5))
+            _codimate.Frames(**e._payloads(), durations=e.durations,
+                             width=cm.width(), height=cm.height())
+
+
 if __name__ == "__main__":
     raise SystemExit(support.run(globals()))
 

@@ -34,7 +34,9 @@ pub use rect::{rect, ConcreteRect, Rect};
 pub use text::{text, ConcreteText, Text, TextAlign};
 pub use transform::{ConcreteTransform, Transform};
 
-pub(crate) type TimeCurve = Arc<dyn Fn(f32) -> f32 + Send + Sync>;
+/// A remapping of a segment's time `t` (0..1), applied to everything a shape
+/// does at once: its timing within the beat, and its easing.
+pub type TimeCurve = Arc<dyn Fn(f32) -> f32 + Send + Sync>;
 
 /// A named point on a shape's boundary.
 ///

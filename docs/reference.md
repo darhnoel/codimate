@@ -689,7 +689,7 @@ do; the rest needs a depth buffer the Engine does not have. See
 ## Choose how things move
 
 ```python
-cm.Rule(pattern, position="straight", **options)
+cm.Rule(pattern, position="straight", *, ease=None, order="screen", **options)
 ```
 
 `pattern` matches a shape's full name with `*` and `?`; first match wins. A
@@ -702,6 +702,7 @@ A rule cannot make something move that did not move.
 | `linear` | constant speed; for a thing mid-journey at every event, like something turning |
 | `fall` | a parabola: sideways at a constant rate, downwards accelerating |
 | `lift_carry_drop` | arcs up and over, then falls. Takes `clearance` |
+| `arc` | a curve bowed to one side. `bend` is how far, a fraction of the distance (0.3); negative bows the other way |
 
 ```python
 motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
@@ -709,6 +710,27 @@ motion=[cm.Rule("*", position="lift_carry_drop", clearance=90)]
 
 Use `linear` when something turns or orbits — easing would make it accelerate
 and stop inside every segment.
+
+A rule also sets the **feel and timing** of everything about a shape — where it
+is, its size, colour, opacity, turn, and a marker's reveal:
+
+| | |
+|---|---|
+| `ease` | `linear`, `in`, `out`, `in_out`, `back` (overshoots, settles), `spring` (takes `bounciness`, 0 to 1), `bounce` |
+| `delay` | wait this fraction of the beat before starting |
+| `stagger` | matching shapes start this fraction of the beat apart; all take the same time and the last finishes as the beat ends |
+| `order` | who staggers first: `screen` (left to right, then top to bottom), `reverse`, `name`, `centre` (middle out) |
+
+```python
+motion=[
+    cm.Rule("bar/*", ease="spring", stagger=0.08),     # a row that springs in turn
+    cm.Rule("card", position="arc", bend=-0.4, ease="out"),
+]
+```
+
+With no `ease`, `delay` or `stagger`, a shape moves as it always has: eased
+position, everything else linear. `ease` replaces the built-in ease of
+`straight` and `arc`; on the other paths it warps their time.
 
 ```python
 cm.ease(t) -> float

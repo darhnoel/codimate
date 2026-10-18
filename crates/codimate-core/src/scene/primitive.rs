@@ -457,7 +457,10 @@ impl Primitive {
 
     // --- Scene-level operations (mirrors of the old per-node ops) ---
 
-    pub(crate) fn ease(self, curve: super::TimeCurve) -> Self {
+    /// The same primitive on its own clock: `curve` remaps `t` for its
+    /// transform, style and geometry together, so a shape can start late,
+    /// finish early or ease without each value being rebuilt.
+    pub fn ease(self, curve: super::TimeCurve) -> Self {
         Primitive {
             transform: self.transform.ease(curve.clone()),
             style: {
