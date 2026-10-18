@@ -173,6 +173,44 @@ Each shape takes the few things that decide **what it is** — a radius, a
 height, some words. Everything else is said afterwards, on the Handle it hands
 back. Set position with `at` and appearance with the returned Handle.
 
+### Animate text by word or letter
+
+`TextPreset` splits a line into moving words or Unicode letter clusters. Keep one
+preset for the whole explanation, draw it in every Scene, and change its state
+when the text should enter or leave:
+
+Import these helpers from `codimate.text`; `codimate.TextPreset` and
+`codimate.TextPresetStyle` remain available as convenient top-level aliases.
+Named helpers such as `cm.text.words_up` choose the motion without a preset
+name string. Use `TextPreset` directly when the preset name comes from data.
+
+```python
+title = cm.text.words_up(
+    "title", "Hello world",
+    style=cm.TextPresetStyle(size=72, fill="#1d1d1f"),
+    at=(640, 360),
+)
+
+def view(frame):
+    scene = cm.Scene()
+    title.draw(scene, state="shown" if frame.state.ready else "hidden")
+    return scene
+
+motion = title.rules(stagger=0.12)
+```
+
+Available presets are `words_up`, `words_down`, `words_left`, `words_right`,
+`letters_up`, `letters_down`, and `words_up_blur`. The first six move each
+word or letter cluster in from that direction. `words_up_blur` has three
+states: `hidden`, `blurred`, and `shown`; draw `blurred` for the soft entrance,
+then `shown` to resolve it into crisp text. Its soft edge is built from ordinary
+translucent Text shapes, so it needs no extra image library.
+
+`TextPresetStyle` sets `size`, optional `font` and `fill`, and travel `distance`
+(48 pixels by default). `at` is the block's centre and can be a point or Slot;
+each line is centred separately. Word presets split at whitespace. Letter
+presets keep combining marks and joined emoji together as one moving unit.
+
 `start` and `end` on a line or an arrow may each be a `Slot` or a plain `(x, y)`.
 
 `image` draws a picture — a photo, a screenshot, a figure. PNG and JPEG,

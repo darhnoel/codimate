@@ -57,8 +57,11 @@ def covered(scene: "Scene") -> "list[tuple[str, str]]":
     """
     # ponytail: boxes ignore rotation, and a circle or a curve counts its whole
     # bounding box — exact enough for labels, which are what this is about.
+    # TextPreset's translucent `/blur/` copies soften a word; they are texture,
+    # not readable labels that the coverage check should report.
     shapes = [s for s in scene._shapes.values()
-              if s.opacity > 0 and (s.color != "none" or s.edge_w > 0)]
+              if s.opacity > 0 and (s.color != "none" or s.edge_w > 0)
+              and not (s.kind == "text" and "/blur/" in s.item)]
     # The Engine draws in (layer, name) order: later is on top.
     shapes.sort(key=lambda s: (s.layer, s.item))
     boxes = {s.item: box(s) for s in shapes}

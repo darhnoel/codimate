@@ -26,6 +26,7 @@ encoding — happens in Rust (ADR 0008).
 - `Group` — several shapes that move together
 - `Handle` — what a shape call returns: `.fill()`, `.round()`, `.turn()`,
   `.grow()`, `.on()`, `.write()`, chained
+- `TextPreset`, `TextPresetStyle` — reusable word and letter entrances
 
 ## Where things sit
 
@@ -52,11 +53,27 @@ encoding — happens in Rust (ADR 0008).
 
 from __future__ import annotations
 
-from . import science
+from . import science, text
 from .explain import Explanation, Rule, Timing, ease, explain
-from .layout import (Axes, Place, Slot, at, axes, canvas, column, font, height,
-                     measure, measure_math, ngon, row, star, width)
+from .layout import (
+    Axes,
+    Place,
+    Slot,
+    at,
+    axes,
+    canvas,
+    column,
+    font,
+    height,
+    measure,
+    measure_math,
+    ngon,
+    row,
+    star,
+    width,
+)
 from .scene import Group, Handle, Scene
+from .text import TextPreset, TextPresetStyle
 from .trace import Event, Frame, Item, Trace, items, trace
 
 __all__ = [
@@ -71,6 +88,9 @@ __all__ = [
     "Scene",
     "Group",
     "Handle",
+    "TextPreset",
+    "TextPresetStyle",
+    "text",
     # where things sit
     "canvas",
     "font",
