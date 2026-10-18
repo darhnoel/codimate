@@ -339,6 +339,9 @@ def main() -> int:
         shutil.rmtree(OUT)
     OUT.mkdir()
     shutil.copytree(DOCS / "media", OUT / "media", dirs_exist_ok=True)
+    # Google Search Console looks for this exact file at the site root.
+    for proof in DOCS.glob("google*.html"):
+        shutil.copy(proof, OUT / proof.name)
 
     for source, dest in PAGES.items():
         (OUT / dest).parent.mkdir(parents=True, exist_ok=True)
