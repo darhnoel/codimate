@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Hashable
 
-from ..layout import Place, Slot, _UNSET, _resolve
+from ..layout import _FONT, Place, Slot, _UNSET, _resolve
 from . import marker as mk
 from .handle import Handle
 from .shape import _Shape, _key, _point
@@ -109,11 +109,17 @@ class Group:
         return self._place(key, "circle", x=x, y=y, r=r)
 
     def text(self, key: Hashable, content: Any, *,
-             size: float = 16.0, at=None) -> "Handle":
-        """Text, centred horizontally. You never deal with baselines."""
+             size: float = 16.0, font: str = None, at=None) -> "Handle":
+        """Text, centred horizontally. You never deal with baselines.
+
+            scene.text("title", "Bubble sort", size=48, font="fonts/Inter-Bold.ttf")
+
+        ``font`` is a ``.ttf``/``.otf`` file or an installed font's name, for this
+        text only; unset, the film's font (``cm.font``).
+        """
         x, y = self._where(at, size / 2)
         return self._place(key, "text", x=x, y=y, text=str(content), size=size,
-                           layer=10)
+                           font=str(font or _FONT[0]), layer=10)
 
     def marker(self, key: Hashable, *, w: float, h: float, at=None) -> "Handle":
         """A highlighter stroke over any box on screen.
@@ -137,7 +143,7 @@ class Group:
         return handle.on(layer=mk.LAYER, opacity=mk.OPACITY).fill("yellow")
 
     def highlight(self, key: Hashable, content: Any, *, size: float = 16.0,
-                  at=None) -> "tuple[Handle, Handle]":
+                  font: str = None, at=None) -> "tuple[Handle, Handle]":
         """Words under a highlighter stroke, the stroke sized to them.
 
             band, words = scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
@@ -148,18 +154,19 @@ class Group:
         on every side, with the words drawn as their own text shape on top.
         Marked, the words are near-black; `band.write(reveal=...)` blends them
         back to their own colour as the stroke rubs out, in step with it. Their
-        own colour is white unless `words.fill(...)` says otherwise. Give each
+        own colour is white unless `words.fill(...)` says otherwise. `font` is
+        as for `text`, and the stroke is sized to the words in it. Give each
         word its own name and keep its words fixed under that name: the stroke
         can then move and draw on or off between words without the letters
         overflowing it.
         """
         from ..layout import measure
 
-        w, h = measure(str(content), size)
+        w, h = measure(str(content), size, font)
         pad = size / 4
         x, y = self._where(at, h / 2)
         band = self.marker(f"{key} marker", w=w + 2 * pad, h=h + 2 * pad, at=(x, y))
-        words = self.text(key, content, size=size, at=(x, y))
+        words = self.text(key, content, size=size, font=font, at=(x, y))
         marks = self._scene._markers
         marks[band._name] = replace(marks[band._name], words=words._name)
         marks[words._name] = band._name

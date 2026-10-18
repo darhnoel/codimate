@@ -8,4 +8,4 @@ license.workspace = true
 codimate-core = { path = "../codimate-core" }
 codimate-fonts = { path = "../codimate-fonts" }
 harfbuzz_rs = "2.0"
-ttf-parser = "0.21"
+ttf-parser = "0.25"

@@ -74,6 +74,7 @@ fn rasterize_text_draws_glyphs() {
             font_size: 24.0,
             fill: Color::RED,
             align: TextAlign::Left,
+            font: String::new(),
         }],
     };
 
@@ -100,6 +101,7 @@ fn rasterize_japanese_text_uses_real_glyphs_not_missing_boxes() {
             font_size: 32.0,
             fill: Color::RED,
             align: TextAlign::Left,
+            font: String::new(),
         }],
     };
     let missing_frame = RenderFrame {
@@ -113,6 +115,7 @@ fn rasterize_japanese_text_uses_real_glyphs_not_missing_boxes() {
             font_size: 32.0,
             fill: Color::RED,
             align: TextAlign::Left,
+            font: String::new(),
         }],
     };
 
@@ -152,6 +155,7 @@ fn rasterize_khmer_text_matches_harfbuzz_shaped_paths() {
             font_size,
             fill: Color::RED,
             align: TextAlign::Left,
+            font: String::new(),
         }],
     };
 
@@ -224,6 +228,7 @@ fn rasterize_khmer_text_with_ascii_number_uses_font_runs() {
             font_size,
             fill: Color::RED,
             align: TextAlign::Left,
+            font: String::new(),
         }],
     };
 
@@ -404,4 +409,25 @@ fn rasterize_image_honours_opacity() {
         "half-opaque red over black should be mid red, got {:?}",
         (r, g, b, a)
     );
+}
+
+/// A text in a named font is measured — and so drawn — in that font, falling
+/// back to the built-in fonts only for characters it lacks. Noto Sans Khmer
+/// has no Latin letters but has its own, narrower space; that is enough to
+/// tell which font answered.
+#[test]
+fn a_named_font_measures_in_that_font() {
+    let khmer = format!(
+        "{}/../codimate-fonts/fonts/NotoSansKhmer-Regular.ttf",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let (mono_w, _) = codimate_render::measure_text("   ", 40.0, "");
+    let (named_w, _) = codimate_render::measure_text("   ", 40.0, &khmer);
+    assert!(
+        named_w < mono_w * 0.6,
+        "spaces: mono {mono_w}, named {named_w}"
+    );
+    // Latin it lacks falls back, so a word still measures as the built-in does.
+    let (word, _) = codimate_render::measure_text("abc", 40.0, &khmer);
+    assert_eq!(word, codimate_render::measure_text("abc", 40.0, "").0);
 }

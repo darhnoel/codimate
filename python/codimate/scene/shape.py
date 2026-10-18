@@ -29,6 +29,7 @@ class _Shape:
     edge_w: float = 0.0
     text: str = ""
     size: float = 16.0
+    font: str = ""
     layer: int = 0
     opacity: float = 1.0
     scale_x: float = 1.0

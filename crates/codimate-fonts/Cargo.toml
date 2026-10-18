@@ -5,6 +5,10 @@ edition = "2021"
 license.workspace = true
 
 [build-dependencies]
-ttf-parser = "0.21"
+ttf-parser = "0.25"
 
 [dependencies]
+# Reading a font file an author names at render time, and finding an
+# installed one by family name.
+ttf-parser = "0.25"
+fontdb = "0.23"

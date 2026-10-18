@@ -1,5 +1,7 @@
 """What one moment looks like: Groups, names, and the shapes you can draw."""
 
+from pathlib import Path
+
 import support  # noqa: F401  (puts `codimate` on the import path)
 import codimate as cm
 
@@ -97,7 +99,8 @@ def test_every_shape_carries_every_field():
     shape = scene._payload()[0]
     assert set(shape) == {
         "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
-        "color", "points", "edge", "edge_w", "text", "size", "layer", "opacity",
+        "color", "points", "edge", "edge_w", "text", "size", "font", "layer",
+        "opacity",
         "scale_x", "scale_y", "rotate", "pivot",
     }, sorted(shape)
 
@@ -503,6 +506,48 @@ def test_a_longer_word_gets_a_wider_marker():
     short.highlight("w", "Hi", size=24, at=(0, 0))
     long.highlight("w", "Highlighted", size=24, at=(0, 0))
     assert _span(_shape(long, "w marker"), 0) > _span(_shape(short, "w marker"), 0)
+
+
+
+KHMER = str(Path(__file__).resolve().parents[2]
+            / "crates/codimate-fonts/fonts/NotoSansKhmer-Regular.ttf")
+
+
+def test_a_text_takes_its_own_font_or_the_films():
+    try:
+        scene = cm.Scene()
+        scene.text("plain", "a", at=(0, 0))
+        scene.text("own", "b", font="fonts/Own.ttf", at=(0, 0))
+        cm.font(KHMER)
+        scene.text("film", "c", at=(0, 0))
+        assert _shape(scene, "plain")["font"] == "", "built-in by default"
+        assert _shape(scene, "own")["font"] == "fonts/Own.ttf"
+        assert _shape(scene, "film")["font"] == KHMER
+    finally:
+        cm.font()
+    scene = cm.Scene()
+    scene.text("after", "d", at=(0, 0))
+    assert _shape(scene, "after")["font"] == "", "cm.font() goes back"
+
+
+def test_a_font_that_will_not_load_is_refused_where_it_is_named():
+    for name in ("fonts/missing.ttf", "No Such Family Anywhere"):
+        try:
+            cm.font(name)
+        except ValueError as e:
+            assert name in str(e), e
+        else:
+            raise AssertionError(f"{name} should be refused")
+    assert cm.layout._FONT[0] == "", "a refused font changes nothing"
+
+
+def test_a_highlight_is_measured_in_its_font():
+    # Noto Sans Khmer's space is narrower than DejaVu Sans Mono's.
+    assert cm.measure("   ", 40, font=KHMER)[0] < cm.measure("   ", 40)[0]
+    mono, named = cm.Scene(), cm.Scene()
+    mono.highlight("w", "   ", size=40, at=(0, 0))
+    named.highlight("w", "   ", size=40, font=KHMER, at=(0, 0))
+    assert _span(_shape(named, "w marker"), 0) < _span(_shape(mono, "w marker"), 0)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ The parts:
 """
 
 from .canvas import (
-    _CANVAS, measure, measure_math, canvas, width, height,
+    _CANVAS, _FONT, font, measure, measure_math, canvas, width, height,
 )
 from .points import (
     ngon, star,
@@ -22,7 +22,7 @@ from .axes import (
 )
 
 __all__ = [
-    'Axes', 'Place', 'Slot', '_CANVAS', '_UNSET', '_nice_step', '_places',
-    '_resolve', '_size', '_spread', '_within', 'at', 'axes', 'canvas', 'column',
+    'Axes', 'Place', 'Slot', '_CANVAS', '_FONT', '_UNSET', '_nice_step', '_places',
+    '_resolve', '_size', '_spread', '_within', 'at', 'axes', 'canvas', 'column', 'font',
     'height', 'measure', 'measure_math', 'ngon', 'row', 'star', 'width',
 ]

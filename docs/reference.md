@@ -153,9 +153,9 @@ frame.items(key="items")   # the list an `items=[...]` event named; [] if none
 ```python
 scene.rect(name, *, h, w=None, at=None)          -> Handle
 scene.circle(name, *, r, at=None)                -> Handle
-scene.text(name, content, *, size=16.0, at=None) -> Handle
+scene.text(name, content, *, size=16.0, font=None, at=None) -> Handle
 scene.marker(name, *, w, h, at=None) -> Handle
-scene.highlight(name, content, *, size=16.0, at=None) -> (Handle, Handle)
+scene.highlight(name, content, *, size=16.0, font=None, at=None) -> (Handle, Handle)
 scene.formula(name, latex, *, size=16.0, at=None) -> Handle
 scene.polygon(name, points, *, closed=True)      -> Handle
 scene.curve(name, points, *, w=2.0, closed=False) -> Handle
@@ -334,7 +334,8 @@ size, colour or position **tween**. You ask for none of it.
 ```python
 cm.canvas(w, h) -> None      # default 1280x720; call before building anything
 cm.width() -> float
-cm.measure(text, size=16.0) -> (w, h)   # how big that string will actually be
+cm.font(name=None) -> None   # every text's font: a .ttf/.otf file or installed name
+cm.measure(text, size=16.0, font=None) -> (w, h)   # how big that string will actually be
 cm.height() -> float
 ```
 

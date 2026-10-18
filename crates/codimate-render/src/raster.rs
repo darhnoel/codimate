@@ -157,6 +157,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                 font_size,
                 fill,
                 align,
+                font,
             } => {
                 // Glyphs are rasterized straight into the pixmap, so this
                 // cannot take a `Transform` the way the path commands do.
@@ -164,12 +165,12 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
                 // and without it, text ignores `pixel_scale` entirely.
                 render_text(
                     &mut pixmap,
-                    *x * pixel_scale,
-                    *y * pixel_scale,
+                    (*x * pixel_scale, *y * pixel_scale),
                     text,
                     *font_size * pixel_scale,
                     *fill,
                     *align,
+                    font,
                 );
             }
         }
@@ -257,30 +258,46 @@ fn render_path(
     }
 }
 
+/// The font a text asked for, or `None` for the built-in one. Reconcile has
+/// already reported a font that will not load, so here it only falls back.
+fn asked_for(font: &str) -> Option<FontId> {
+    (!font.is_empty())
+        .then(|| FontRegistry::global().load(font).ok())
+        .flatten()
+}
+
+/// The font a text starts in: the one it asked for, else the built-in.
+fn lead_font(primary: Option<FontId>) -> FontId {
+    primary.unwrap_or_else(|| FontRegistry::global().char_font('A'))
+}
+
+fn font_ref(id: FontId) -> Option<ab_glyph::FontRef<'static>> {
+    let registry = FontRegistry::global();
+    ab_glyph::FontRef::try_from_slice_and_index(registry.data(id), registry.index(id)).ok()
+}
+
 fn render_text(
     pixmap: &mut tiny_skia::Pixmap,
-    x: f32,
-    y: f32,
+    (x, y): (f32, f32),
     text: &str,
     font_size: f32,
     fill: Color,
     align: TextAlign,
+    font: &str,
 ) {
-    if render_shaped_text(pixmap, x, y, text, font_size, fill, align) {
+    let primary = asked_for(font);
+    if render_shaped_text(pixmap, (x, y), text, font_size, fill, align, primary) {
         return;
     }
 
-    use ab_glyph::{point, Font, FontRef, PxScale, ScaleFont};
+    use ab_glyph::{point, Font, PxScale, ScaleFont};
 
     let registry = FontRegistry::global();
-    let primary_font = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
-        Ok(f) => f,
-        Err(_) => return,
+    let lead = lead_font(primary);
+    let Some(primary_font) = font_ref(lead) else {
+        return;
     };
-    let fallback_font = registry
-        .ids()
-        .filter(|id| *id != registry.char_font('A'))
-        .find_map(|id| FontRef::try_from_slice(registry.data(id)).ok());
+    let fallback_font = registry.ids().filter(|id| *id != lead).find_map(font_ref);
     let scale = PxScale::from(font_size);
 
     let fill_r = (fill.r * 255.0) as u32;
@@ -349,14 +366,14 @@ fn render_text(
 
 fn render_shaped_text(
     pixmap: &mut tiny_skia::Pixmap,
-    x: f32,
-    y: f32,
+    (x, y): (f32, f32),
     text: &str,
     font_size: f32,
     fill: Color,
     align: TextAlign,
+    primary: Option<FontId>,
 ) -> bool {
-    let Some(runs) = shaped_runs(text, font_size, fill) else {
+    let Some(runs) = shaped_runs(text, font_size, fill, primary) else {
         return false;
     };
     if runs.is_empty() {
@@ -399,7 +416,12 @@ struct ShapedRun {
     block: codimate_core::GlyphBlock,
 }
 
-fn shaped_runs(text: &str, font_size: f32, fill: Color) -> Option<Vec<ShapedRun>> {
+fn shaped_runs(
+    text: &str,
+    font_size: f32,
+    fill: Color,
+    primary: Option<FontId>,
+) -> Option<Vec<ShapedRun>> {
     let registry = FontRegistry::global();
     let mut runs = Vec::new();
     let mut current_font: Option<FontId> = None;
@@ -407,9 +429,9 @@ fn shaped_runs(text: &str, font_size: f32, fill: Color) -> Option<Vec<ShapedRun>
 
     for ch in text.chars() {
         let font = if ch.is_whitespace() {
-            current_font.unwrap_or_else(|| registry.char_font('A'))
+            current_font.unwrap_or_else(|| lead_font(primary))
         } else {
-            registry.char_font(ch)
+            registry.char_font_in(primary, ch)
         };
 
         if current_font.is_some_and(|active| active != font) && !current_text.is_empty() {
@@ -431,7 +453,7 @@ fn shaped_runs(text: &str, font_size: f32, fill: Color) -> Option<Vec<ShapedRun>
         push_shaped_run(
             &mut runs,
             &current_text,
-            current_font.unwrap_or_else(|| registry.char_font('A')),
+            current_font.unwrap_or_else(|| lead_font(primary)),
             font_size,
             fill,
         )?;
@@ -577,6 +599,7 @@ mod scale_tests {
             font_size: 20.0,
             fill: Color::WHITE,
             align: TextAlign::Center,
+            font: String::new(),
         }]);
 
         let (x1, y1) = ink_centre(&rasterize(&f));
@@ -619,32 +642,33 @@ mod scale_tests {
 ///
 /// The height is the **line height** (ascent to descent), not the tight ink
 /// box: it is the same for "cat" and "Qgy", so boxes in a row line up.
-pub fn measure_text(text: &str, font_size: f32) -> (f32, f32) {
-    use ab_glyph::{Font, FontRef, PxScale, ScaleFont};
+///
+/// `font` is a `.ttf`/`.otf` path or an installed family name, or empty for the
+/// built-in font; the line height is that font's.
+pub fn measure_text(text: &str, font_size: f32, font: &str) -> (f32, f32) {
+    use ab_glyph::{Font, PxScale, ScaleFont};
 
     let registry = FontRegistry::global();
-    let height = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
-        Ok(font) => {
+    let asked = asked_for(font);
+    let lead = lead_font(asked);
+    let height = match font_ref(lead) {
+        Some(font) => {
             let scaled = font.as_scaled(PxScale::from(font_size));
             scaled.ascent() - scaled.descent()
         }
-        Err(_) => font_size,
+        None => font_size,
     };
 
-    if let Some(runs) = shaped_runs(text, font_size, Color::WHITE) {
+    if let Some(runs) = shaped_runs(text, font_size, Color::WHITE, asked) {
         if !runs.is_empty() {
             return (runs.iter().map(|r| r.block.width).sum(), height);
         }
     }
 
-    let primary = match FontRef::try_from_slice(registry.data(registry.char_font('A'))) {
-        Ok(f) => f,
-        Err(_) => return (0.0, height),
+    let Some(primary) = font_ref(lead) else {
+        return (0.0, height);
     };
-    let fallback = registry
-        .ids()
-        .filter(|id| *id != registry.char_font('A'))
-        .find_map(|id| FontRef::try_from_slice(registry.data(id)).ok());
+    let fallback = registry.ids().filter(|id| *id != lead).find_map(font_ref);
 
     (
         text_width(&primary, fallback.as_ref(), PxScale::from(font_size), text),

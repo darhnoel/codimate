@@ -20,7 +20,7 @@ pub struct Focus {
 pub(crate) fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
     let (w, h) = match shape.kind.as_str() {
         "circle" => (shape.r * 2.0, shape.r * 2.0),
-        "text" => codimate_render::measure_text(&shape.text, shape.size),
+        "text" => codimate_render::measure_text(&shape.text, shape.size, &shape.font),
         "formula" => formula_size(&shape.text, shape.size).unwrap_or((0.0, 0.0)),
         // The fitted box, not the box asked for: a wide drawing in a square
         // `size` does not fill the square, and framing the square would leave

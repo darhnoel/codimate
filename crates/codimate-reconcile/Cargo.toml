@@ -9,6 +9,7 @@ codimate-core = { path = "../codimate-core" }
 codimate-animation = { path = "../codimate-animation" }
 codimate-math = { path = "../codimate-math" }
 codimate-render = { path = "../codimate-render" }
+codimate-fonts = { path = "../codimate-fonts" }
 
 # Decoding an imported picture (ADR 0013). `png` is already in the workspace;
 # `jpeg-decoder` is the one dependency added purely for a feature, because

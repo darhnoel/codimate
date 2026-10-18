@@ -30,7 +30,8 @@ pub fn shape(
     }
 
     // 1. HarfBuzz shaping — get glyph IDs + positions.
-    let hb_face = harfbuzz_rs::Face::new(data, 0);
+    let index = registry.index(font_id);
+    let hb_face = harfbuzz_rs::Face::new(data, index);
     let upem = hb_face.upem();
 
     let mut hb_font = harfbuzz_rs::Font::new(hb_face);
@@ -45,13 +46,10 @@ pub fn shape(
     let infos = glyph_info.get_glyph_infos();
 
     // 2. TTF outline extraction — convert each glyph to path segments.
-    let ttf_face = ttf_parser::Face::parse(data, 0)
+    // `outline_glyph` reads TrueType and CFF outlines alike, so an `.otf`
+    // draws as well as a `.ttf`.
+    let ttf_face = ttf_parser::Face::parse(data, index)
         .map_err(|e| GlyphError::Outline(format!("ttf_face: {e}")))?;
-    let glyf = ttf_face
-        .tables()
-        .glyf
-        .as_ref()
-        .ok_or_else(|| GlyphError::Outline("no glyf table".into()))?;
 
     let scale_factor = font_size / upem as f32;
     let inv_64 = 1.0 / 64.0;
@@ -65,7 +63,7 @@ pub fn shape(
 
         let gid = ttf_parser::GlyphId(info.codepoint as u16);
         let mut collector = OutlineCollector::new(ox, oy, scale_factor);
-        let outlines_ok = glyf.outline(gid, &mut collector).is_some();
+        let outlines_ok = ttf_face.outline_glyph(gid, &mut collector).is_some();
         let segs = collector.segments();
         if outlines_ok && !segs.is_empty() {
             glyph_nodes.push(

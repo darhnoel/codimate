@@ -82,6 +82,27 @@ scene.rect("card", w=240, h=120, at=(640, 360)).fill(
 
 Use named colors such as `blue`, `orange`, `white`, `grey`, or hex colors
 such as `#087FC4`. Do not assume every CSS color name is supported.
+
+## Choose a font
+
+Text uses the built-in DejaVu Sans Mono until you name another. Set one font
+for the whole film, before building scenes, and override it on any text:
+
+```python
+cm.font("fonts/Inter-Regular.ttf")       # every text: a .ttf or .otf file
+
+scene.text("title", "Bubble sort", size=48, font="fonts/Inter-Bold.ttf")
+scene.text("code", "x = 1", size=24, font="Menlo")   # an installed font, by name
+```
+
+A name with a `/` or a font file's extension is a file; anything else is an
+installed font, found by family or face name (`"Georgia Italic"`). Prefer a
+file kept in your project for a film you will share: an installed font may not
+be on the next machine. Bold and italic are their own file or name.
+Characters the font lacks, such as Khmer or Chinese, fall back to the built-in
+fonts. `cm.measure` and `scene.highlight` take the same `font=`, so boxes and
+markers fit the words. A font that will not load is a `ValueError` that names
+it.
 Text glyphs stay upright when a text handle is turned.
 
 ## Put related shapes in a group

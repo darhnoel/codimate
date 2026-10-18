@@ -30,6 +30,7 @@ encoding — happens in Rust (ADR 0008).
 ## Where things sit
 
 - `canvas`, `width`, `height` — the frame
+- `font` — the font every text uses, by file or installed name
 - `row`, `column`, `Slot` — divide it up, without coordinates
 - `measure`, `measure_math` — how big text or a formula will actually be
 
@@ -53,8 +54,8 @@ from __future__ import annotations
 
 from . import science
 from .explain import Explanation, Rule, Timing, ease, explain
-from .layout import (Axes, Place, Slot, at, axes, canvas, column, height, measure,
-                     measure_math, ngon, row, star, width)
+from .layout import (Axes, Place, Slot, at, axes, canvas, column, font, height,
+                     measure, measure_math, ngon, row, star, width)
 from .scene import Group, Handle, Scene
 from .trace import Event, Frame, Item, Trace, items, trace
 
@@ -72,6 +73,7 @@ __all__ = [
     "Handle",
     # where things sit
     "canvas",
+    "font",
     "measure",
     "measure_math",
     "width",

@@ -54,6 +54,8 @@ pub enum RenderCommand {
         font_size: f32,
         fill: Color,
         align: TextAlign,
+        /// A `.ttf`/`.otf` path or installed family name; empty is built in.
+        font: String,
     },
 }
 
@@ -92,6 +94,7 @@ pub fn render_commands(frame: &LayoutFrame) -> Vec<RenderCommand> {
                 font_size: text.font_size,
                 fill: text.fill,
                 align: text.align,
+                font: String::new(),
             }],
         })
         .collect()
@@ -179,6 +182,7 @@ fn render_primitive_commands(primitive: &ConcretePrimitive) -> Vec<RenderCommand
             text,
             font_size,
             align,
+            font,
         } => {
             let origin = transform_point(Vec2::new(0.0, 0.0), &primitive.transform);
             vec![RenderCommand::Text {
@@ -188,6 +192,7 @@ fn render_primitive_commands(primitive: &ConcretePrimitive) -> Vec<RenderCommand
                 font_size: *font_size * scale_factor.max(0.01),
                 fill,
                 align: *align,
+                font: font.clone(),
             }]
         }
     }
@@ -283,6 +288,7 @@ pub fn inject_debug_metadata(frame: &mut RenderFrame) {
             a: 1.0,
         },
         align: TextAlign::Left,
+        font: String::new(),
     });
 }
 

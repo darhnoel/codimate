@@ -116,6 +116,16 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
         )));
     }
 
+    // A font that will not load is an authoring mistake, said here rather
+    // than drawn quietly in the fallback font.
+    for font in [&before.font, &after.font] {
+        if !font.is_empty() {
+            codimate_fonts::FontRegistry::global()
+                .load(font)
+                .map_err(|e| Error(format!("item {:?}: {e}", after.item)))?;
+        }
+    }
+
     let path = motion_path(before.anchor(), after.anchor(), rules, &after.item)?;
     let style = tween(before.style()?, after.style()?);
     let opacity = tween(before.opacity, after.opacity);
@@ -217,7 +227,7 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
             // The Engine aligns left or centre; `text-anchor="end"` becomes a
             // left-aligned label starting one measured width earlier.
             let shift = if label.from_right {
-                -codimate_render::measure_text(&label.content, size).0
+                -codimate_render::measure_text(&label.content, size, "").0
             } else {
                 0.0
             };
@@ -232,6 +242,7 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
                     text: label.content.clone().into_animated(),
                     font_size: size.into_animated(),
                     align: label.align,
+                    font: String::new(),
                 })
                 .pos(Animated::new(move |t| {
                     let base = anchored.resolve(t);

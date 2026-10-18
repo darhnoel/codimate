@@ -42,6 +42,7 @@ struct PyShape {
     points: Vec<f32>,
     text: String,
     size: f32,
+    font: String,
     layer: i32,
     opacity: f32,
     scale_x: f32,
@@ -68,6 +69,7 @@ impl From<PyShape> for Shape {
             points: s.points,
             text: s.text,
             size: s.size,
+            font: s.font,
             layer: s.layer,
             opacity: s.opacity,
             scale_x: s.scale_x,
@@ -235,8 +237,15 @@ fn ease(t: f32) -> f32 {
 /// Exposed because an author has no canvas to ask, and the alternative is
 /// rendering a frame and measuring the picture by hand.
 #[pyfunction]
-fn measure(text: &str, size: f32) -> (f32, f32) {
-    codimate_render::measure_text(text, size)
+#[pyo3(signature = (text, size, font = ""))]
+fn measure(text: &str, size: f32, font: &str) -> PyResult<(f32, f32)> {
+    // Load it first so a bad name is an error, not a fallback-font width.
+    if !font.is_empty() {
+        codimate_fonts::FontRegistry::global()
+            .load(font)
+            .map_err(pyo3::exceptions::PyValueError::new_err)?;
+    }
+    Ok(codimate_render::measure_text(text, size, font))
 }
 
 /// How wide and tall a typeset formula will be at `size`.

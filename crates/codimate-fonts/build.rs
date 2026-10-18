@@ -29,7 +29,7 @@ fn main() {
     .unwrap();
 
     for (i, (name, path, ranges)) in entries.iter().enumerate() {
-        let abs_path = std::fs::canonicalize(&path).unwrap();
+        let abs_path = std::fs::canonicalize(path).unwrap();
         let font_data_path = abs_path.to_string_lossy().to_string();
         // Escape backslashes on Windows; no-op on Unix.
         let font_data_path = font_data_path.replace('\\', "\\\\");

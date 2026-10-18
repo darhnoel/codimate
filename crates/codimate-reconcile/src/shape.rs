@@ -33,6 +33,9 @@ pub struct Shape {
     pub points: Vec<f32>,
     pub text: String,
     pub size: f32,
+    /// A text's font: a `.ttf`/`.otf` path or an installed family name.
+    /// Empty is the built-in font.
+    pub font: String,
     pub layer: i32,
     pub opacity: f32,
     /// The rest of `Transform`, which the surface used to leave unreachable.
@@ -290,6 +293,7 @@ impl Shape {
                 text: self.text.clone().into_animated(),
                 font_size: tween(self.size, other.size),
                 align: TextAlign::Center,
+                font: self.font.clone(),
             },
             "line" => Geometry::path(tween(line_path(self), line_path(other))),
 

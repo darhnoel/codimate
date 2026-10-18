@@ -33,6 +33,9 @@ pub enum Geometry {
         text: Animated<String>,
         font_size: Animated<f32>,
         align: TextAlign,
+        /// A `.ttf`/`.otf` path or an installed family name; empty is the
+        /// built-in font. Not tweened: a change of font is a cut.
+        font: String,
     },
     /// A decoded raster picture, drawn into a box (ADR 0013).
     ///
@@ -83,6 +86,7 @@ pub enum ConcreteGeometry {
         text: String,
         font_size: f32,
         align: TextAlign,
+        font: String,
     },
     Image {
         pixels: std::sync::Arc<Pixels>,
@@ -116,6 +120,7 @@ impl Geometry {
             text: text.into_animated(),
             font_size: 16.0.into_animated(),
             align: TextAlign::Left,
+            font: String::new(),
         }
     }
 
@@ -165,10 +170,12 @@ impl Geometry {
                 text,
                 font_size,
                 align,
+                font,
             } => ConcreteGeometry::Text {
                 text: text.resolve(t),
                 font_size: font_size.resolve(t),
                 align: *align,
+                font: font.clone(),
             },
             Geometry::Image {
                 pixels,
@@ -216,12 +223,14 @@ impl Geometry {
                 text,
                 font_size,
                 align,
+                font,
             } => {
                 let text_curve = curve.clone();
                 Geometry::Text {
                     text: Animated::new(move |t| text.resolve(text_curve(t))),
                     font_size: Animated::new(move |t| font_size.resolve(curve(t))),
                     align,
+                    font,
                 }
             }
             // Handled above, before the match, because it needs to move its
@@ -267,11 +276,13 @@ impl Geometry {
                     text: from_text,
                     font_size: from_size,
                     align: _,
+                    font,
                 },
                 Geometry::Text {
                     text: to_text,
                     font_size: to_size,
                     align,
+                    font: _,
                 },
             ) => {
                 let from_text = from_text.clone();
@@ -286,6 +297,8 @@ impl Geometry {
                     }),
                     font_size: crate::value::tween(from_size.clone(), to_size.clone()),
                     align: *align,
+                    // Like the words, the font holds for the whole change.
+                    font: font.clone(),
                 })
             }
             (from, to) => Err(super::SceneTransformError::NodeKindMismatch {
@@ -443,6 +456,14 @@ impl Primitive {
     pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
         if let Geometry::Text { font_size, .. } = &mut self.geometry {
             *font_size = size.into_animated();
+        }
+        self
+    }
+
+    /// Set a text's font: a `.ttf`/`.otf` path or an installed family name.
+    pub fn font(mut self, name: impl Into<String>) -> Self {
+        if let Geometry::Text { font, .. } = &mut self.geometry {
+            *font = name.into();
         }
         self
     }
