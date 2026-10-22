@@ -50,6 +50,35 @@ NAV = [
     ("api/codimate.html", "API"),
 ]
 
+# On a phone the nav shows these icons instead of its words (24-unit, stroked,
+# like the theme toggle); the word stays as the link's name and tooltip.
+ICONS = {
+    "Home": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>',
+    "Concepts": '<path d="M9 18h6M10 21h4"/>'
+                '<path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2'
+                'c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/>',
+    "Tutorial": '<path d="M2 5.5C4 4.5 7 4.3 12 6c5-1.7 8-1.5 10-.5V19'
+                'c-2-1-5-1.2-10 .5-5-1.7-8-1.5-10-.5Z"/><path d="M12 6v13.5"/>',
+    "Reference": '<path d="M8 6h13M8 12h13M8 18h13"/>'
+                 '<path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+    "API": '<path d="m8 7-5 5 5 5M16 7l5 5-5 5"/>',
+}
+
+# Words on wide screens, icons on narrow ones. Shared by the site and the
+# pdoc-built API pages.
+NAV_CSS = """
+.nav-icon { display:none; width:1.3rem; height:1.3rem; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width: 640px) {
+  .header-links { width:100%; flex-wrap:nowrap; gap:0; padding:0 3rem 0 1rem; }
+  .header-links .nav-label { display:none; }
+  .header-links .nav-icon { display:block; }
+  .header-links a:not(.brand) { display:inline-flex; align-items:center;
+    justify-content:center; flex:none; width:2.1rem; height:2.5rem; }
+  .site-header .theme-toggle { right:.4rem; }
+}
+"""
+
 PAGES = {
     ROOT / "README.md": "index.html",
     DOCS / "concepts.md": "concepts.html",
@@ -142,7 +171,11 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display:none; }
 .header-links .brand { color:var(--text); font-weight:700; margin-right:auto; }
 .site-header .theme-toggle { position:absolute; top:50%; right:1.25rem;
   transform:translateY(-50%); }
-</style>"""
+@media (max-width:769px) {
+  /* pdoc's own menu button sits at the top right, under the site header */
+  #navtoggle { top:4.75rem; }
+}
+""" + NAV_CSS + """</style>"""
 
 SHELL = """<!doctype html>
 <html lang="en"><head>
@@ -208,6 +241,7 @@ th {{ background:var(--panel); }}
 blockquote {{ border-left:3px solid var(--line); margin:1rem 0; padding:0 1rem;
               color:var(--dim); }}
 img {{ display:block; max-width:100%; height:auto; margin-inline:auto; }}
+{nav_css}
 {highlight}
 </style>
 </head><body>
@@ -241,8 +275,11 @@ def nav_html(here: str, depth: int) -> str:
     up = "../" * depth
     out = [f'<a class="brand" href="{up}index.html">Codimate</a>']
     for href, label in NAV:
-        mark = ' class="here"' if href == here else ""
-        out.append(f'<a href="{up}{href}"{mark}>{label}</a>')
+        mark = ' class="here" aria-current="page"' if href == here else ""
+        icon = (f'<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">'
+                f'{ICONS[label]}</svg>')
+        out.append(f'<a href="{up}{href}"{mark} title="{label}" aria-label="{label}">'
+                   f'{icon}<span class="nav-label">{label}</span></a>')
     return "\n".join(out)
 
 
@@ -328,6 +365,7 @@ def to_html(md_path: Path, dest: str, depth: int = 0) -> str:
     title = re.search(r"^#\s+(.+)$", text, re.M)
     return SHELL.format(title=title.group(1) if title else "Codimate",
                         nav=nav_html(dest, depth), theme_toggle=theme_toggle(),
+                        nav_css=NAV_CSS,
                         body=body,
                         highlight=HIGHLIGHT, toc=toc,
                         next_page=next_page, theme_script=THEME_SCRIPT,
