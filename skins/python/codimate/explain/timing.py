@@ -51,5 +51,10 @@ def __getattr__(name):
     if name in ("PATHS", "EASES", "ORDERS"):
         from .._waist import call
 
-        return tuple(call("choices", {})[name.lower()])
+        # The docs build has no extension, and pdoc probes every name in
+        # `__all__`: to it, these simply are not there.
+        try:
+            return tuple(call("choices", {})[name.lower()])
+        except ImportError:
+            raise AttributeError(name) from None
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
