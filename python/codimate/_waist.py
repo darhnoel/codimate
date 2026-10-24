@@ -90,6 +90,8 @@ def _points(points) -> "list[list[float]]":
 
 def _radius(r):
     """One radius, or ``(rx, ry)`` for an ellipse."""
+    if r is None:
+        return None
     return float(r) if isinstance(r, (int, float)) else [float(r[0]), float(r[1])]
 
 
@@ -106,3 +108,37 @@ def _slot(slot):
     if slot is None:
         return None
     return {"x": slot.x, "y": slot.y, "w": slot.w, "h": slot.h, "anchor": slot.anchor}
+
+
+def _int(value) -> int:
+    return int(value)
+
+
+def _items(items) -> int:
+    """How many things a run lays out: a count, or the items themselves."""
+    return items if isinstance(items, int) else len(list(items))
+
+
+def _canvas() -> "list[float]":
+    from .layout import height, width
+
+    return [width(), height()]
+
+
+def _as_points(points) -> "list[tuple[float, float]]":
+    return [(x, y) for x, y in points]
+
+
+def _as_size(size) -> "tuple[float, float]":
+    return (size[0], size[1])
+
+
+def _paired(items, slots):
+    """The Core's Slots as Slots, each with its item, or bare for a count."""
+    from .layout import Slot
+
+    made = [Slot(**slot) for slot in slots]
+    if isinstance(items, int):
+        yield from made
+    else:
+        yield from zip(made, items)

@@ -1,6 +1,6 @@
 // Generated from api/surface.toml by tools/generate.py. Do not edit.
 
-use crate::surface::{self, run, run_frame};
+use crate::surface::{self, run};
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -16,7 +16,13 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "polygon" => run(data, surface::polygon),
         "curve" => run(data, surface::curve),
         "arc" => run(data, surface::arc),
-        "group" => run_frame(data, surface::group),
+        "group" => run(data, surface::group),
+        "ngon" => run(data, surface::ngon),
+        "star" => run(data, surface::star),
+        "row" => run(data, surface::row),
+        "column" => run(data, surface::column),
+        "measure" => run(data, surface::measure),
+        "ease" => run(data, surface::ease),
         _ => surface::internal(op, data),
     }
 }

@@ -45,13 +45,11 @@ def load() -> list[dict]:
 # -- Rust: the Core's dispatch -------------------------------------------------
 
 def rust(ops: list[dict]) -> str:
-    arms = "\n".join(
-        f'        "{op["name"]}" => '
-        f'{"run_frame" if op.get("returns") == "Group" else "run"}(data, surface::{op["name"]}),'
-        for op in ops)
+    arms = "\n".join(f'        "{op["name"]}" => run(data, surface::{op["name"]}),'
+                     for op in ops)
     return f"""// {HEADER}
 
-use crate::surface::{{self, run, run_frame}};
+use crate::surface::{{self, run}};
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -67,12 +65,15 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {{
 
 # -- Python: the Skin's methods ------------------------------------------------
 
-PY_DEFAULT = {"none": "None", "true": "True", "false": "False"}
+PY_DEFAULT = {"none": "None", "true": "True", "false": "False", "origin": "(0.0, 0.0)"}
 PY_CONTEXT = {
     "group": '"group": self._frame()',
     "shape": '"shape": self._shape()',
     "film_font": '"film_font": _film_font()',
+    "canvas": '"canvas": _canvas()',
 }
+PY_RETURNS = {"points": "_as_points({})", "size": "_as_size({})", "number": "{}",
+              "slots": "_paired(items, {})"}
 
 
 def py_param(arg: dict) -> str:
@@ -83,7 +84,7 @@ def py_param(arg: dict) -> str:
 
 def python(ops: list[dict]) -> str:
     classes: dict[str, list[str]] = {}
-    for op in ops:
+    for op in (o for o in ops if o["on"] != "module"):
         positional = [py_param(a) for a in op["args"] if a["positional"]]
         keywords = [py_param(a) for a in op["args"] if not a["positional"]]
         params = ["self", *positional] + (["*", *keywords] if keywords else [])
@@ -99,15 +100,31 @@ def python(ops: list[dict]) -> str:
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{returns if returns != "self" else op["on"]}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
+    functions = []
+    for op in (o for o in ops if o["on"] == "module"):
+        positional = [py_param(a) for a in op["args"] if a["positional"]]
+        keywords = [py_param(a) for a in op["args"] if not a["positional"]]
+        params = positional + (["*", *keywords] if keywords else [])
+        data = [PY_CONTEXT[c] for c in op["context"]]
+        data += [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in op["args"]]
+        answer = PY_RETURNS[op["returns"]].format(f'call("{op["name"]}", {{{", ".join(data)}}})')
+        # Items may be a generator: listed once, so counting them does not
+        # use them up before they are paired with their Slots.
+        listed = ("    items = items if isinstance(items, int) else list(items)\n"
+                  if any(a["type"] == "items" for a in op["args"]) else "")
+        functions.append(f'def {op["name"]}({", ".join(params)}):\n'
+                         f'    """{op["doc"]}"""\n{listed}    return {answer}\n')
     out = [f'"""{HEADER}\n\nThe Python Skin\'s side of the Interface Manifest: each method sends its\n'
            'arguments across the Waist and keeps what comes back."""\n',
            "from __future__ import annotations\n",
            "from typing import TYPE_CHECKING\n",
            "from ._waist import " + ", ".join(sorted(
-               {"_film_font", "call"} | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
+               {"_film_font", "_canvas", "_as_points", "_as_size", "_paired", "call"}
+               | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
            "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
+    out += ["\n" + f for f in functions]
     return "\n".join(out)
 
 
@@ -115,16 +132,22 @@ def python(ops: list[dict]) -> str:
 
 TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "string", "at": "At",
            "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
-           "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot"}
+           "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot",
+           "int": "number", "items": "number | Iterable<unknown>"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
     "film_font": "film_font: filmFont()",
+    "canvas": "canvas: [width(), height()]",
 }
+TS_DEFAULT = {"origin": "[0, 0]"}
+TS_RETURNS = {"points": ("[number, number][]", "{}"), "size": ("[number, number]", "{}"),
+              "number": ("number", "{}"), "slots": ("any[]", "paired(items, {})")}
 
 
 def typescript(ops: list[dict]) -> str:
     classes: dict[str, list[str]] = {}
+    functions: list[str] = []
     for op in ops:
         positional = [a for a in op["args"] if a["positional"]]
         options = [a for a in op["args"] if not a["positional"]]
@@ -142,9 +165,16 @@ def typescript(ops: list[dict]) -> str:
             source = camel(a["name"]) if a["positional"] else f'options?.{camel(a["name"])}'
             default = a.get("default")
             if default not in (None, "none"):
-                source = f"({source} ?? {default})"
+                source = f"({source} ?? {TS_DEFAULT.get(default, default)})"
             data.append(f'{a["name"]}: to.{a["type"]}({source})')
         call = f'"{op["name"]}", {{ {", ".join(data)} }}'
+        if op["on"] == "module":
+            kind, answer = TS_RETURNS[op["returns"]]
+            functions.append(
+                f'/** {op["doc"]} */\n'
+                f'export function {camel(op["name"])}({", ".join(params)}): {kind} {{\n'
+                f'  return {answer.format(f"call({call})")};\n}}\n')
+            continue
         if op.get("returns") == "Group":
             body = f"    return this._nest(call({call}));"
             returns = "Group"
@@ -160,7 +190,7 @@ def typescript(ops: list[dict]) -> str:
     out = [f"// {HEADER}\n//\n// The JavaScript Skin's side of the Interface Manifest: each method sends\n"
            "// its arguments across the Waist and keeps what comes back.\n",
            'import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";\n'
-           'import { call } from "./waist.ts";\n'
+           'import { call, height, paired, width } from "./waist.ts";\n'
            'import type { Group, Handle } from "./scene.ts";\n']
     for owner, methods in classes.items():
         hooks = ("  protected abstract _frame(): Frame;\n"
@@ -170,6 +200,7 @@ def typescript(ops: list[dict]) -> str:
                  "  protected abstract _shape(): ShapeData;\n"
                  "  protected abstract _change(op: string, data: object): void;\n")
         out.append(f"export abstract class {owner}Surface {{\n{hooks}\n" + "\n".join(methods) + "}\n")
+    out += functions
     return "\n".join(out)
 
 

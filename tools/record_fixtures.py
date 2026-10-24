@@ -116,6 +116,66 @@ def slice3():
     return cases
 
 
+def query(op, answer, data):
+    """A Query's case: what Python answered, as plain data."""
+    try:
+        expected = {"ok": json.loads(json.dumps(answer()))}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": op, "data": data, "expected": expected}
+
+
+def slots(make):
+    return lambda: [{"x": s.x, "y": s.y, "w": s.w, "h": s.h, "anchor": s.anchor}
+                    for s in (pair[0] if isinstance(pair, tuple) else pair
+                              for pair in make())]
+
+
+def slice4():
+    canvas = [1280.0, 720.0]
+    box = cm.Slot(x=300, y=200, w=400, h=300)
+    box_data = {"x": 300, "y": 200, "w": 400, "h": 300, "anchor": "center"}
+    none = {"gap": 40.0, "size": None, "at": None, "within": None, "canvas": canvas}
+    cases = [
+        query("ngon", lambda: cm.ngon(3, r=60, at=(640, 360)),
+              {"sides": 3, "r": 60, "at": [640, 360], "turn": 0.0}),
+        query("ngon", lambda: cm.ngon(6, r=10, turn=30),
+              {"sides": 6, "r": 10, "at": [0, 0], "turn": 30}),
+        query("ngon", lambda: cm.ngon(2, r=10),
+              {"sides": 2, "r": 10, "at": [0, 0], "turn": 0.0}),
+        query("star", lambda: cm.star(5, r=80, at=(640, 360)),
+              {"points": 5, "r": 80, "inner": None, "at": [640, 360], "turn": 0.0}),
+        query("star", lambda: cm.star(4, r=50, inner=10, turn=45),
+              {"points": 4, "r": 50, "inner": 10, "at": [0, 0], "turn": 45}),
+        query("row", slots(lambda: cm.row(4)), {"count": 4, **none}),
+        query("row", slots(lambda: cm.row([3, 1, 4], gap=20, size=100)),
+              {"count": 3, **none, "gap": 20, "size": 100}),
+        query("row", slots(lambda: cm.row(2, size=(80, 30), at=cm.at(bottom=500))),
+              {"count": 2, **none, "size": [80, 30],
+               "at": {"x": None, "y": None, "top": None, "bottom": 500}}),
+        query("row", slots(lambda: cm.row(3, at=cm.at(y=100), within=box)),
+              {"count": 3, **none, "at": {"x": None, "y": 100, "top": None, "bottom": None},
+               "within": box_data}),
+        query("row", slots(lambda: cm.row(0)), {"count": 0, **none}),
+        query("column", slots(lambda: cm.column(4, gap=40, at=cm.at(x=640))),
+              {"count": 4, **none, "at": {"x": 640, "y": None, "top": None, "bottom": None}}),
+        query("column", slots(lambda: cm.column(["a", "b"], size=(200, 50), within=box)),
+              {"count": 2, **none, "size": [200, 50], "within": box_data}),
+        query("column", slots(lambda: cm.column(3, size=60, at=cm.at(y=300))),
+              {"count": 3, **none, "size": 60,
+               "at": {"x": None, "y": 300, "top": None, "bottom": None}}),
+        query("measure", lambda: cm.measure("Bubble sort", 48),
+              {"text": "Bubble sort", "size": 48, "font": ""}),
+        query("measure", lambda: cm.measure("", 16),
+              {"text": "", "size": 16, "font": ""}),
+        query("measure", lambda: cm.measure("ពន្យល់", 30),
+              {"text": "ពន្យល់", "size": 30, "font": ""}),
+    ]
+    for t in (0.0, 0.25, 0.5, 0.9, 1.0):
+        cases.append(query("ease", lambda t=t: cm.ease(t), {"t": t}))
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

@@ -4,7 +4,7 @@
 // its arguments across the Waist and keeps what comes back.
 
 import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";
-import { call } from "./waist.ts";
+import { call, height, paired, width } from "./waist.ts";
 import type { Group, Handle } from "./scene.ts";
 
 export abstract class GroupSurface {
@@ -67,4 +67,34 @@ export abstract class HandleSurface {
     this._change("fill", { shape: this._shape(), color: to.string((color ?? "white")), edge: to.string(options?.edge), edge_w: to.number(options?.edgeW) });
     return this;
   }
+}
+
+/** The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up. */
+export function ngon(sides: number, r: number, options?: { at?: Point; turn?: number }): [number, number][] {
+  return call("ngon", { sides: to.int(sides), r: to.number(r), at: to.point((options?.at ?? [0, 0])), turn: to.number((options?.turn ?? 0.0)) });
+}
+
+/** The corners of a star, for `polygon`. `inner` is the radius of the valleys; it defaults to a proportion that looks like a star rather than a gear. */
+export function star(points: number, r: number, options?: { inner?: number; at?: Point; turn?: number }): [number, number][] {
+  return call("star", { points: to.int(points), r: to.number(r), inner: to.number(options?.inner), at: to.point((options?.at ?? [0, 0])), turn: to.number((options?.turn ?? 0.0)) });
+}
+
+/** One Slot per item, evenly spaced on a shared baseline, anchored at bottom-centre. `size` is the Slot's width (its height follows) or (w, h). `within` divides part of the canvas instead of all of it. Gives (slot, item) pairs, or bare Slots for a count. */
+export function row(items: number | Iterable<unknown>, options?: { gap?: number; size?: number | Point; at?: At; within?: Slot }): any[] {
+  return paired(items, call("row", { canvas: [width(), height()], items: to.items(items), gap: to.number((options?.gap ?? 40.0)), size: to.radius(options?.size), at: to.at(options?.at), within: to.slot(options?.within) }));
+}
+
+/** One Slot per item, stacked vertically around a centre line, anchored at their centres. `x` places the column; it defaults to mid-canvas. Gives (slot, item) pairs, or bare Slots for a count. */
+export function column(items: number | Iterable<unknown>, options?: { gap?: number; size?: number | Point; at?: At; within?: Slot }): any[] {
+  return paired(items, call("column", { canvas: [width(), height()], items: to.items(items), gap: to.number((options?.gap ?? 40.0)), size: to.radius(options?.size), at: to.at(options?.at), within: to.slot(options?.within) }));
+}
+
+/** How wide and tall `text` will be at `size`: (w, h). Measured by the Engine with the real fonts, fallback included, so it is right for Khmer and anything else that is not plain ASCII. The height is the line height, the same for every word. */
+export function measure(text: unknown, size?: number, font?: string): [number, number] {
+  return call("measure", { film_font: filmFont(), text: to.text(text), size: to.number((size ?? 16.0)), font: to.string(font) });
+}
+
+/** The easing curve the Engine applies between two moments: the same curve your animation uses, not a copy of it. */
+export function ease(t: number): number {
+  return call("ease", { t: to.number(t) });
 }

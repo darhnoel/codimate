@@ -8,11 +8,11 @@ use serde_json::Value;
 use crate::place::{centre, Frame};
 use crate::{Refusal, Shape};
 
-/// Run `f` on `data` read straight into its arguments, its shape written
+/// Run `f` on `data` read straight into its arguments, its answer written
 /// straight back as JSON: one parse and one write per call, nothing between.
-pub fn run<A: for<'de> Deserialize<'de>>(
+pub fn run<A: for<'de> Deserialize<'de>, T: serde::Serialize>(
     data: &str,
-    f: impl FnOnce(A) -> Result<Shape, Refusal>,
+    f: impl FnOnce(A) -> Result<T, Refusal>,
 ) -> Result<String, Refusal> {
     Ok(serde_json::to_string(&f(serde_json::from_str(data)?)?)?)
 }
@@ -331,25 +331,20 @@ pub fn arc(a: Arc) -> Result<Shape, Refusal> {
     })
 }
 
-/// Run `f` on `data` read as its arguments, the Group frame it makes written
-/// back as JSON.
-pub fn run_frame<A: for<'de> Deserialize<'de>>(
-    data: &str,
-    f: impl FnOnce(A) -> Result<Frame, Refusal>,
-) -> Result<String, Refusal> {
-    Ok(serde_json::to_string(&f(serde_json::from_str(data)?)?)?)
-}
-
 /// A Slot: a place to put something, its centre and size, and the edge
 /// things placed there line up on.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize, serde::Serialize)]
 pub struct Slot {
     x: f64,
     y: f64,
-    #[allow(dead_code)]
     w: f64,
     h: f64,
+    #[serde(default = "centred")]
     anchor: String,
+}
+
+fn centred() -> String {
+    "center".into()
 }
 
 impl Slot {
@@ -395,4 +390,187 @@ pub fn group(a: Group) -> Result<Frame, Refusal> {
         oy: a.group.oy + gy,
         w: gw,
     })
+}
+
+// -- Queries: answered at once, never drawn -----------------------------------
+
+#[derive(Deserialize)]
+pub struct Ngon {
+    sides: i64,
+    r: f64,
+    at: [f64; 2],
+    turn: f64,
+}
+
+/// The corners of a regular polygon; the first points straight up.
+pub fn ngon(a: Ngon) -> Result<Vec<[f64; 2]>, Refusal> {
+    use std::f64::consts::PI;
+    if a.sides < 3 {
+        return Err(Refusal(format!(
+            "a polygon needs at least 3 sides, got {}",
+            a.sides
+        )));
+    }
+    let step = 2.0 * PI / a.sides as f64;
+    let start = a.turn.to_radians() - PI / 2.0;
+    Ok((0..a.sides)
+        .map(|i| {
+            let angle = start + step * i as f64;
+            [a.at[0] + a.r * angle.cos(), a.at[1] + a.r * angle.sin()]
+        })
+        .collect())
+}
+
+#[derive(Deserialize)]
+pub struct Star {
+    points: i64,
+    r: f64,
+    inner: Option<f64>,
+    at: [f64; 2],
+    turn: f64,
+}
+
+/// The corners of a star: outer points and valleys in turn.
+pub fn star(a: Star) -> Result<Vec<[f64; 2]>, Refusal> {
+    use std::f64::consts::PI;
+    let inner = a.inner.unwrap_or(a.r * 0.42);
+    let step = PI / a.points as f64;
+    let start = a.turn.to_radians() - PI / 2.0;
+    Ok((0..a.points * 2)
+        .map(|i| {
+            let reach = if i % 2 == 0 { a.r } else { inner };
+            let angle = start + step * i as f64;
+            [a.at[0] + reach * angle.cos(), a.at[1] + reach * angle.sin()]
+        })
+        .collect())
+}
+
+#[derive(Deserialize)]
+pub struct Run {
+    #[serde(alias = "items")]
+    count: usize,
+    gap: f64,
+    size: Option<Radius>,
+    at: Option<Value>,
+    within: Option<Slot>,
+    canvas: [f64; 2],
+}
+
+impl Run {
+    /// The region the run divides up: the whole canvas unless given one.
+    fn region(&self) -> Slot {
+        self.within.clone().unwrap_or(Slot {
+            x: self.canvas[0] / 2.0,
+            y: self.canvas[1] / 2.0,
+            w: self.canvas[0],
+            h: self.canvas[1],
+            anchor: centred(),
+        })
+    }
+
+    /// One number is the width (the height follows); a pair is both.
+    fn size(&self) -> (Option<f64>, Option<f64>) {
+        match self.size {
+            None => (None, None),
+            Some(Radius::Round(w)) => (Some(w), None),
+            Some(Radius::Oval([w, h])) => (Some(w), Some(h)),
+        }
+    }
+
+    /// Evenly space `count` things of `size` along an axis of `extent`,
+    /// centred on `centre`; unsized, they fill 70% of it.
+    fn spread(&self, size: Option<f64>, extent: f64, centre: f64) -> (Vec<f64>, f64) {
+        let n = self.count as f64;
+        let size = size.unwrap_or_else(|| ((extent * 0.7 - self.gap * (n - 1.0)) / n).max(1.0));
+        let span = n * size + (n - 1.0) * self.gap;
+        let first = centre - span / 2.0 + size / 2.0;
+        let at = (0..self.count)
+            .map(|i| first + i as f64 * (size + self.gap))
+            .collect();
+        (at, size)
+    }
+}
+
+/// A row of Slots on a shared baseline near the bottom of its region,
+/// anchored at bottom-centre.
+pub fn row(a: Run) -> Result<Vec<Slot>, Refusal> {
+    if a.count == 0 {
+        return Ok(Vec::new());
+    }
+    let place = crate::place::place(a.at.as_ref())?;
+    let region = a.region();
+    let (w, h) = a.size();
+    let (xs, w) = a.spread(w, region.w, region.x);
+    let h = h.unwrap_or(w);
+    let floor = place
+        .bottom
+        .unwrap_or(region.y + region.h / 2.0 - region.h * 0.22);
+    let y = place.y.unwrap_or(floor - h / 2.0);
+    Ok(xs
+        .into_iter()
+        .map(|x| Slot {
+            x,
+            y,
+            w,
+            h,
+            anchor: "bottom".into(),
+        })
+        .collect())
+}
+
+/// A column of Slots around a centre line, anchored at their centres.
+pub fn column(a: Run) -> Result<Vec<Slot>, Refusal> {
+    if a.count == 0 {
+        return Ok(Vec::new());
+    }
+    let place = crate::place::place(a.at.as_ref())?;
+    let region = a.region();
+    let (w, h) = a.size();
+    let (ys, h) = a.spread(h, region.h, place.y.unwrap_or(region.y));
+    let w = w.unwrap_or(h);
+    let x = place.x.unwrap_or(region.x);
+    Ok(ys
+        .into_iter()
+        .map(|y| Slot {
+            x,
+            y,
+            w,
+            h,
+            anchor: centred(),
+        })
+        .collect())
+}
+
+#[derive(Deserialize)]
+pub struct Measure {
+    text: String,
+    size: f64,
+    #[serde(default)]
+    font: Option<String>,
+    /// The film's font (`cm.font`), for a measurement that names none.
+    #[serde(default)]
+    film_font: String,
+}
+
+/// How wide and tall `text` is at `size`, by the Engine's own fonts and
+/// fallback. A font that will not load is refused, not measured as another.
+pub fn measure(a: Measure) -> Result<[f64; 2], Refusal> {
+    let font = a.font.filter(|f| !f.is_empty()).unwrap_or(a.film_font);
+    if !font.is_empty() {
+        codimate_fonts::FontRegistry::global()
+            .load(&font)
+            .map_err(Refusal)?;
+    }
+    let (w, h) = codimate_render::measure_text(&a.text, a.size as f32, &font);
+    Ok([w as f64, h as f64])
+}
+
+#[derive(Deserialize)]
+pub struct Ease {
+    t: f64,
+}
+
+/// The easing curve the Engine applies between two moments.
+pub fn ease(a: Ease) -> Result<f64, Refusal> {
+    Ok(codimate_reconcile::ease(a.t as f32) as f64)
 }

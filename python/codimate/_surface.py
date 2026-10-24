@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._waist import _at, _bool, _film_font, _key, _number, _pair, _point, _points, _radius, _slot, _string, _text, call
+from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _int, _items, _key, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _text, call
 
 if TYPE_CHECKING:
     from .scene import Group, Handle
@@ -56,3 +56,35 @@ class _HandleSurface:
         """Colour it. `edge` outlines it; `color="none"` leaves it unfilled. Saying nothing about the outline leaves it alone."""
         self._change("fill", {"shape": self._shape(), "color": _string(color), "edge": _string(edge), "edge_w": _number(edge_w)})
         return self
+
+
+def ngon(sides, r, *, at=(0.0, 0.0), turn=0.0):
+    """The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up."""
+    return _as_points(call("ngon", {"sides": _int(sides), "r": _number(r), "at": _point(at), "turn": _number(turn)}))
+
+
+def star(points, r, *, inner=None, at=(0.0, 0.0), turn=0.0):
+    """The corners of a star, for `polygon`. `inner` is the radius of the valleys; it defaults to a proportion that looks like a star rather than a gear."""
+    return _as_points(call("star", {"points": _int(points), "r": _number(r), "inner": _number(inner), "at": _point(at), "turn": _number(turn)}))
+
+
+def row(items, *, gap=40.0, size=None, at=None, within=None):
+    """One Slot per item, evenly spaced on a shared baseline, anchored at bottom-centre. `size` is the Slot's width (its height follows) or (w, h). `within` divides part of the canvas instead of all of it. Gives (slot, item) pairs, or bare Slots for a count."""
+    items = items if isinstance(items, int) else list(items)
+    return _paired(items, call("row", {"canvas": _canvas(), "items": _items(items), "gap": _number(gap), "size": _radius(size), "at": _at(at), "within": _slot(within)}))
+
+
+def column(items, *, gap=40.0, size=None, at=None, within=None):
+    """One Slot per item, stacked vertically around a centre line, anchored at their centres. `x` places the column; it defaults to mid-canvas. Gives (slot, item) pairs, or bare Slots for a count."""
+    items = items if isinstance(items, int) else list(items)
+    return _paired(items, call("column", {"canvas": _canvas(), "items": _items(items), "gap": _number(gap), "size": _radius(size), "at": _at(at), "within": _slot(within)}))
+
+
+def measure(text, size=16.0, font=None):
+    """How wide and tall `text` will be at `size`: (w, h). Measured by the Engine with the real fonts, fallback included, so it is right for Khmer and anything else that is not plain ASCII. The height is the line height, the same for every word."""
+    return _as_size(call("measure", {"film_font": _film_font(), "text": _text(text), "size": _number(size), "font": _string(font)}))
+
+
+def ease(t):
+    """The easing curve the Engine applies between two moments: the same curve your animation uses, not a copy of it."""
+    return call("ease", {"t": _number(t)})

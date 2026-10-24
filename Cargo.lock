@@ -152,6 +152,9 @@ dependencies = [
 name = "codimate-author"
 version = "0.1.0"
 dependencies = [
+ "codimate-fonts",
+ "codimate-reconcile",
+ "codimate-render",
  "serde",
  "serde_json",
 ]

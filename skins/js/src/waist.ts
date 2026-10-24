@@ -32,8 +32,45 @@ export type At = readonly [number, number] | { x: number; y: number; w: number; 
 /** A point `[x, y]`, or a Slot (its centre). */
 export type Point = readonly [number, number] | { x: number; y: number; w: number; h: number };
 /** A place to put something: its centre, its size, and the edge things placed
- * there line up on. `row` and `column` hand these out. */
-export interface Slot { x: number; y: number; w: number; h: number; anchor: string }
+ * there line up on. Not a shape: nothing draws a Slot. `row` and `column` hand
+ * these out. */
+export class Slot {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly anchor: string;
+
+  constructor(slot: { x: number; y: number; w: number; h: number; anchor?: string }) {
+    this.x = slot.x;
+    this.y = slot.y;
+    this.w = slot.w;
+    this.h = slot.h;
+    this.anchor = slot.anchor ?? "center";
+  }
+
+  get left() { return this.x - this.w / 2; }
+  get right() { return this.x + this.w / 2; }
+  get top() { return this.y - this.h / 2; }
+  get bottom() { return this.y + this.h / 2; }
+
+  /** The single point this Slot anchors things at. */
+  point(anchor?: string): [number, number] {
+    const a = anchor ?? this.anchor;
+    if (a === "center") return [this.x, this.y];
+    if (a === "bottom") return [this.x, this.bottom];
+    if (a === "top") return [this.x, this.top];
+    throw new Error(`unknown anchor '${a}' — use center, top or bottom`);
+  }
+}
+
+/** The Core's Slots as Slots, each with its item, or bare for a count. */
+export function paired(items: number | Iterable<unknown>, slots: any[]): any[] {
+  const made = slots.map((s) => new Slot(s));
+  if (typeof items === "number") return made;
+  const list = [...items];
+  return made.map((slot, i) => [slot, list[i]]);
+}
 /** A placement by edges: one horizontal anchor and one vertical. */
 export interface Place { x?: number; y?: number; top?: number; bottom?: number; readonly place: true }
 /** A Group as the Core needs it. */
@@ -55,11 +92,13 @@ export const to = {
     return Array.isArray(point) ? [Number(point[0]), Number(point[1])] : [(point as any).x, (point as any).y];
   },
   points: (points: readonly Point[]) => points.map((p) => to.point(p)),
-  radius: (r: number | Point) => (typeof r === "number" ? r : to.point(r)),
+  radius: (r?: number | Point) => (r === undefined || r === null ? null : typeof r === "number" ? r : to.point(r)),
   pair: (pair: readonly [number, number]) => [Number(pair[0]), Number(pair[1])],
   bool: (value: boolean) => Boolean(value),
-  slot: (slot?: Slot) =>
-    slot === undefined || slot === null ? null : { x: slot.x, y: slot.y, w: slot.w, h: slot.h, anchor: slot.anchor },
+  int: (value: number) => Math.trunc(Number(value)),
+  items: (items: number | Iterable<unknown>) => (typeof items === "number" ? items : [...items].length),
+  slot: (slot?: Slot | { x: number; y: number; w: number; h: number; anchor?: string }) =>
+    slot === undefined || slot === null ? null : { x: slot.x, y: slot.y, w: slot.w, h: slot.h, anchor: slot.anchor ?? "center" },
   at(at?: At) {
     if (at === undefined || at === null) return null;
     if (Array.isArray(at)) return [Number(at[0]), Number(at[1])];

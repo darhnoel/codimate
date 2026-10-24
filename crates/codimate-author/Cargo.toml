@@ -6,5 +6,9 @@ license.workspace = true
 description = "The Authoring Core: everything an Authoring Surface does that is not the author's own code"
 
 [dependencies]
+# The Engine, for the Queries it answers: how big text is, and the easing curve.
+codimate-fonts = { path = "../codimate-fonts" }
+codimate-reconcile = { path = "../codimate-reconcile" }
+codimate-render = { path = "../codimate-render" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

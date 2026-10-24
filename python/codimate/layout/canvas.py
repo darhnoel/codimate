@@ -34,29 +34,6 @@ def font(name: str = None) -> None:
     _FONT[0] = name
 
 
-def measure(text: str, size: float = 16.0, font: str = None) -> tuple[float, float]:
-    """How wide and tall ``text`` will be at ``size``: ``(w, h)``.
-
-    For drawing a box around a label without guessing::
-
-        w, h = cm.measure(label, size=30)
-        scene.rect("box", w=w + 24, h=h + 12, at=(x, y)).round(6)
-        scene.text("label", label, size=30, at=(x, y))
-
-    Measured by the engine with the real fonts, including fallback, so it is
-    right for Khmer and anything else that is not plain ASCII — which is why
-    estimating ``len(text) * size * k`` is not good enough.
-
-    The height is the line height, the same for "cat" and "Qgy", so a row of
-    boxes lines up instead of jittering with whatever letters it holds.
-
-    ``font`` is measured in, as for ``scene.text``; unset, the film's font.
-    """
-    from .. import _codimate  # imported here so the pure Python is testable
-
-    return _codimate.measure(str(text), float(size), font or _FONT[0])
-
-
 def measure_math(latex: str, size: float = 16.0) -> tuple[float, float]:
     """How wide and tall a LaTeX formula will be at ``size``: ``(w, h)``.
 
@@ -81,3 +58,6 @@ def width() -> float:
 def height() -> float:
     """The canvas height."""
     return _CANVAS[1]
+
+
+from .._surface import measure  # noqa: E402, F401  (worked out by the Authoring Core)

@@ -150,3 +150,91 @@ args = [
   { name = "anchor", type = "string", default = "none" },
   { name = "w", type = "number", default = "none" },
 ]
+
+# -- Queries: module functions that answer at once ----------------------------
+#
+# returns  points (corners), slots (with their items, if given items), size
+#          (w, h) or number. The Skin turns the answer into its own values.
+
+[[op]]
+name = "ngon"
+on = "module"
+kind = "query"
+returns = "points"
+context = []
+doc = "The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up."
+args = [
+  { name = "sides", type = "int", positional = true },
+  { name = "r", type = "number", positional = true },
+  { name = "at", type = "point", default = "origin" },
+  { name = "turn", type = "number", default = "0.0" },
+]
+
+[[op]]
+name = "star"
+on = "module"
+kind = "query"
+returns = "points"
+context = []
+doc = "The corners of a star, for `polygon`. `inner` is the radius of the valleys; it defaults to a proportion that looks like a star rather than a gear."
+args = [
+  { name = "points", type = "int", positional = true },
+  { name = "r", type = "number", positional = true },
+  { name = "inner", type = "number", default = "none" },
+  { name = "at", type = "point", default = "origin" },
+  { name = "turn", type = "number", default = "0.0" },
+]
+
+[[op]]
+name = "row"
+on = "module"
+kind = "query"
+returns = "slots"
+context = ["canvas"]
+doc = "One Slot per item, evenly spaced on a shared baseline, anchored at bottom-centre. `size` is the Slot's width (its height follows) or (w, h). `within` divides part of the canvas instead of all of it. Gives (slot, item) pairs, or bare Slots for a count."
+args = [
+  { name = "items", type = "items", positional = true },
+  { name = "gap", type = "number", default = "40.0" },
+  { name = "size", type = "radius", default = "none" },
+  { name = "at", type = "at", default = "none" },
+  { name = "within", type = "slot", default = "none" },
+]
+
+[[op]]
+name = "column"
+on = "module"
+kind = "query"
+returns = "slots"
+context = ["canvas"]
+doc = "One Slot per item, stacked vertically around a centre line, anchored at their centres. `x` places the column; it defaults to mid-canvas. Gives (slot, item) pairs, or bare Slots for a count."
+args = [
+  { name = "items", type = "items", positional = true },
+  { name = "gap", type = "number", default = "40.0" },
+  { name = "size", type = "radius", default = "none" },
+  { name = "at", type = "at", default = "none" },
+  { name = "within", type = "slot", default = "none" },
+]
+
+[[op]]
+name = "measure"
+on = "module"
+kind = "query"
+returns = "size"
+context = ["film_font"]
+doc = "How wide and tall `text` will be at `size`: (w, h). Measured by the Engine with the real fonts, fallback included, so it is right for Khmer and anything else that is not plain ASCII. The height is the line height, the same for every word."
+args = [
+  { name = "text", type = "text", positional = true },
+  { name = "size", type = "number", positional = true, default = "16.0" },
+  { name = "font", type = "string", positional = true, default = "none" },
+]
+
+[[op]]
+name = "ease"
+on = "module"
+kind = "query"
+returns = "number"
+context = []
+doc = "The easing curve the Engine applies between two moments: the same curve your animation uses, not a copy of it."
+args = [
+  { name = "t", type = "number", positional = true },
+]

@@ -15,7 +15,7 @@ from .points import (
     ngon, star,
 )
 from .place import (
-    Place, at, Slot, _within, _spread, _size, row, column, _UNSET, _resolve,
+    Place, at, Slot, _within, _size, row, column, _UNSET, _resolve,
 )
 from .axes import (
     _nice_step, _places, Axes, axes,
@@ -23,6 +23,6 @@ from .axes import (
 
 __all__ = [
     'Axes', 'Place', 'Slot', '_CANVAS', '_FONT', '_UNSET', '_nice_step', '_places',
-    '_resolve', '_size', '_spread', '_within', 'at', 'axes', 'canvas', 'column', 'font',
+    '_resolve', '_size', '_within', 'at', 'axes', 'canvas', 'column', 'font',
     'height', 'measure', 'measure_math', 'ngon', 'row', 'star', 'width',
 ]
