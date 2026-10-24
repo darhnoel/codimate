@@ -11,7 +11,7 @@ from ..trace import Frame, Trace
 from .encoder import _ffmpeg, _find_encoder, _mixing
 from .timing import Rule, Timing
 from .._surface import _ExplanationSurface
-from .._waist import _film_font
+from .._waist import _film_font, _own
 
 
 View = Callable[[Frame], Scene]
@@ -58,6 +58,7 @@ def _plain(value, depth: int = 0):
     return repr(value)
 
 
+@_own(_ExplanationSurface)
 class Explanation(_ExplanationSurface):
     """A trace, a view and a timing, ready to render.
 

@@ -3,12 +3,12 @@
 // back. Also the converters the generated methods (surface.ts) use, so every
 // language sends the same shapes of data.
 
-import init, * as engine from "../pkg/codimate_wasm.js";
+import init, * as engine from "../pkg/codimate_waist.js";
 
 // Loaded once, before anything else: from disk in Node, over the network in a
 // browser. Top-level await, so importing codimate is all an author does.
 const inNode = typeof process !== "undefined" && !!process.versions?.node;
-const wasmFile = new URL("../pkg/codimate_wasm_bg.wasm", import.meta.url);
+const wasmFile = new URL("../pkg/codimate_waist_bg.wasm", import.meta.url);
 const exports = inNode
   ? engine.initSync({ module: (await import("node:fs")).readFileSync(wasmFile) })
   : await init({ module_or_path: wasmFile });

@@ -58,7 +58,7 @@ jobs:
       # The fast suite: no video, so no ffmpeg and no typst. Rendering every
       # example takes minutes and is the job of a release, not of every push.
       - name: Tests
-        run: .venv/bin/python python/tests/run.py
+        run: .venv/bin/python skins/python/tests/run.py
 
   # Every Skin over the one Authoring Core (ADR 0030–0033): the generated files
   # match the Interface Manifest, every Conformance Example writes the same film

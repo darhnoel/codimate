@@ -13,11 +13,12 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WASM = ROOT / "target/wasm32-unknown-unknown/release/codimate_wasm.wasm"
+WASM = ROOT / "target/wasm32-unknown-unknown/release/codimate_waist.wasm"
 
 
 def main() -> int:
-    subprocess.run(["cargo", "build", "-q", "-p", "codimate-wasm", "--release",
+    subprocess.run(["cargo", "build", "-q", "-p", "codimate-waist",
+                    "--features", "wasm", "--release",
                     "--target", "wasm32-unknown-unknown"], cwd=ROOT, check=True)
     bindgen = (shutil.which("wasm-bindgen")
                or str(Path.home() / ".cargo/bin/wasm-bindgen"))

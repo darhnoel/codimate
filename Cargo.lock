@@ -224,21 +224,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codimate-py"
-version = "0.4.0"
-dependencies = [
- "codimate-animation",
- "codimate-author",
- "codimate-core",
- "codimate-export",
- "codimate-fonts",
- "codimate-layout",
- "codimate-reconcile",
- "codimate-render",
- "pyo3",
-]
-
-[[package]]
 name = "codimate-reconcile"
 version = "0.1.0"
 dependencies = [
@@ -264,15 +249,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "codimate-wasm"
-version = "0.1.0"
+name = "codimate-waist"
+version = "0.4.0"
 dependencies = [
  "codimate-animation",
  "codimate-author",
+ "codimate-core",
+ "codimate-export",
  "codimate-fonts",
  "codimate-layout",
  "codimate-reconcile",
  "codimate-render",
+ "pyo3",
  "serde",
  "serde_json",
  "wasm-bindgen",

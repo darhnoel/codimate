@@ -1,4 +1,4 @@
-//! WebAssembly bindings: the browser's crossing, as `codimate-py` is Python's.
+//! The WebAssembly transport: the JavaScript Skin's crossing (ADR 0032).
 //!
 //! Python builds a film's scenes and saves them (`Explanation.export_web`); this
 //! crate reads that file and draws any moment of it to RGBA pixels for a

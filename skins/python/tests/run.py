@@ -1,7 +1,7 @@
 """Run the self-checks.
 
-    python python/tests/run.py                    # no video; a second or two
-    python python/tests/run.py --all              # also runs the guide's programs
+    python skins/python/tests/run.py                    # no video; a second or two
+    python skins/python/tests/run.py --all              # also runs the guide's programs
 
 One of these files renders real video: `test_docs` runs every complete program in
 the guide. That is the right check to run before committing and the wrong one to run

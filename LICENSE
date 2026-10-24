@@ -25,6 +25,6 @@ SOFTWARE.
 The fonts bundled in crates/codimate-fonts/fonts are not covered by this
 license. Each keeps its own; see crates/codimate-fonts/fonts/LICENSES.
 
-The JavaScript libraries vendored in python/codimate/viewer/vendor (Preact,
+The JavaScript libraries vendored in skins/python/codimate/viewer/vendor (Preact,
 htm, @preact/signals) are MIT licensed by their own authors; see the README
 there.

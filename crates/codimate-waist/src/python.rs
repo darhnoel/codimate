@@ -1,4 +1,4 @@
-//! PyO3 bindings — the Python Authoring Surface's one crossing (ADR 0008).
+//! The Python transport (PyO3): the Python Skin's crossing (ADR 0008, 0032).
 //!
 //! This crate translates and nothing else. Python hands over a list of flat
 //! Scenes, one per Trace Event; those become `codimate_reconcile::Shape`, the

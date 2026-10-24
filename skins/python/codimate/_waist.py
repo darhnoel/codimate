@@ -157,3 +157,21 @@ def _group(group) -> dict:
 def _keys(keys) -> "list[list[str]]":
     """Several names, each a name or a path of names."""
     return [_key(key) for key in keys]
+
+
+def _own(source):
+    """Make a generated Surface's methods the decorated class's own.
+
+    They are inherited too, but the API reference (pdoc) does not document what
+    a class inherits from a private one, so `Group.rect` would vanish from it.
+    Each method is set on the class under its own name and qualified name.
+    """
+    def apply(cls):
+        for name, member in vars(source).items():
+            if callable(member) and not name.startswith("__"):
+                member.__qualname__ = f"{cls.__qualname__}.{name}"
+                member.__module__ = cls.__module__
+                setattr(cls, name, member)
+        return cls
+
+    return apply

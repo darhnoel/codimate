@@ -78,7 +78,7 @@ to find what was produced. Anything else goes on a separate line.
 Do not read whole files. In order:
 
 1. `docs/reference.md` — every call and parameter on one page. Usually enough.
-2. `python/codimate/scene.py` — read 20–40 lines around a method signature.
+2. `skins/python/codimate/scene.py` — read 20–40 lines around a method signature.
 3. One neighbouring example, for a pattern you are copying.
 
 Do not read `crates/` unless fixing the engine.

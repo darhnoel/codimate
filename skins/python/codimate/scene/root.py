@@ -7,10 +7,12 @@ from typing import Any
 
 from ..layout import width
 from .._surface import _SceneSurface
+from .._waist import _own
 from .group import Group
 from .shape import _Shape
 
 
+@_own(_SceneSurface)
 class Scene(_SceneSurface, Group):
     """The picture at one moment. No animation, no timing, no memory of the
     frame before.

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from .._surface import _HandleSurface
-from .._waist import call
+from .._waist import _own, call
 from .shape import _shape_of
 
 
+@_own(_HandleSurface)
 class Handle(_HandleSurface):
     """What a shape call gives back: a way to say more about that shape.
 

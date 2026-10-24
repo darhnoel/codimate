@@ -16,7 +16,7 @@ python -c "import codimate; print(codimate.__file__)"
 
 If you use a virtual environment, activate it first or use its Python path
 for both commands. A source checkout needs a built extension; ordinary users
-should install the package rather than copy the `python/codimate` directory.
+should install the package rather than copy the `skins/python/codimate` directory.
 
 ### FFmpeg is missing or fails to start
 

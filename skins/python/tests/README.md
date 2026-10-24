@@ -17,14 +17,14 @@ Plain `assert` tests, no framework. One file per module of the package:
 Run the lot:
 
 ```bash
-python python/tests/run.py --all     # also runs the guide's programs, which render real video
-python python/tests/run.py           # skip that while working on the library
+python skins/python/tests/run.py --all     # also runs the guide's programs, which render real video
+python skins/python/tests/run.py           # skip that while working on the library
 ```
 
 or one file on its own while you work on it:
 
 ```bash
-python python/tests/test_layout.py
+python skins/python/tests/test_layout.py
 ```
 
 They are also valid pytest modules if you prefer that. Everything except

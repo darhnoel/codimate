@@ -393,8 +393,8 @@ def main() -> int:
          "-d", "google", "--no-include-undocumented", "--no-show-source",
          "codimate", "codimate.scene", "codimate.layout",
          "codimate.preview", "codimate.index"],
-        cwd=ROOT / "python", check=True,
-        env={**__import__("os").environ, "PYTHONPATH": str(ROOT / "python")},
+        cwd=ROOT / "skins/python", check=True,
+        env={**__import__("os").environ, "PYTHONPATH": str(ROOT / "skins/python")},
     )
     # pdoc renders its own shell, so the site nav is grafted on afterwards —
     # without it the API pages are a one-way door out of the site.

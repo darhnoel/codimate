@@ -38,7 +38,7 @@ cd codimate
 python3 -m venv .venv
 .venv/bin/python -m pip install maturin
 .venv/bin/maturin develop --release
-.venv/bin/python python/tests/run.py
+.venv/bin/python skins/python/tests/run.py
 ```
 
 Build the documentation locally with `python docs/build_site.py` after installing

@@ -2,11 +2,11 @@
 
 These are plain `assert` tests with no framework. Each file runs on its own:
 
-    python python/tests/test_layout.py
+    python skins/python/tests/test_layout.py
 
 and the whole set runs with:
 
-    python python/tests/run.py
+    python skins/python/tests/run.py
 
 They are also valid pytest modules if you would rather use that.
 """

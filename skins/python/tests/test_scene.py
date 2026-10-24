@@ -509,7 +509,7 @@ def test_a_longer_word_gets_a_wider_marker():
 
 
 
-KHMER = str(Path(__file__).resolve().parents[2]
+KHMER = str(Path(__file__).resolve().parents[3]
             / "crates/codimate-fonts/fonts/NotoSansKhmer-Regular.ttf")
 
 

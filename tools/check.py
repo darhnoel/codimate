@@ -33,7 +33,7 @@ def steps(fast: bool):
         yield "build the Python Skin", [str(ROOT / ".venv/bin/maturin"), "develop",
                                         "--release", "-q"]
         yield "build the JavaScript Skin", [PY, "tools/build_js.py"]
-    yield "python tests", [PY, "python/tests/run.py"]
+    yield "python tests", [PY, "skins/python/tests/run.py"]
     yield "javascript tests", ["node", "--test", "skins/js/test/skin.test.ts"]
     yield "conformance", [PY, "tools/conformance.py"]
     yield "waist cost", [PY, "tools/bench_waist.py"]

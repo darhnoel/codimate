@@ -942,7 +942,7 @@ one. Mid-transition, what is reported is the nearer of the transition's two
 ends.
 
 The page is Preact, with no build step: its libraries are vendored under
-`python/codimate/viewer/vendor/` and loaded as plain modules.
+`skins/python/codimate/viewer/vendor/` and loaded as plain modules.
 
 <a id="timing"></a>
 

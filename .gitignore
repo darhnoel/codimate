@@ -21,7 +21,7 @@ __pycache__/
 
 # The examples moved to https://github.com/darhnoel/codimate-examples. What this tree still holds
 # of them on one machine is paid audio and examples kept local; none of it is published.
-/python/examples/
+/skins/python/examples/
 
 # Frames pulled out of a render while checking it.
 /scenes/

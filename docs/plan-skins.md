@@ -73,30 +73,37 @@ without a failing test first.
   browser's main use. MP4 through ffmpeg in Node, through WebCodecs in the
   browser. Sound export in Node first.
 
-## Order of work
+## Status
 
-Each slice is a vertical cut: Conformance Example → Manifest → Core → Python
-switched to the Waist (its tests green) → Python's old code for the slice
-deleted.
+Done on the `codimate-js` branch, one commit per slice, each passing
+`tools/check.py` (Rust, Python and JavaScript tests, every Conformance Example
+byte for byte in both languages, the Waist's cost):
 
-1. **Slice 1, the whole hourglass, thinly:** Waist (three functions), generator,
-   recorder in both Skins; `canvas`, `Scene`, `rect`, `circle`, `text`, `fill`,
-   `trace`/`emit`, `explain`, browser play and MP4. Conformance #1: a ball moves
-   left to right with a label, identical from Python and TypeScript. A
-   benchmark on a large film guards recording speed.
-2. Lines, arrows, paths.
-3. Groups.
-4. Anchors and Slots (`row`, `column`, placement).
-5. Rule and Timing.
-6. Text presets.
-7. Whatever remains of the core Surface.
+| Slice | Into the Core |
+|---|---|
+| 1 | the hourglass: Waist, Manifest, generator, both Skins; rect, circle, text, fill, film data |
+| 2 | line, arrow, polygon, curve, arc |
+| 3 | group |
+| 4 | ngon, star, row, column, measure, ease |
+| 5 | Rule |
+| 6 | turn, grow, on, round, write |
+| 7 | text presets |
+| 8 | formula, image, svg, focus, overlay |
+| 9 | markers and highlights (Python's random, bit for bit) |
+| 10 | axes |
+| 11 | the Explanation's timeline, chapters and covered labels |
+| last | `python/` to `skins/python/`; codimate-py and codimate-wasm into `codimate-waist` |
 
-**Later, each its own decision:** Science Kit, Previewer, viewer, compact index,
-a C++ Skin.
+Stay in the Python Skin, decided: the Science Kit, the Previewer and viewer,
+the index, the contact sheet, and sound mixing. Timing stays in each Skin: it
+is an extension point an author subclasses.
+
+Follow-ups: per-language examples in the Manifest's docs (the JavaScript ones
+are the Python originals); an npm release; sound in the JavaScript Skin.
 
 ## Where the prototype fits
 
-The `codimate-js` branch already has: rustybuzz in place of HarfBuzz (every
+Before slice 1 the branch had: rustybuzz in place of HarfBuzz (every
 crate builds for WebAssembly), `FontRegistry::provide`, a `codimate-wasm` crate
 that plays a saved film, and `Explanation.export_web`. Slice 1 reshapes
 `codimate-wasm` into the Waist and `export_web`'s format into the film data the

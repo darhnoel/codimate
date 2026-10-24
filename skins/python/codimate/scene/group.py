@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .._surface import _GroupSurface
-from .._waist import call
+from .._waist import _own, call
 from .handle import Handle
 from .shape import _key, _shape_of
 
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .root import Scene
 
 
+@_own(_GroupSurface)
 class Group(_GroupSurface):
     """Somewhere to draw, with its own origin and its own name.
 

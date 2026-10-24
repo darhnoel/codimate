@@ -9,7 +9,7 @@ One manifest, several outputs, so a name exists in every language or in none:
 - crates/codimate-author/src/generated.rs   the Core's dispatch: an operation in
                                             the manifest with no Core function
                                             does not compile
-- python/codimate/_surface.py               the Python Skin's methods
+- skins/python/codimate/_surface.py         the Python Skin's methods
 - skins/js/src/surface.ts                   the JavaScript Skin's methods
 
 Python names are the manifest's; JavaScript names are the same in camelCase.
@@ -41,6 +41,25 @@ def load() -> list[dict]:
             arg.setdefault("positional", False)
             arg.setdefault("variadic", False)
     return ops
+
+
+def py_doc(doc: str, indent: str) -> str:
+    """A docstring at `indent`: raw if it holds a backslash (LaTeX), lines
+    indented under the first."""
+    lines = doc.strip("\n").splitlines()
+    body = "\n".join([lines[0]] + [(indent + line) if line else "" for line in lines[1:]])
+    raw = "r" if "\\" in doc else ""
+    closing = f"\n{indent}" if len(lines) > 1 else ""
+    return f'{indent}{raw}"""{body}{closing}"""'
+
+
+def ts_doc(doc: str, indent: str) -> str:
+    """A JSDoc comment at `indent`."""
+    lines = doc.strip("\n").splitlines()
+    if len(lines) == 1:
+        return f"{indent}/** {lines[0]} */"
+    inner = "\n".join(f"{indent} *" + (f" {line}" if line else "") for line in lines)
+    return f"{indent}/**\n{inner}\n{indent} */"
 
 
 # -- Rust: the Core's dispatch -------------------------------------------------
@@ -144,8 +163,8 @@ def py_value(op: dict, ops: list[dict]) -> str:
         else:
             body = f'        return {PY_RETURNS[m["returns"]].format(crossing)}\n'
         methods.append(f'    def {m["method"]}({py_signature(m["args"], ["self"])}):\n'
-                       f'        """{m["doc"]}"""\n{body}')
-    out = (f'class {cls}:\n    """{op["doc"]}"""\n\n'
+                       f'{py_doc(m["doc"], "        ")}\n{body}')
+    out = (f'class {cls}:\n{py_doc(op["doc"], "    ")}\n\n'
            f'    def __init__({py_signature(op["args"], ["self"])}) -> None:\n'
            f'        self._set(call("{op["name"]}", {py_data(op)}))\n\n'
            f'    @classmethod\n    def _of(cls, made: dict) -> "{cls}":\n'
@@ -173,7 +192,7 @@ def py_shortcut(op: dict, ops: list[dict]) -> str:
         else:
             given.append(f'{a["name"]}={a["name"]}')
     return (f'def {op["name"]}({py_signature(op["args"], [])}) -> "{op["makes"]}":\n'
-            f'    """{op["doc"]}"""\n    return {op["makes"]}({", ".join(given)})\n')
+            f'{py_doc(op["doc"], "    ")}\n    return {op["makes"]}({", ".join(given)})\n')
 
 
 def python(ops: list[dict]) -> str:
@@ -204,7 +223,7 @@ def python(ops: list[dict]) -> str:
                       "highlight": "tuple[Handle, Handle]"}.get(returns, returns)
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{annotation}":\n'
-            f'        """{op["doc"]}"""\n{body}\n')
+            f'{py_doc(op["doc"], "        ")}\n{body}\n')
     values = {op["class"] for op in ops if op["kind"] == "value"}
     for op in ops:
         if op["kind"] == "method" and op["on"] not in values:
@@ -212,7 +231,7 @@ def python(ops: list[dict]) -> str:
             body = f'        return {PY_RETURNS[op["returns"]].format(crossing)}\n'
             classes.setdefault(op["on"], []).append(
                 f'    def {op["method"]}({py_signature(op["args"], ["self"])}):\n'
-                f'        """{op["doc"]}"""\n{body}')
+                f'{py_doc(op["doc"], "        ")}\n{body}')
     functions = [py_value(op, ops) for op in ops if op["kind"] == "value"]
     functions += [py_shortcut(op, ops) for op in ops if op["kind"] == "shortcut"]
     for op in (o for o in ops if o["on"] == "module" and o["kind"] == "query"):
@@ -227,7 +246,7 @@ def python(ops: list[dict]) -> str:
         listed = ("    items = items if isinstance(items, int) else list(items)\n"
                   if any(a["type"] == "items" for a in op["args"]) else "")
         functions.append(f'def {op["name"]}({", ".join(params)}):\n'
-                         f'    """{op["doc"]}"""\n{listed}    return {answer}\n')
+                         f'{py_doc(op["doc"], "    ")}\n{listed}    return {answer}\n')
     out = [f'"""{HEADER}\n\nThe Python Skin\'s side of the Interface Manifest: each method sends its\n'
            'arguments across the Waist and keeps what comes back."""\n',
            "from __future__ import annotations\n",
@@ -285,7 +304,7 @@ def typescript(ops: list[dict]) -> str:
                 kind, answer = TS_RETURNS[op["returns"]]
                 crossing = f'call("{op["name"]}", {ts_data(op)})'
                 classes.setdefault(op["on"], []).append(
-                    f'  /** {op["doc"]} */\n'
+                    f'{ts_doc(op["doc"], "  ")}\n'
                     f'  {camel(op["method"])}(): {kind} {{\n    return {answer.format(crossing)};\n  }}\n')
             continue
         positional = [a for a in op["args"] if a["positional"]]
@@ -310,7 +329,7 @@ def typescript(ops: list[dict]) -> str:
         if op["on"] == "module":
             kind, answer = TS_RETURNS[op["returns"]]
             functions.append(
-                f'/** {op["doc"]} */\n'
+                f'{ts_doc(op["doc"], "")}\n'
                 f'export function {camel(op["name"])}({", ".join(params)}): {kind} {{\n'
                 f'  return {answer.format(f"call({call})")};\n}}\n')
             continue
@@ -333,7 +352,7 @@ def typescript(ops: list[dict]) -> str:
             body = f"    this._change({call});\n    return this;"
             returns = "this"
         classes.setdefault(op["on"], []).append(
-            f'  /** {op["doc"]} */\n'
+            f'{ts_doc(op["doc"], "  ")}\n'
             f'  {camel(op["name"])}({", ".join(params)}): {returns} {{\n{body}\n  }}\n')
     out = [f"// {HEADER}\n//\n// The JavaScript Skin's side of the Interface Manifest: each method sends\n"
            "// its arguments across the Waist and keeps what comes back.\n",
@@ -438,10 +457,10 @@ def ts_value(op: dict, ops: list[dict]) -> str:
             kind, answer = TS_RETURNS[m["returns"]]
             body = f"    return {answer.format(crossing)};\n"
         methods.append(
-            f'  /** {m["doc"]} */\n'
+            f'{ts_doc(m["doc"], "  ")}\n'
             f'  {camel(m["method"])}({", ".join(m_params)}): {kind} {{\n'
             f'{ts_unpack(m["args"], m_keywords)}{body}  }}\n')
-    out = (f'/** {op["doc"]} */\n'
+    out = (f'{ts_doc(op["doc"], "")}\n'
            f'export class {cls} {{\n{declared}\n  _fields: any;\n  private made: unknown[] = [];\n\n'
            f'  constructor({", ".join(params)}) {{\n'
            f'{ts_unpack(op["args"], keywords)}'
@@ -473,14 +492,14 @@ def ts_shortcut(op: dict, ops: list[dict]) -> str:
             options.append(camel(a["name"]))
     if options:
         given.append("options")
-    return (f'/** {op["doc"]} */\n'
+    return (f'{ts_doc(op["doc"], "")}\n'
             f'export function {camel(op["name"])}({", ".join(params)}): {op["makes"]} {{\n'
             f'  return new {op["makes"]}({", ".join(given)});\n}}\n')
 
 
 OUTPUTS = {
     ROOT / "crates/codimate-author/src/generated.rs": rust,
-    ROOT / "python/codimate/_surface.py": python,
+    ROOT / "skins/python/codimate/_surface.py": python,
     ROOT / "skins/js/src/surface.ts": typescript,
 }
 

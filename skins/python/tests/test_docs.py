@@ -33,7 +33,7 @@ from pathlib import Path
 
 import support  # noqa: F401  (puts `codimate` on the import path)
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 PAGES = sorted([ROOT / "README.md"] + list((ROOT / "docs").glob("*.md")))
 BLOCK = re.compile(r"```python\n(.*?)```", re.S)
 

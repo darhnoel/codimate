@@ -10,9 +10,8 @@ members = [
     "crates/codimate-export",
     "crates/codimate-fonts",
     "crates/codimate-glyph",
-    "crates/codimate-py",
     "crates/codimate-reconcile",
-    "crates/codimate-wasm",
+    "crates/codimate-waist",
 ]
 
 [workspace.package]

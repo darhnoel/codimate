@@ -40,10 +40,11 @@ classifiers = [
 painted = ["numpy>=1.21", "pillow>=9"]
 
 [tool.maturin]
-manifest-path = "crates/codimate-py/Cargo.toml"
-python-source = "python"
+# The Waist's Python transport (ADR 0032, 0033), and the Python Skin's source.
+manifest-path = "crates/codimate-waist/Cargo.toml"
+python-source = "skins/python"
 module-name = "codimate._codimate"
-features = ["pyo3/extension-module"]
+features = ["extension-module"]
 
 [tool.ruff]
 line-length = 88
@@ -62,7 +63,7 @@ ignore = ["E741"]
 [tool.ruff.lint.per-file-ignores]
 # Generated from api/surface.toml, and the templates that generate code: their
 # lines are the lines of the code they write.
-"python/codimate/_surface.py" = ["E501"]
+"skins/python/codimate/_surface.py" = ["E501"]
 "tools/generate.py" = ["E501"]
 # A table of recorded calls, one per line.
 "tools/record_fixtures.py" = ["E501"]
