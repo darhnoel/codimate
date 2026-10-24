@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _int, _items, _key, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _text, call
+from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _group, _int, _items, _key, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _style, _text, call
 
 if TYPE_CHECKING:
     from .scene import Group, Handle
@@ -87,7 +87,17 @@ class Rule:
     """How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre."""
 
     def __init__(self, pattern, position="straight", *, ease=None, order="screen", **options) -> None:
-        made = call("rule", {"pattern": _key(pattern), "position": _string(position), "ease": _string(ease), "order": _string(order), "options": options})
+        self._set(call("rule", {"pattern": _key(pattern), "position": _string(position), "ease": _string(ease), "order": _string(order), "options": options}))
+
+    @classmethod
+    def _of(cls, made: dict) -> "Rule":
+        """One the Authoring Core has already made."""
+        value = cls.__new__(cls)
+        value._set(made)
+        return value
+
+    def _set(self, made: dict) -> None:
+        self._fields = {k: v for k, v in made.items() if k != "payload"}
         self._made = tuple(made["payload"])
         self.pattern = made["pattern"]
         self.position = made["position"]
@@ -101,6 +111,98 @@ class Rule:
 
     def __repr__(self) -> str:
         return "Rule(" + f"pattern={self.pattern!r}" + ", " + f"position={self.position!r}" + ", " + f"ease={self.ease!r}" + ", " + f"order={self.order!r}" + ", " + f"options={self.options!r}" + ")"
+
+
+class TextPresetStyle:
+    """Text appearance and travel distance shared by a preset's words or letters. `size` is in canvas points; `font` and `fill` are optional; `distance` is how far each starts from its place."""
+
+    def __init__(self, *, size=16.0, font=None, fill=None, distance=48.0) -> None:
+        self._set(call("text_preset_style", {"size": _number(size), "font": _string(font), "fill": _string(fill), "distance": _number(distance)}))
+
+    @classmethod
+    def _of(cls, made: dict) -> "TextPresetStyle":
+        """One the Authoring Core has already made."""
+        value = cls.__new__(cls)
+        value._set(made)
+        return value
+
+    def _set(self, made: dict) -> None:
+        self._fields = {k: v for k, v in made.items() if k != "payload"}
+        self.size = made["size"]
+        self.font = made["font"]
+        self.fill = made["fill"]
+        self.distance = made["distance"]
+
+    def __repr__(self) -> str:
+        return "TextPresetStyle(" + f"size={self.size!r}" + ", " + f"font={self.font!r}" + ", " + f"fill={self.fill!r}" + ", " + f"distance={self.distance!r}" + ")"
+
+
+class TextPreset:
+    """Text drawn as individually moving words or letters. `preset` is words_up, words_down, letters_up, letters_down, words_left, words_right or words_up_blur. Draw it in a state (hidden or shown; blurred too for words_up_blur) and pass its rules() to explain."""
+
+    def __init__(self, name, content, preset, *, style=None, at=None) -> None:
+        self._set(call("text_preset", {"name": _string(name), "content": _text(content), "preset": _string(preset), "style": _style(style), "at": _at(at)}))
+
+    @classmethod
+    def _of(cls, made: dict) -> "TextPreset":
+        """One the Authoring Core has already made."""
+        value = cls.__new__(cls)
+        value._set(made)
+        return value
+
+    def _set(self, made: dict) -> None:
+        self._fields = {k: v for k, v in made.items() if k != "payload"}
+        self.name = made["name"]
+        self.content = made["content"]
+        self.preset = made["preset"]
+        self.style = None if made["style"] is None else TextPresetStyle._of(made["style"])
+        self.at = made["at"]
+
+    def __repr__(self) -> str:
+        return "TextPreset(" + f"name={self.name!r}" + ", " + f"content={self.content!r}" + ", " + f"preset={self.preset!r}" + ", " + f"style={self.style!r}" + ", " + f"at={self.at!r}" + ")"
+
+    def draw(self, group, *, state="hidden"):
+        """Draw this preset into a Scene or Group at one of its stable states."""
+        return group._adopt(call("text_preset_draw", {"preset": self._fields, "film_font": _film_font(), "group": _group(group), "state": _string(state)}))
+
+    def rules(self, *, ease="out", stagger=0.12, order="screen"):
+        """The motion rules for this preset's words or letters, and its blur."""
+        return tuple(Rule._of(made) for made in call("text_preset_rules", {"preset": self._fields, "ease": _string(ease), "stagger": _number(stagger), "order": _string(order)}))
+
+
+def words_up(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings words up into place."""
+    return TextPreset(name, content, 'words_up', style=style, at=at)
+
+
+def words_down(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings words down into place."""
+    return TextPreset(name, content, 'words_down', style=style, at=at)
+
+
+def letters_up(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings letter clusters up into place."""
+    return TextPreset(name, content, 'letters_up', style=style, at=at)
+
+
+def letters_down(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings letter clusters down into place."""
+    return TextPreset(name, content, 'letters_down', style=style, at=at)
+
+
+def words_left(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings words in from the left."""
+    return TextPreset(name, content, 'words_left', style=style, at=at)
+
+
+def words_right(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings words in from the right."""
+    return TextPreset(name, content, 'words_right', style=style, at=at)
+
+
+def words_up_blur(name, content, *, style=None, at=None) -> "TextPreset":
+    """A text preset that brings soft, blurred words up into focus."""
+    return TextPreset(name, content, 'words_up_blur', style=style, at=at)
 
 
 def ngon(sides, r, *, at=(0.0, 0.0), turn=0.0):

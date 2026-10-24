@@ -77,9 +77,11 @@ class Group(_GroupSurface):
         group._frame_data = frame
         return group
 
-    def _build(self, op: str, data: dict) -> "Handle":
-        """Draw with the Authoring Core: it places the shape, this keeps it."""
-        shape = _shape_of(call(op, data))
+    def _adopt(self, shapes: list) -> "tuple[Handle, ...]":
+        """Keep several shapes the Authoring Core drew at once, in order."""
+        return tuple(self._keep(_shape_of(shape)) for shape in shapes)
+
+    def _keep(self, shape) -> "Handle":
         if shape.item in self._scene._shapes:
             raise ValueError(
                 f"two shapes share the name {shape.item!r} — "
@@ -87,6 +89,10 @@ class Group(_GroupSurface):
             )
         self._scene._shapes[shape.item] = shape
         return Handle(self._scene._shapes, shape.item, self._scene._markers)
+
+    def _build(self, op: str, data: dict) -> "Handle":
+        """Draw with the Authoring Core: it places the shape, this keeps it."""
+        return self._keep(_shape_of(call(op, data)))
 
     def _where(self, at, half: float):
         """One placement argument in, a centre out.

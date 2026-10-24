@@ -6,6 +6,7 @@
 # camelCase, by one rule, no exceptions.
 #
 #   name     the operation, and the method's name
+#   module   the Core module that answers it (default: surface)
 #   on       where the method lives: Group (a Scene is one), Handle
 #   kind     builder (draws or changes a shape) or query (answers at once)
 #   context  what the Skin supplies itself, never the author:
@@ -313,3 +314,178 @@ args = [
   { name = "options", type = "options" },
 ]
 fields = ["pattern", "position", "ease", "order", "options"]
+payload = true
+
+# -- Text presets: words or letters that each move into place -----------------
+#
+# A value's methods are `kind = "method"` entries `on` the value's class; the
+# value's own fields reach the Core as the `preset` context. A shortcut makes
+# a value with some arguments fixed.
+
+[[op]]
+name = "text_preset_style"
+module = "preset"
+class = "TextPresetStyle"
+on = "module"
+kind = "value"
+context = []
+doc = "Text appearance and travel distance shared by a preset's words or letters. `size` is in canvas points; `font` and `fill` are optional; `distance` is how far each starts from its place."
+args = [
+  { name = "size", type = "number", default = "16.0" },
+  { name = "font", type = "string", default = "none" },
+  { name = "fill", type = "string", default = "none" },
+  { name = "distance", type = "number", default = "48.0" },
+]
+fields = ["size", "font", "fill", "distance"]
+
+[[op]]
+name = "text_preset"
+module = "preset"
+class = "TextPreset"
+on = "module"
+kind = "value"
+context = []
+doc = "Text drawn as individually moving words or letters. `preset` is words_up, words_down, letters_up, letters_down, words_left, words_right or words_up_blur. Draw it in a state (hidden or shown; blurred too for words_up_blur) and pass its rules() to explain."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "preset", type = "string", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+fields = ["name", "content", "preset", "style", "at"]
+field_types = { style = "TextPresetStyle" }
+
+[[op]]
+name = "text_preset_draw"
+module = "preset"
+method = "draw"
+on = "TextPreset"
+kind = "method"
+returns = "handles"
+context = ["preset", "film_font"]
+doc = "Draw this preset into a Scene or Group at one of its stable states."
+args = [
+  { name = "group", type = "group", positional = true },
+  { name = "state", type = "string", default = "\"hidden\"" },
+]
+
+[[op]]
+name = "text_preset_rules"
+module = "preset"
+method = "rules"
+on = "TextPreset"
+kind = "method"
+returns = "rules"
+context = ["preset"]
+doc = "The motion rules for this preset's words or letters, and its blur."
+args = [
+  { name = "ease", type = "string", default = "\"out\"" },
+  { name = "stagger", type = "number", default = "0.12" },
+  { name = "order", type = "string", default = "\"screen\"" },
+]
+
+[[op]]
+name = "words_up"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "words_up" }
+context = []
+doc = "A text preset that brings words up into place."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "words_down"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "words_down" }
+context = []
+doc = "A text preset that brings words down into place."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "letters_up"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "letters_up" }
+context = []
+doc = "A text preset that brings letter clusters up into place."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "letters_down"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "letters_down" }
+context = []
+doc = "A text preset that brings letter clusters down into place."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "words_left"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "words_left" }
+context = []
+doc = "A text preset that brings words in from the left."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "words_right"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "words_right" }
+context = []
+doc = "A text preset that brings words in from the right."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "words_up_blur"
+makes = "TextPreset"
+on = "module"
+kind = "shortcut"
+fixed = { preset = "words_up_blur" }
+context = []
+doc = "A text preset that brings soft, blurred words up into focus."
+args = [
+  { name = "name", type = "string", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "style", type = "style", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]

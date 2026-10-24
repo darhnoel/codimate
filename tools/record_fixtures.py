@@ -255,6 +255,91 @@ def slice6():
     ]
 
 
+def preset_data(name, content, preset, style=None, at=None):
+    style = style or {"size": 16.0, "font": None, "fill": None, "distance": 48.0}
+    return {"name": name, "content": content, "preset": preset, "style": style, "at": at}
+
+
+def preset_draw(make, state, data, frame=ROOT):
+    """A preset drawn: every shape it puts on the Scene, in order."""
+    scene, target = where(frame)
+    try:
+        make().draw(target, state=state)
+        expected = {"ok": [json.loads(json.dumps(asdict(s))) for s in scene._shapes.values()]}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "text_preset_draw",
+            "data": {"preset": data, "group": frame, "film_font": "", "state": state},
+            "expected": expected}
+
+
+def preset_rules(make, kwargs, data):
+    try:
+        rules = make().rules(**kwargs)
+        expected = {"ok": [{"pattern": r.pattern, "position": r.position, "ease": r.ease,
+                            "order": r.order, "options": r.options,
+                            "payload": json.loads(json.dumps(r._payload()))} for r in rules]}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "text_preset_rules",
+            "data": {"preset": data, "ease": kwargs.get("ease", "out"),
+                     "stagger": kwargs.get("stagger", 0.12),
+                     "order": kwargs.get("order", "screen")},
+            "expected": expected}
+
+
+def preset_check(make, data):
+    try:
+        p = make()
+        expected = {"ok": {"name": p.name, "content": p.content, "preset": p.preset,
+                           "style": {"size": p.style.size, "font": p.style.font,
+                                     "fill": p.style.fill, "distance": p.style.distance},
+                           "at": data["at"]}}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "text_preset", "data": data, "expected": expected}
+
+
+def slice7():
+    T = cm.text
+    big = {"size": 40.0, "font": None, "fill": "#ffd60a", "distance": 30.0}
+    cases = []
+    for preset in ("words_up", "words_down", "words_left", "words_right",
+                   "letters_up", "letters_down", "words_up_blur"):
+        for state in (("hidden", "blurred", "shown") if preset.endswith("blur")
+                      else ("hidden", "shown")):
+            cases.append(preset_draw(
+                lambda preset=preset: T.TextPreset("t", "Hello world", preset, at=(640, 360)),
+                state, preset_data("t", "Hello world", preset, at=[640, 360])))
+    style = T.TextPresetStyle(size=40, fill="#ffd60a", distance=30)
+    cases += [
+        preset_draw(lambda: T.words_up("two", "First line\nsecond one", style=style,
+                                       at=cm.at(x=400, top=100)),
+                    "hidden", preset_data("two", "First line\nsecond one", "words_up", big,
+                                          {"x": 400, "y": None, "top": 100, "bottom": None})),
+        preset_draw(lambda: T.letters_up("kh", "ពន្យល់ ok", at=(300, 300)), "shown",
+                    preset_data("kh", "ពន្យល់ ok", "letters_up", at=[300, 300])),
+        preset_draw(lambda: T.letters_up("em", "a👩‍💻b🇯🇵", at=(300, 300)), "shown",
+                    preset_data("em", "a👩‍💻b🇯🇵", "letters_up", at=[300, 300])),
+        preset_draw(lambda: T.words_up("g", "in a group"), "hidden",
+                    preset_data("g", "in a group", "words_up"), GROUP),
+        preset_draw(lambda: T.words_up("t", "x", at=(0, 0)), "blurred",
+                    preset_data("t", "x", "words_up", at=[0, 0])),
+        preset_rules(lambda: T.words_up("t", "x"), {}, preset_data("t", "x", "words_up")),
+        preset_rules(lambda: T.words_up_blur("t", "x"), {"ease": "spring", "stagger": 0.2,
+                                                         "order": "centre"},
+                     preset_data("t", "x", "words_up_blur")),
+        preset_check(lambda: T.TextPreset("a/b", "x", "words_up"), preset_data("a/b", "x", "words_up")),
+        preset_check(lambda: T.TextPreset("", "x", "words_up"), preset_data("", "x", "words_up")),
+        preset_check(lambda: T.TextPreset("t", "x", "spin"), preset_data("t", "x", "spin")),
+        preset_check(lambda: T.TextPreset("t", "x", "words_up", style=T.TextPresetStyle(size=0)),
+                     preset_data("t", "x", "words_up",
+                                 {"size": 0, "font": None, "fill": None, "distance": 48.0})),
+        preset_check(lambda: T.TextPreset("t", 42, "words_up"), preset_data("t", "42", "words_up")),
+    ]
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

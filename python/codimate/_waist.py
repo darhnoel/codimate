@@ -142,3 +142,13 @@ def _paired(items, slots):
         yield from made
     else:
         yield from zip(made, items)
+
+
+def _style(style):
+    """A value made by the Core, as the fields it was made with."""
+    return None if style is None else style._fields
+
+
+def _group(group) -> dict:
+    """The Group (or Scene) to draw on, as the Core needs it."""
+    return group._frame()

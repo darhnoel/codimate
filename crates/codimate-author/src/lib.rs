@@ -8,6 +8,7 @@
 
 mod generated;
 mod place;
+mod preset;
 mod shape;
 mod surface;
 

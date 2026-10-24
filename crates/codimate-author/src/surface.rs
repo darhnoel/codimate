@@ -91,13 +91,25 @@ fn sixteen() -> f64 {
 pub fn text(a: Text) -> Result<Shape, Refusal> {
     let at = centre(&a.group, a.at.as_ref(), a.size / 2.0)?;
     let font = a.font.filter(|f| !f.is_empty()).unwrap_or(a.film_font);
-    Ok(Shape {
-        text: a.content,
-        size: a.size,
-        font,
+    Ok(text_shape(&a.group, &a.key, &a.content, a.size, &font, at))
+}
+
+/// A text shape at a centre already worked out (relative to `frame`).
+pub fn text_shape(
+    frame: &Frame,
+    key: &[String],
+    content: &str,
+    size: f64,
+    font: &str,
+    at: (f64, f64),
+) -> Shape {
+    Shape {
+        text: content.into(),
+        size,
+        font: font.into(),
         layer: 10,
-        ..placed(&a.group, &a.key, "text", at)
-    })
+        ..placed(frame, key, "text", at)
+    }
 }
 
 #[derive(Deserialize)]
@@ -116,20 +128,22 @@ fn white() -> String {
 /// Colour a shape. Saying nothing about the outline leaves it alone; an edge
 /// with no width was asked to be visible, so it gets one.
 pub fn fill(a: Fill) -> Result<Shape, Refusal> {
-    let mut shape = Shape {
-        color: a.color,
-        ..a.shape
-    };
-    if let Some(edge) = a.edge {
+    Ok(fill_shape(a.shape, a.color, a.edge, a.edge_w))
+}
+
+/// `fill`'s rule, for any shape the Core makes.
+pub fn fill_shape(shape: Shape, color: String, edge: Option<String>, edge_w: Option<f64>) -> Shape {
+    let mut shape = Shape { color, ..shape };
+    if let Some(edge) = edge {
         shape.edge = edge;
-        if a.edge_w.is_none() {
+        if edge_w.is_none() {
             shape.edge_w = shape.edge_w.max(1.0);
         }
     }
-    if let Some(w) = a.edge_w {
+    if let Some(w) = edge_w {
         shape.edge_w = w;
     }
-    Ok(shape)
+    shape
 }
 
 /// The operations Skins use that are not part of the author's interface.
@@ -595,12 +609,12 @@ const ORDERS: [&str; 4] = ["screen", "reverse", "name", "centre"];
 
 #[derive(Deserialize)]
 pub struct RuleArgs {
-    pattern: Vec<String>,
-    position: String,
-    ease: Option<String>,
-    order: String,
+    pub pattern: Vec<String>,
+    pub position: String,
+    pub ease: Option<String>,
+    pub order: String,
     #[serde(default)]
-    options: serde_json::Map<String, Value>,
+    pub options: serde_json::Map<String, Value>,
 }
 
 /// A motion rule, checked: its fields, and the payload the Engine takes.

@@ -1,5 +1,6 @@
 // Generated from api/surface.toml by tools/generate.py. Do not edit.
 
+use crate::preset;
 use crate::surface::{self, run};
 use crate::Refusal;
 
@@ -29,6 +30,10 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "measure" => run(data, surface::measure),
         "ease" => run(data, surface::ease),
         "rule" => run(data, surface::rule),
+        "text_preset_style" => run(data, preset::text_preset_style),
+        "text_preset" => run(data, preset::text_preset),
+        "text_preset_draw" => run(data, preset::text_preset_draw),
+        "text_preset_rules" => run(data, preset::text_preset_rules),
         _ => surface::internal(op, data),
     }
 }

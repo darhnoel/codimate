@@ -45,11 +45,13 @@ def load() -> list[dict]:
 # -- Rust: the Core's dispatch -------------------------------------------------
 
 def rust(ops: list[dict]) -> str:
-    arms = "\n".join(f'        "{op["name"]}" => run(data, surface::{op["name"]}),'
-                     for op in ops)
+    arms = "\n".join(
+        f'        "{op["name"]}" => run(data, {op.get("module", "surface")}::{op["name"]}),'
+        for op in ops if op["kind"] != "shortcut")
     return f"""// {HEADER}
 
 use crate::surface::{{self, run}};
+use crate::preset;
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -71,9 +73,11 @@ PY_CONTEXT = {
     "shape": '"shape": self._shape()',
     "film_font": '"film_font": _film_font()',
     "canvas": '"canvas": _canvas()',
+    "preset": '"preset": self._fields',
 }
 PY_RETURNS = {"points": "_as_points({})", "size": "_as_size({})", "number": "{}",
-              "slots": "_paired(items, {})"}
+              "slots": "_paired(items, {})", "handles": "group._adopt({})",
+              "rules": "tuple(Rule._of(made) for made in {})"}
 
 
 def py_param(arg: dict) -> str:
@@ -82,9 +86,75 @@ def py_param(arg: dict) -> str:
     return f'{arg["name"]}={PY_DEFAULT.get(arg["default"], arg["default"])}'
 
 
+def py_signature(args: list[dict], first: list[str]) -> str:
+    named = [a for a in args if a["type"] != "options"]
+    positional = [py_param(a) for a in named if a["positional"]]
+    keywords = [py_param(a) for a in named if not a["positional"]]
+    params = first + positional + (["*", *keywords] if keywords else [])
+    if any(a["type"] == "options" for a in args):
+        params.append("**options")
+    return ", ".join(params)
+
+
+def py_data(op: dict) -> str:
+    data = [PY_CONTEXT[c] for c in op["context"]]
+    data += [f'"{a["name"]}": ' + ("options" if a["type"] == "options" else
+                                    f'_{a["type"]}({a["name"]})') for a in op["args"]]
+    return "{" + ", ".join(data) + "}"
+
+
+def py_value(op: dict, ops: list[dict]) -> str:
+    """A value class: made by the Core, its fields set from the answer, with
+    the methods the manifest gives it."""
+    cls, types = op["class"], op.get("field_types", {})
+    fields = []
+    for f in op["fields"]:
+        if f in types:
+            fields.append(f'        self.{f} = None if made["{f}"] is None else '
+                          f'{types[f]}._of(made["{f}"])')
+        else:
+            fields.append(f'        self.{f} = made["{f}"]')
+    payload = ('        self._made = tuple(made["payload"])\n' if op.get("payload") else "")
+    shown = " + \", \" + ".join(f'f"{f}={{self.{f}!r}}"' for f in op["fields"])
+    methods = []
+    for m in (o for o in ops if o["kind"] == "method" and o["on"] == cls):
+        answer = PY_RETURNS[m["returns"]].format(f'call("{m["name"]}", {py_data(m)})')
+        methods.append(f'    def {m["method"]}({py_signature(m["args"], ["self"])}):\n'
+                       f'        """{m["doc"]}"""\n        return {answer}\n')
+    out = (f'class {cls}:\n    """{op["doc"]}"""\n\n'
+           f'    def __init__({py_signature(op["args"], ["self"])}) -> None:\n'
+           f'        self._set(call("{op["name"]}", {py_data(op)}))\n\n'
+           f'    @classmethod\n    def _of(cls, made: dict) -> "{cls}":\n'
+           f'        """One the Authoring Core has already made."""\n'
+           f'        value = cls.__new__(cls)\n        value._set(made)\n        return value\n\n'
+           f'    def _set(self, made: dict) -> None:\n'
+           f'        self._fields = {{k: v for k, v in made.items() if k != "payload"}}\n'
+           f'{payload}' + "\n".join(fields) + "\n\n")
+    if op.get("payload"):
+        out += ('    def _payload(self) -> tuple:\n        """What the Engine takes."""\n'
+                '        return self._made\n\n')
+    out += (f'    def __repr__(self) -> str:\n        return "{cls}(" + {shown} + ")"\n')
+    return out + "".join("\n" + m for m in methods)
+
+
+def py_shortcut(op: dict, ops: list[dict]) -> str:
+    """A function that makes a value with some of its arguments fixed."""
+    made = next(o for o in ops if o.get("class") == op["makes"])
+    given = []
+    for a in made["args"]:
+        if a["name"] in op["fixed"]:
+            given.append(repr(op["fixed"][a["name"]]))
+        elif a["positional"]:
+            given.append(a["name"])
+        else:
+            given.append(f'{a["name"]}={a["name"]}')
+    return (f'def {op["name"]}({py_signature(op["args"], [])}) -> "{op["makes"]}":\n'
+            f'    """{op["doc"]}"""\n    return {op["makes"]}({", ".join(given)})\n')
+
+
 def python(ops: list[dict]) -> str:
     classes: dict[str, list[str]] = {}
-    for op in (o for o in ops if o["on"] != "module"):
+    for op in (o for o in ops if o["on"] in ("Group", "Handle")):
         positional = [py_param(a) for a in op["args"] if a["positional"]]
         keywords = [py_param(a) for a in op["args"] if not a["positional"]]
         params = ["self", *positional] + (["*", *keywords] if keywords else [])
@@ -100,26 +170,9 @@ def python(ops: list[dict]) -> str:
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{returns if returns != "self" else op["on"]}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
-    functions = []
-    for op in (o for o in ops if o["kind"] == "value"):
-        named = [a for a in op["args"] if a["type"] != "options"]
-        positional = [py_param(a) for a in named if a["positional"]]
-        keywords = [py_param(a) for a in named if not a["positional"]]
-        params = ["self", *positional] + (["*", *keywords] if keywords else []) + ["**options"]
-        data = [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in named]
-        data.append('"options": options')
-        fields = "\n".join(f'        self.{f} = made["{f}"]' for f in op["fields"])
-        shown = " + \", \" + ".join(f'f"{f}={{self.{f}!r}}"' for f in op["fields"])
-        functions.append(
-            f'class {op["class"]}:\n    """{op["doc"]}"""\n\n'
-            f'    def __init__({", ".join(params)}) -> None:\n'
-            f'        made = call("{op["name"]}", {{{", ".join(data)}}})\n'
-            f'        self._made = tuple(made["payload"])\n{fields}\n\n'
-            f'    def _payload(self) -> tuple:\n        """What the Engine takes."""\n'
-            f'        return self._made\n\n'
-            f'    def __repr__(self) -> str:\n'
-            f'        return "{op["class"]}(" + {shown} + ")"\n')
-    for op in (o for o in ops if o["on"] == "module" and o["kind"] != "value"):
+    functions = [py_value(op, ops) for op in ops if op["kind"] == "value"]
+    functions += [py_shortcut(op, ops) for op in ops if op["kind"] == "shortcut"]
+    for op in (o for o in ops if o["on"] == "module" and o["kind"] == "query"):
         positional = [py_param(a) for a in op["args"] if a["positional"]]
         keywords = [py_param(a) for a in op["args"] if not a["positional"]]
         params = positional + (["*", *keywords] if keywords else [])
@@ -138,7 +191,8 @@ def python(ops: list[dict]) -> str:
            "from typing import TYPE_CHECKING\n",
            "from ._waist import " + ", ".join(sorted(
                {"_film_font", "_canvas", "_as_points", "_as_size", "_paired", "call"}
-               | {f"_{a['type']}" for op in ops for a in op["args"] if a["type"] != "options"})) + "\n",
+               | {f"_{a['type']}" for op in ops for a in op["args"]
+                  if a["type"] != "options" and op["kind"] != "shortcut"})) + "\n",
            "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
@@ -151,16 +205,20 @@ def python(ops: list[dict]) -> str:
 TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "string", "at": "At",
            "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
            "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot",
-           "int": "number", "items": "number | Iterable<unknown>"}
+           "int": "number", "items": "number | Iterable<unknown>",
+           "style": "TextPresetStyle", "group": "Group"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
     "film_font": "film_font: filmFont()",
     "canvas": "canvas: [width(), height()]",
+    "preset": "preset: this._fields",
 }
 TS_DEFAULT = {"origin": "[0, 0]"}
 TS_RETURNS = {"points": ("[number, number][]", "{}"), "size": ("[number, number]", "{}"),
-              "number": ("number", "{}"), "slots": ("any[]", "paired(items, {})")}
+              "number": ("number", "{}"), "slots": ("any[]", "paired(items, {})"),
+              "handles": ("Handle[]", "group._adopt({})"),
+              "rules": ("Rule[]", "{}.map((made: any) => Rule._of(made))")}
 
 
 def typescript(ops: list[dict]) -> str:
@@ -168,7 +226,12 @@ def typescript(ops: list[dict]) -> str:
     functions: list[str] = []
     for op in ops:
         if op["kind"] == "value":
-            functions.append(ts_value(op))
+            functions.append(ts_value(op, ops))
+            continue
+        if op["kind"] == "shortcut":
+            functions.append(ts_shortcut(op, ops))
+            continue
+        if op["kind"] == "method":
             continue
         positional = [a for a in op["args"] if a["positional"]]
         options = [a for a in op["args"] if not a["positional"]]
@@ -225,34 +288,98 @@ def typescript(ops: list[dict]) -> str:
     return "\n".join(out)
 
 
-def ts_value(op: dict) -> str:
-    """A value class: built by the Core, its fields set from the answer."""
-    named = [a for a in op["args"] if a["type"] != "options"]
+def ts_params(args: list[dict]) -> tuple[list[str], list[dict]]:
+    named = [a for a in args if a["type"] != "options"]
     positional = [a for a in named if a["positional"]]
     keywords = [a for a in named if not a["positional"]]
     params = [f'{camel(a["name"])}{"?" if "default" in a else ""}: {TS_TYPE[a["type"]]}'
               for a in positional]
-    fields = "; ".join(f'{camel(a["name"])}?: {TS_TYPE[a["type"]]}' for a in keywords)
-    params.append(f"options?: {{ {fields} }} & Record<string, unknown>")
-    unpack = ", ".join(camel(a["name"]) for a in keywords)
-    data = []
-    for a in named:
-        default = a.get("default")
+    if keywords or any(a["type"] == "options" for a in args):
+        fields = "; ".join(f'{camel(a["name"])}?: {TS_TYPE[a["type"]]}' for a in keywords)
+        extra = (" & Record<string, unknown>" if any(a["type"] == "options" for a in args)
+                 else "")
+        params.append(f"options?: {{ {fields} }}{extra}")
+    return params, keywords
+
+
+def ts_data(op: dict) -> str:
+    data = [TS_CONTEXT[c] for c in op["context"]]
+    for a in op["args"]:
+        if a["type"] == "options":
+            data.append("options: rest")
+            continue
         source = camel(a["name"])
+        default = a.get("default")
         if default not in (None, "none"):
             source = f"({source} ?? {TS_DEFAULT.get(default, default)})"
         data.append(f'{a["name"]}: to.{a["type"]}({source})')
-    data.append("options: rest")
-    declared = "\n".join(f"  readonly {camel(f)}: any;" for f in op["fields"])
-    assigned = "\n".join(f'    this.{camel(f)} = made.{f};' for f in op["fields"])
+    return "{ " + ", ".join(data) + " }"
+
+
+def ts_unpack(args: list[dict], keywords: list[dict]) -> str:
+    names = [camel(a["name"]) for a in keywords]
+    if any(a["type"] == "options" for a in args):
+        names.append("...rest")
+    return f'    const {{ {", ".join(names)} }} = options ?? {{}};\n' if names else ""
+
+
+def ts_value(op: dict, ops: list[dict]) -> str:
+    """A value class: made by the Core, its fields set from the answer, with
+    the methods the manifest gives it."""
+    cls, types = op["class"], op.get("field_types", {})
+    params, keywords = ts_params(op["args"])
+    declared = "\n".join(f"  {camel(f)}: any;" for f in op["fields"])
+    assigned = []
+    for f in op["fields"]:
+        value = (f"made.{f} == null ? null : {types[f]}._of(made.{f})" if f in types
+                 else f"made.{f}")
+        assigned.append(f"    this.{camel(f)} = {value};")
+    payload = "    this.made = made.payload;\n" if op.get("payload") else ""
+    methods = []
+    for m in (o for o in ops if o["kind"] == "method" and o["on"] == cls):
+        m_params, m_keywords = ts_params(m["args"])
+        kind, answer = TS_RETURNS[m["returns"]]
+        crossing = f'call("{m["name"]}", {ts_data(m)})'
+        methods.append(
+            f'  /** {m["doc"]} */\n'
+            f'  {camel(m["method"])}({", ".join(m_params)}): {kind} {{\n'
+            f'{ts_unpack(m["args"], m_keywords)}'
+            f'    return {answer.format(crossing)};\n  }}\n')
+    out = (f'/** {op["doc"]} */\n'
+           f'export class {cls} {{\n{declared}\n  _fields: any;\n  private made: unknown[] = [];\n\n'
+           f'  constructor({", ".join(params)}) {{\n'
+           f'{ts_unpack(op["args"], keywords)}'
+           f'    this._set(call("{op["name"]}", {ts_data(op)}));\n  }}\n\n'
+           f'  /** @internal One the Authoring Core has already made. */\n'
+           f'  static _of(made: any): {cls} {{\n'
+           f'    const value = Object.create({cls}.prototype);\n    value._set(made);\n'
+           f'    return value;\n  }}\n\n'
+           f'  private _set(made: any): void {{\n'
+           f'    const {{ payload, ...fields }} = made;\n    this._fields = fields;\n'
+           f'{payload}' + "\n".join(assigned) + "\n  }\n\n")
+    if op.get("payload"):
+        out += ('  /** @internal What the Engine takes. */\n'
+                '  _payload(): unknown[] {\n    return this.made;\n  }\n\n')
+    return out + "\n".join(methods) + "}\n"
+
+
+def ts_shortcut(op: dict, ops: list[dict]) -> str:
+    """A function that makes a value with some of its arguments fixed."""
+    made = next(o for o in ops if o.get("class") == op["makes"])
+    params, keywords = ts_params(op["args"])
+    given, options = [], []
+    for a in made["args"]:
+        if a["name"] in op["fixed"]:
+            given.append(f'"{op["fixed"][a["name"]]}"')
+        elif a["positional"]:
+            given.append(camel(a["name"]))
+        else:
+            options.append(camel(a["name"]))
+    if options:
+        given.append("options")
     return (f'/** {op["doc"]} */\n'
-            f'export class {op["class"]} {{\n{declared}\n  private readonly made: unknown[];\n\n'
-            f'  constructor({", ".join(params)}) {{\n'
-            f'    const {{ {unpack}, ...rest }} = options ?? {{}};\n'
-            f'    const made = call("{op["name"]}", {{ {", ".join(data)} }});\n'
-            f'    this.made = made.payload;\n{assigned}\n  }}\n\n'
-            f'  /** @internal What the Engine takes. */\n'
-            f'  _payload(): unknown[] {{\n    return this.made;\n  }}\n}}\n')
+            f'export function {camel(op["name"])}({", ".join(params)}): {op["makes"]} {{\n'
+            f'  return new {op["makes"]}({", ".join(given)});\n}}\n')
 
 
 OUTPUTS = {

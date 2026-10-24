@@ -131,16 +131,29 @@ export function ease(t: number): number {
 
 /** How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre. */
 export class Rule {
-  readonly pattern: any;
-  readonly position: any;
-  readonly ease: any;
-  readonly order: any;
-  readonly options: any;
-  private readonly made: unknown[];
+  pattern: any;
+  position: any;
+  ease: any;
+  order: any;
+  options: any;
+  _fields: any;
+  private made: unknown[] = [];
 
   constructor(pattern: Key, position?: string, options?: { ease?: string; order?: string } & Record<string, unknown>) {
     const { ease, order, ...rest } = options ?? {};
-    const made = call("rule", { pattern: to.key(pattern), position: to.string((position ?? "straight")), ease: to.string(ease), order: to.string((order ?? "screen")), options: rest });
+    this._set(call("rule", { pattern: to.key(pattern), position: to.string((position ?? "straight")), ease: to.string(ease), order: to.string((order ?? "screen")), options: rest }));
+  }
+
+  /** @internal One the Authoring Core has already made. */
+  static _of(made: any): Rule {
+    const value = Object.create(Rule.prototype);
+    value._set(made);
+    return value;
+  }
+
+  private _set(made: any): void {
+    const { payload, ...fields } = made;
+    this._fields = fields;
     this.made = made.payload;
     this.pattern = made.pattern;
     this.position = made.position;
@@ -153,4 +166,117 @@ export class Rule {
   _payload(): unknown[] {
     return this.made;
   }
+
+}
+
+/** Text appearance and travel distance shared by a preset's words or letters. `size` is in canvas points; `font` and `fill` are optional; `distance` is how far each starts from its place. */
+export class TextPresetStyle {
+  size: any;
+  font: any;
+  fill: any;
+  distance: any;
+  _fields: any;
+  private made: unknown[] = [];
+
+  constructor(options?: { size?: number; font?: string; fill?: string; distance?: number }) {
+    const { size, font, fill, distance } = options ?? {};
+    this._set(call("text_preset_style", { size: to.number((size ?? 16.0)), font: to.string(font), fill: to.string(fill), distance: to.number((distance ?? 48.0)) }));
+  }
+
+  /** @internal One the Authoring Core has already made. */
+  static _of(made: any): TextPresetStyle {
+    const value = Object.create(TextPresetStyle.prototype);
+    value._set(made);
+    return value;
+  }
+
+  private _set(made: any): void {
+    const { payload, ...fields } = made;
+    this._fields = fields;
+    this.size = made.size;
+    this.font = made.font;
+    this.fill = made.fill;
+    this.distance = made.distance;
+  }
+
+}
+
+/** Text drawn as individually moving words or letters. `preset` is words_up, words_down, letters_up, letters_down, words_left, words_right or words_up_blur. Draw it in a state (hidden or shown; blurred too for words_up_blur) and pass its rules() to explain. */
+export class TextPreset {
+  name: any;
+  content: any;
+  preset: any;
+  style: any;
+  at: any;
+  _fields: any;
+  private made: unknown[] = [];
+
+  constructor(name: string, content: unknown, preset: string, options?: { style?: TextPresetStyle; at?: At }) {
+    const { style, at } = options ?? {};
+    this._set(call("text_preset", { name: to.string(name), content: to.text(content), preset: to.string(preset), style: to.style(style), at: to.at(at) }));
+  }
+
+  /** @internal One the Authoring Core has already made. */
+  static _of(made: any): TextPreset {
+    const value = Object.create(TextPreset.prototype);
+    value._set(made);
+    return value;
+  }
+
+  private _set(made: any): void {
+    const { payload, ...fields } = made;
+    this._fields = fields;
+    this.name = made.name;
+    this.content = made.content;
+    this.preset = made.preset;
+    this.style = made.style == null ? null : TextPresetStyle._of(made.style);
+    this.at = made.at;
+  }
+
+  /** Draw this preset into a Scene or Group at one of its stable states. */
+  draw(group: Group, options?: { state?: string }): Handle[] {
+    const { state } = options ?? {};
+    return group._adopt(call("text_preset_draw", { preset: this._fields, film_font: filmFont(), group: to.group(group), state: to.string((state ?? "hidden")) }));
+  }
+
+  /** The motion rules for this preset's words or letters, and its blur. */
+  rules(options?: { ease?: string; stagger?: number; order?: string }): Rule[] {
+    const { ease, stagger, order } = options ?? {};
+    return call("text_preset_rules", { preset: this._fields, ease: to.string((ease ?? "out")), stagger: to.number((stagger ?? 0.12)), order: to.string((order ?? "screen")) }).map((made: any) => Rule._of(made));
+  }
+}
+
+/** A text preset that brings words up into place. */
+export function wordsUp(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "words_up", options);
+}
+
+/** A text preset that brings words down into place. */
+export function wordsDown(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "words_down", options);
+}
+
+/** A text preset that brings letter clusters up into place. */
+export function lettersUp(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "letters_up", options);
+}
+
+/** A text preset that brings letter clusters down into place. */
+export function lettersDown(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "letters_down", options);
+}
+
+/** A text preset that brings words in from the left. */
+export function wordsLeft(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "words_left", options);
+}
+
+/** A text preset that brings words in from the right. */
+export function wordsRight(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "words_right", options);
+}
+
+/** A text preset that brings soft, blurred words up into focus. */
+export function wordsUpBlur(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
+  return new TextPreset(name, content, "words_up_blur", options);
 }

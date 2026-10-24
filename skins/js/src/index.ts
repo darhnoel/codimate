@@ -12,6 +12,9 @@
 
 export { Slot, at, canvas, font, height, width } from "./waist.ts";
 export { Rule, column, ease, measure, ngon, row, star } from "./surface.ts";
+export {
+  TextPreset, TextPresetStyle, lettersDown, lettersUp, wordsDown, wordsLeft, wordsRight, wordsUp, wordsUpBlur,
+} from "./surface.ts";
 export { Group, Handle, Scene } from "./scene.ts";
 export { Frame, Item, items, trace, type Emit, type Event, type Trace } from "./trace.ts";
 export { Explanation, Timing, explain, type View } from "./explain.ts";

@@ -35,7 +35,15 @@ export class Group extends GroupSurface {
   }
 
   protected _build(op: string, data: object): Handle {
-    const shape: ShapeData = call(op, data);
+    return this.keep(call(op, data));
+  }
+
+  /** @internal Keep several shapes the Authoring Core drew at once, in order. */
+  _adopt(shapes: ShapeData[]): Handle[] {
+    return shapes.map((shape) => this.keep(shape));
+  }
+
+  private keep(shape: ShapeData): Handle {
     if (this.scene.shapes.has(shape.item)) {
       throw new Error(`two shapes share the name '${shape.item}' — a name means exactly one thing`);
     }
