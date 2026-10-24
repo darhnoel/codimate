@@ -326,3 +326,85 @@ export function wordsRight(name: string, content: unknown, options?: { style?: T
 export function wordsUpBlur(name: string, content: unknown, options?: { style?: TextPresetStyle; at?: At }): TextPreset {
   return new TextPreset(name, content, "words_up_blur", options);
 }
+
+/** A map from your numbers to pixels. `x` and `y` are (low, high); `size` is (w, h) in pixels, or one number for a square, defaulting to most of the canvas; `at` places the box's centre, and `within` fits it to part of the canvas. It returns points rather than drawing, so what you plot is a shape with a name of yours. */
+export class Axes {
+  x0: any;
+  x1: any;
+  y0: any;
+  y1: any;
+  left: any;
+  top: any;
+  w: any;
+  h: any;
+  ink: any;
+  label: any;
+  layer: any;
+  right: any;
+  bottom: any;
+  _fields: any;
+  private made: unknown[] = [];
+
+  constructor(options?: { x?: readonly [number, number]; y?: readonly [number, number]; at?: At; size?: number | Point; within?: Slot }) {
+    const { x, y, at, size, within } = options ?? {};
+    this._set(call("axes", { canvas: [width(), height()], x: to.pair(x), y: to.pair(y), at: to.at(at), size: to.radius(size), within: to.slot(within) }));
+  }
+
+  /** @internal One the Authoring Core has already made. */
+  static _of(made: any): Axes {
+    const value = Object.create(Axes.prototype);
+    value._set(made);
+    return value;
+  }
+
+  private _set(made: any): void {
+    const { payload, ...fields } = made;
+    this._fields = fields;
+    this.x0 = made.x0;
+    this.x1 = made.x1;
+    this.y0 = made.y0;
+    this.y1 = made.y1;
+    this.left = made.left;
+    this.top = made.top;
+    this.w = made.w;
+    this.h = made.h;
+    this.ink = made.ink;
+    this.label = made.label;
+    this.layer = made.layer;
+    this.right = made.right;
+    this.bottom = made.bottom;
+  }
+
+  /** Restyle the frame, ticks and labels. Returns a new Axes. */
+  looks(ink?: string, label?: number, layer?: number): Axes {
+    return Axes._of(call("axes_looks", { axes: this._fields, ink: to.string(ink), label: to.number(label), layer: to.number(layer) }));
+  }
+
+  /** One data point as a pixel pair, for any shape's `at`. */
+  at(x: number, y: number): [number, number] {
+    return call("axes_at", { axes: this._fields, x: to.number(x), y: to.number(y) });
+  }
+
+  /** steps + 1 points along y = f(x), as pixels, for a curve. `over=(lo, hi)` samples part of the range. Every sample is kept, even outside the box: curves only tween when their point counts match. */
+  line(f: (x: number) => number, steps?: number, over?: readonly [number, number]): [number, number][] {
+    const xs: number[] = call("axes_samples", { axes: this._fields, steps: to.int((steps ?? 200)), over: to.pair(over) });
+    return call("axes_points", { axes: this._fields, xs, ys: xs.map((x) => Number(f(x))) });
+  }
+
+  /** (n, value, label) per tick, where n, the step multiple, is what a tick is named after: an integer cannot drift. */
+  ticks(axis?: string, about?: number): [number, number, string][] {
+    return call("axes_ticks", { axes: this._fields, axis: to.string((axis ?? "x")), about: to.int((about ?? 6)) });
+  }
+
+  /** Draw the frame, ticks and labels, each named under `name`. Returns the Axes, for chaining. Colours and sizes come from `looks`. */
+  draw(group: Group, name?: Key, options?: { about?: number; grid?: boolean }): this {
+    const { about, grid } = options ?? {};
+    group._adopt(call("axes_draw", { axes: this._fields, film_font: filmFont(), group: to.group(group), name: to.key((name ?? "plot")), about: to.int((about ?? 6)), grid: to.bool((grid ?? false)) }));
+    return this;
+  }
+}
+
+/** A coordinate map from your numbers to pixels: see Axes. `x` and `y` are (low, high). */
+export function axes(options?: { x?: readonly [number, number]; y?: readonly [number, number]; at?: At; size?: number | Point; within?: Slot }): Axes {
+  return new Axes(options);
+}

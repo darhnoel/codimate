@@ -46,13 +46,15 @@ def load() -> list[dict]:
 # -- Rust: the Core's dispatch -------------------------------------------------
 
 def rust(ops: list[dict]) -> str:
-    arms = "\n".join(
-        f'        "{op["name"]}" => run(data, {op.get("module", "surface")}::{op["name"]}),'
-        for op in ops if op["kind"] != "shortcut")
+    # Each operation, and each second step a sampled method crosses (`then`).
+    names = [(op["name"], op.get("module", "surface")) for op in ops if op["kind"] != "shortcut"]
+    names += [(op["then"], op.get("module", "surface")) for op in ops if "then" in op]
+    arms = "\n".join(f'        "{name}" => run(data, {module}::{name}),' for name, module in names)
+    modules = ", ".join(sorted({op["module"] for op in ops if "module" in op}))
     return f"""// {HEADER}
 
 use crate::surface::{{self, run}};
-use crate::{{marker, preset}};
+use crate::{{{modules}}};
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -75,10 +77,12 @@ PY_CONTEXT = {
     "film_font": '"film_font": _film_font()',
     "canvas": '"canvas": _canvas()',
     "preset": '"preset": self._fields',
+    "axes": '"axes": self._fields',
 }
 PY_RETURNS = {"points": "_as_points({})", "size": "_as_size({})", "number": "{}",
               "slots": "_paired(items, {})", "handles": "group._adopt({})",
-              "rules": "tuple(Rule._of(made) for made in {})"}
+              "rules": "tuple(Rule._of(made) for made in {})",
+              "point": "_as_size({})", "ticks": "[tuple(tick) for tick in {}]"}
 
 
 def py_param(arg: dict) -> str:
@@ -102,7 +106,8 @@ def py_signature(args: list[dict], first: list[str]) -> str:
 def py_data(op: dict) -> str:
     data = [PY_CONTEXT[c] for c in op["context"]]
     data += [f'"{a["name"]}": ' + ("options" if a["type"] == "options" else
-                                    f'_{a["type"]}({a["name"]})') for a in op["args"]]
+                                    f'_{a["type"]}({a["name"]})') for a in op["args"]
+             if a["type"] != "function"]
     return "{" + ", ".join(data) + "}"
 
 
@@ -121,9 +126,23 @@ def py_value(op: dict, ops: list[dict]) -> str:
     shown = " + \", \" + ".join(f'f"{f}={{self.{f}!r}}"' for f in op["fields"])
     methods = []
     for m in (o for o in ops if o["kind"] == "method" and o["on"] == cls):
-        answer = PY_RETURNS[m["returns"]].format(f'call("{m["name"]}", {py_data(m)})')
+        crossing = f'call("{m["name"]}", {py_data(m)})'
+        if m["returns"] == "sampled":
+            # The Core gives the samples, the author's function their values,
+            # and the Core maps them: the function only runs here.
+            f = next(a["name"] for a in m["args"] if a["type"] == "function")
+            body = (f"        xs = {crossing}\n"
+                    f'        return _as_points(call("{m["then"]}", {{{PY_CONTEXT["axes"]}, '
+                    f'"xs": xs, "ys": [float({f}(x)) for x in xs]}}))\n')
+        elif m["returns"] == "drawn":
+            group = next(a["name"] for a in m["args"] if a["type"] == "group")
+            body = f"        {group}._adopt({crossing})\n        return self\n"
+        elif m["returns"] == "value":
+            body = f'        return {m["returns_class"]}._of({crossing})\n'
+        else:
+            body = f'        return {PY_RETURNS[m["returns"]].format(crossing)}\n'
         methods.append(f'    def {m["method"]}({py_signature(m["args"], ["self"])}):\n'
-                       f'        """{m["doc"]}"""\n        return {answer}\n')
+                       f'        """{m["doc"]}"""\n{body}')
     out = (f'class {cls}:\n    """{op["doc"]}"""\n\n'
            f'    def __init__({py_signature(op["args"], ["self"])}) -> None:\n'
            f'        self._set(call("{op["name"]}", {py_data(op)}))\n\n'
@@ -206,7 +225,8 @@ def python(ops: list[dict]) -> str:
            "from ._waist import " + ", ".join(sorted(
                {"_film_font", "_canvas", "_as_points", "_as_size", "_paired", "call"}
                | {f"_{a['type']}" for op in ops for a in op["args"]
-                  if a["type"] != "options" and op["kind"] != "shortcut"})) + "\n",
+                  if a["type"] not in ("options", "function")
+                  and op["kind"] != "shortcut"})) + "\n",
            "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
@@ -220,19 +240,22 @@ TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "strin
            "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
            "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot",
            "int": "number", "items": "number | Iterable<unknown>",
-           "style": "TextPresetStyle", "group": "Group", "keys": "readonly Key[]"}
+           "style": "TextPresetStyle", "group": "Group", "keys": "readonly Key[]",
+           "function": "(x: number) => number"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
     "film_font": "film_font: filmFont()",
     "canvas": "canvas: [width(), height()]",
     "preset": "preset: this._fields",
+    "axes": "axes: this._fields",
 }
 TS_DEFAULT = {"origin": "[0, 0]"}
 TS_RETURNS = {"points": ("[number, number][]", "{}"), "size": ("[number, number]", "{}"),
               "number": ("number", "{}"), "slots": ("any[]", "paired(items, {})"),
               "handles": ("Handle[]", "group._adopt({})"),
-              "rules": ("Rule[]", "{}.map((made: any) => Rule._of(made))")}
+              "rules": ("Rule[]", "{}.map((made: any) => Rule._of(made))"),
+              "point": ("[number, number]", "{}"), "ticks": ("[number, number, string][]", "{}")}
 
 
 def typescript(ops: list[dict]) -> str:
@@ -340,6 +363,8 @@ def ts_params(args: list[dict]) -> tuple[list[str], list[dict]]:
 def ts_data(op: dict) -> str:
     data = [TS_CONTEXT[c] for c in op["context"]]
     for a in op["args"]:
+        if a["type"] == "function":
+            continue
         if a["type"] == "options":
             data.append("options: rest")
             continue
@@ -373,13 +398,27 @@ def ts_value(op: dict, ops: list[dict]) -> str:
     methods = []
     for m in (o for o in ops if o["kind"] == "method" and o["on"] == cls):
         m_params, m_keywords = ts_params(m["args"])
-        kind, answer = TS_RETURNS[m["returns"]]
         crossing = f'call("{m["name"]}", {ts_data(m)})'
+        if m["returns"] == "sampled":
+            f = camel(next(a["name"] for a in m["args"] if a["type"] == "function"))
+            kind = "[number, number][]"
+            body = (f"    const xs: number[] = {crossing};\n"
+                    f'    return call("{m["then"]}", {{ {TS_CONTEXT["axes"]}, xs, '
+                    f"ys: xs.map((x) => Number({f}(x))) }});\n")
+        elif m["returns"] == "drawn":
+            group = camel(next(a["name"] for a in m["args"] if a["type"] == "group"))
+            kind = "this"
+            body = f"    {group}._adopt({crossing});\n    return this;\n"
+        elif m["returns"] == "value":
+            kind = m["returns_class"]
+            body = f'    return {m["returns_class"]}._of({crossing});\n'
+        else:
+            kind, answer = TS_RETURNS[m["returns"]]
+            body = f"    return {answer.format(crossing)};\n"
         methods.append(
             f'  /** {m["doc"]} */\n'
             f'  {camel(m["method"])}({", ".join(m_params)}): {kind} {{\n'
-            f'{ts_unpack(m["args"], m_keywords)}'
-            f'    return {answer.format(crossing)};\n  }}\n')
+            f'{ts_unpack(m["args"], m_keywords)}{body}  }}\n')
     out = (f'/** {op["doc"]} */\n'
            f'export class {cls} {{\n{declared}\n  _fields: any;\n  private made: unknown[] = [];\n\n'
            f'  constructor({", ".join(params)}) {{\n'

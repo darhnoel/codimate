@@ -6,6 +6,7 @@
 //! what a call needs (the Group it draws on, the shape it changes) comes with
 //! it, so any language can drive it and every call can be tested on its own.
 
+mod axes;
 mod generated;
 mod marker;
 mod place;

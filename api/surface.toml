@@ -584,3 +584,118 @@ args = [
   { name = "style", type = "style", default = "none" },
   { name = "at", type = "at", default = "none" },
 ]
+
+# -- Axes: a map from numbers to pixels (ADR 0016) -----------------------------
+#
+# `line` calls the author's own function, which only their language can run:
+# its form is "sampled": the Core gives the x values (`axes_samples`), the Skin
+# asks the author's function for each y, and the Core maps them (`then`).
+
+[[op]]
+name = "axes"
+module = "axes"
+class = "Axes"
+on = "module"
+kind = "value"
+context = ["canvas"]
+doc = "A map from your numbers to pixels. `x` and `y` are (low, high); `size` is (w, h) in pixels, or one number for a square, defaulting to most of the canvas; `at` places the box's centre, and `within` fits it to part of the canvas. It returns points rather than drawing, so what you plot is a shape with a name of yours."
+args = [
+  { name = "x", type = "pair" },
+  { name = "y", type = "pair" },
+  { name = "at", type = "at", default = "none" },
+  { name = "size", type = "radius", default = "none" },
+  { name = "within", type = "slot", default = "none" },
+]
+fields = ["x0", "x1", "y0", "y1", "left", "top", "w", "h", "ink", "label", "layer", "right", "bottom"]
+
+[[op]]
+name = "axes_looks"
+module = "axes"
+method = "looks"
+on = "Axes"
+kind = "method"
+returns = "value"
+returns_class = "Axes"
+context = ["axes"]
+doc = "Restyle the frame, ticks and labels. Returns a new Axes."
+args = [
+  { name = "ink", type = "string", positional = true, default = "none" },
+  { name = "label", type = "number", positional = true, default = "none" },
+  { name = "layer", type = "number", positional = true, default = "none" },
+]
+
+[[op]]
+name = "axes_at"
+module = "axes"
+method = "at"
+on = "Axes"
+kind = "method"
+returns = "point"
+context = ["axes"]
+doc = "One data point as a pixel pair, for any shape's `at`."
+args = [
+  { name = "x", type = "number", positional = true },
+  { name = "y", type = "number", positional = true },
+]
+
+[[op]]
+name = "axes_samples"
+then = "axes_points"
+module = "axes"
+method = "line"
+on = "Axes"
+kind = "method"
+returns = "sampled"
+context = ["axes"]
+doc = "steps + 1 points along y = f(x), as pixels, for a curve. `over=(lo, hi)` samples part of the range. Every sample is kept, even outside the box: curves only tween when their point counts match."
+args = [
+  { name = "f", type = "function", positional = true },
+  { name = "steps", type = "int", positional = true, default = "200" },
+  { name = "over", type = "pair", positional = true, default = "none" },
+]
+
+[[op]]
+name = "axes_ticks"
+module = "axes"
+method = "ticks"
+on = "Axes"
+kind = "method"
+returns = "ticks"
+context = ["axes"]
+doc = "(n, value, label) per tick, where n, the step multiple, is what a tick is named after: an integer cannot drift."
+args = [
+  { name = "axis", type = "string", positional = true, default = "\"x\"" },
+  { name = "about", type = "int", positional = true, default = "6" },
+]
+
+[[op]]
+name = "axes_draw"
+module = "axes"
+method = "draw"
+on = "Axes"
+kind = "method"
+returns = "drawn"
+context = ["axes", "film_font"]
+doc = "Draw the frame, ticks and labels, each named under `name`. Returns the Axes, for chaining. Colours and sizes come from `looks`."
+args = [
+  { name = "group", type = "group", positional = true },
+  { name = "name", type = "key", positional = true, default = "\"plot\"" },
+  { name = "about", type = "int", default = "6" },
+  { name = "grid", type = "bool", default = "false" },
+]
+
+[[op]]
+name = "axes"
+makes = "Axes"
+on = "module"
+kind = "shortcut"
+fixed = {}
+context = []
+doc = "A coordinate map from your numbers to pixels: see Axes. `x` and `y` are (low, high)."
+args = [
+  { name = "x", type = "pair" },
+  { name = "y", type = "pair" },
+  { name = "at", type = "at", default = "none" },
+  { name = "size", type = "radius", default = "none" },
+  { name = "within", type = "slot", default = "none" },
+]

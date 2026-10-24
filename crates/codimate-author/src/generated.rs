@@ -2,7 +2,7 @@
 
 use crate::surface::{self, run};
 use crate::Refusal;
-use crate::{marker, preset};
+use crate::{axes, marker, preset};
 
 /// Every operation the manifest names, to its Core function; anything else
 /// is one of the Core's own operations, which Skins use but authors never see.
@@ -41,6 +41,13 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "text_preset" => run(data, preset::text_preset),
         "text_preset_draw" => run(data, preset::text_preset_draw),
         "text_preset_rules" => run(data, preset::text_preset_rules),
+        "axes" => run(data, axes::axes),
+        "axes_looks" => run(data, axes::axes_looks),
+        "axes_at" => run(data, axes::axes_at),
+        "axes_samples" => run(data, axes::axes_samples),
+        "axes_ticks" => run(data, axes::axes_ticks),
+        "axes_draw" => run(data, axes::axes_draw),
+        "axes_points" => run(data, axes::axes_points),
         _ => surface::internal(op, data),
     }
 }

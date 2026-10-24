@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from .canvas import height, width
 
 
 @dataclass(frozen=True)
@@ -79,23 +78,6 @@ class Slot:
         if anchor == "top":
             return (self.x, self.top)
         raise ValueError(f"unknown anchor {anchor!r} — use center, top or bottom")
-
-
-# ponytail: `axes` still lays itself out here; these two move with it.
-def _within(box) -> "Slot":
-    """The region a run of Slots divides up — the whole canvas by default."""
-    if box is not None:
-        return box
-    return Slot(x=width() / 2, y=height() / 2, w=width(), h=height())
-
-
-def _size(size):
-    """A Slot size: one number for both sides, or `(w, h)`."""
-    if size is None:
-        return None, None
-    if isinstance(size, (int, float)):
-        return float(size), None
-    return size
 
 
 from .._surface import column, row  # noqa: E402, F401  (worked out by the Authoring Core)

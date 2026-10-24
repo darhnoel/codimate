@@ -95,8 +95,8 @@ def _radius(r):
     return float(r) if isinstance(r, (int, float)) else [float(r[0]), float(r[1])]
 
 
-def _pair(pair) -> "list[float]":
-    return [float(pair[0]), float(pair[1])]
+def _pair(pair):
+    return None if pair is None else [float(pair[0]), float(pair[1])]
 
 
 def _bool(value) -> bool:

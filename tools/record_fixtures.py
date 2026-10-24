@@ -489,9 +489,79 @@ def slice9():
     return cases
 
 
+def axes_fields(plot):
+    return {"x0": plot.x0, "x1": plot.x1, "y0": plot.y0, "y1": plot.y1,
+            "left": plot.left, "top": plot.top, "w": plot.w, "h": plot.h,
+            "ink": plot.ink, "label": plot.label, "layer": plot.layer,
+            "right": plot.right, "bottom": plot.bottom}
+
+
+def slice10():
+    canvas = [1280.0, 720.0]
+    made = []
+    for kwargs, data in [
+        ({"x": (-4, 4), "y": (-2, 6)}, {"x": [-4, 4], "y": [-2, 6], "at": None, "size": None, "within": None}),
+        ({"x": (0, 10), "y": (0, 5), "size": (760, 420), "at": cm.at(x=500, top=100)},
+         {"x": [0, 10], "y": [0, 5], "size": [760, 420],
+          "at": {"x": 500, "y": None, "top": 100, "bottom": None}, "within": None}),
+        ({"x": (0, 1), "y": (0, 1), "size": 300, "within": cm.Slot(x=300, y=300, w=400, h=400)},
+         {"x": [0, 1], "y": [0, 1], "size": 300, "at": None,
+          "within": {"x": 300, "y": 300, "w": 400, "h": 400, "anchor": "center"}}),
+        ({"x": (1, 1), "y": (0, 1)}, {"x": [1, 1], "y": [0, 1], "at": None, "size": None, "within": None}),
+    ]:
+        try:
+            expected = {"ok": axes_fields(cm.axes(**kwargs))}
+        except ValueError as error:
+            expected = {"error": str(error)}
+        made.append({"op": "axes", "data": {**data, "canvas": canvas}, "expected": expected})
+    plot = cm.axes(x=(-4, 4), y=(-2, 6))
+    fields = axes_fields(plot)
+    cases = made + [
+        {"op": "axes_looks", "data": {"axes": fields, "ink": "#334", "label": 16, "layer": 3},
+         "expected": {"ok": axes_fields(plot.looks(ink="#334", label=16, layer=3))}},
+        {"op": "axes_looks", "data": {"axes": fields, "ink": None, "label": None, "layer": None},
+         "expected": {"ok": axes_fields(plot.looks())}},
+        {"op": "axes_at", "data": {"axes": fields, "x": 2.0, "y": 4.0},
+         "expected": {"ok": list(plot.at(2.0, 4.0))}},
+        {"op": "axes_at", "data": {"axes": fields, "x": -4, "y": -2},
+         "expected": {"ok": list(plot.at(-4, -2))}},
+    ]
+    for steps, over in ((200, None), (4, (-1, 1)), (0, None)):
+        xs = [x for x, _ in plot.line(lambda t: 0.0, steps=steps, over=over)]
+        lo, hi = (plot.x0, plot.x1) if over is None else over
+        n = max(int(steps), 1)
+        cases.append({"op": "axes_samples",
+                      "data": {"axes": fields, "steps": steps, "over": list(over) if over else None},
+                      "expected": {"ok": [lo + (hi - lo) * i / n for i in range(n + 1)]}})
+        ys = [x * x for x in cases[-1]["expected"]["ok"]]
+        cases.append({"op": "axes_points",
+                      "data": {"axes": fields, "xs": cases[-1]["expected"]["ok"], "ys": ys},
+                      "expected": {"ok": [list(p) for p in plot.line(lambda t: t * t, steps=steps, over=over)]}})
+        assert xs
+    for axis, about, p in (("x", 6, plot), ("y", 6, plot), ("x", 3, cm.axes(x=(0, 0.05), y=(0, 1))),
+                           ("y", 10, cm.axes(x=(0, 1), y=(-1000, 2500)))):
+        cases.append({"op": "axes_ticks", "data": {"axes": axes_fields(p), "axis": axis, "about": about},
+                      "expected": {"ok": [list(t) for t in p.ticks(axis, about)]}})
+    for frame in (ROOT, GROUP):
+        for grid, p, name in ((False, plot, "plot"), (True, cm.axes(x=(0, 10), y=(0, 5)).looks(layer=2), ("g", 1))):
+            scene, target = where(frame)
+            p.draw(target, name, grid=grid)
+            cases.append({"op": "axes_draw",
+                          "data": {"axes": axes_fields(p), "group": frame, "film_font": "",
+                                   "name": list(map(str, cm.scene._key(name).split("/"))),
+                                   "about": 6, "grid": grid},
+                          "expected": {"ok": [shape_of(s) for s in scene._shapes.values()]}})
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {
+    "slice10": [(
+        lambda c: c["op"] == "axes" and "error" in c["expected"],
+        "the Core sees the ranges as numbers, so it writes them as floats",
+        lambda c: c["expected"].update(error="a range needs width, got x=(1.0, 1.0) y=(0.0, 1.0)"),
+    )],
     "slice2": [(
         lambda c: c["op"] == "arc" and c["data"]["group"]["path"],
         "an arc's sweep is angles, not coordinates: a Group no longer moves it",
@@ -506,7 +576,7 @@ if __name__ == "__main__":
     cases = globals()[name]()
     for applies, why, fix in FIXES.get(name, []):
         for c in cases:
-            if applies(c) and "ok" in c["expected"]:
+            if applies(c):
                 fix(c)
                 c["fixed"] = why
     path = OUT / f"{name}.json"

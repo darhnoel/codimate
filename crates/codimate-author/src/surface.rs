@@ -230,13 +230,30 @@ pub struct Line {
 
 /// A line between two points. Both ends move with the Group.
 pub fn line(a: Line) -> Result<Shape, Refusal> {
-    let [x2, y2] = a.end;
-    Ok(Shape {
-        x2: a.group.ox + x2,
-        y2: a.group.oy + y2,
-        w: a.w,
-        ..placed(&a.group, &a.key, "line", (a.start[0], a.start[1]))
-    })
+    Ok(line_shape(&a.group, &a.key, a.start, a.end, a.w))
+}
+
+/// `line`'s shape, for any line the Core draws.
+pub fn line_shape(frame: &Frame, key: &[String], start: [f64; 2], end: [f64; 2], w: f64) -> Shape {
+    Shape {
+        x2: frame.ox + end[0],
+        y2: frame.oy + end[1],
+        w,
+        ..placed(frame, key, "line", (start[0], start[1]))
+    }
+}
+
+/// `text` at a placement (a point or a Place), for any text the Core draws.
+pub fn text_at(
+    frame: &Frame,
+    key: &[String],
+    content: &str,
+    size: f64,
+    font: &str,
+    at: &Value,
+) -> Result<Shape, Refusal> {
+    let centre = centre(frame, Some(at), size / 2.0)?;
+    Ok(text_shape(frame, key, content, size, font, centre))
 }
 
 #[derive(Deserialize)]
@@ -338,7 +355,7 @@ pub fn curve(a: Curve) -> Result<Shape, Refusal> {
     })
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(untagged)]
 pub enum Radius {
     Round(f64),
@@ -388,6 +405,33 @@ fn centred() -> String {
 }
 
 impl Slot {
+    /// The whole canvas, as a region.
+    pub fn centred(canvas: [f64; 2]) -> Slot {
+        Slot {
+            x: canvas[0] / 2.0,
+            y: canvas[1] / 2.0,
+            w: canvas[0],
+            h: canvas[1],
+            anchor: centred(),
+        }
+    }
+
+    pub fn x(&self) -> f64 {
+        self.x
+    }
+
+    pub fn y(&self) -> f64 {
+        self.y
+    }
+
+    pub fn w(&self) -> f64 {
+        self.w
+    }
+
+    pub fn h(&self) -> f64 {
+        self.h
+    }
+
     /// The single point this Slot anchors things at.
     fn point(&self, anchor: Option<&str>) -> Result<(f64, f64), Refusal> {
         match anchor.unwrap_or(&self.anchor) {

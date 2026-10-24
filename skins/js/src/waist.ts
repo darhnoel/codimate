@@ -93,7 +93,7 @@ export const to = {
   },
   points: (points: readonly Point[]) => points.map((p) => to.point(p)),
   radius: (r?: number | Point) => (r === undefined || r === null ? null : typeof r === "number" ? r : to.point(r)),
-  pair: (pair: readonly [number, number]) => [Number(pair[0]), Number(pair[1])],
+  pair: (pair?: readonly [number, number]) => (pair === undefined || pair === null ? null : [Number(pair[0]), Number(pair[1])]),
   bool: (value: boolean) => Boolean(value),
   int: (value: number) => Math.trunc(Number(value)),
   style: (style?: { _fields: unknown } | null) => (style === undefined || style === null ? null : style._fields),

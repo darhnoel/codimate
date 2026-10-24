@@ -200,6 +200,61 @@ class TextPreset:
         return tuple(Rule._of(made) for made in call("text_preset_rules", {"preset": self._fields, "ease": _string(ease), "stagger": _number(stagger), "order": _string(order)}))
 
 
+class Axes:
+    """A map from your numbers to pixels. `x` and `y` are (low, high); `size` is (w, h) in pixels, or one number for a square, defaulting to most of the canvas; `at` places the box's centre, and `within` fits it to part of the canvas. It returns points rather than drawing, so what you plot is a shape with a name of yours."""
+
+    def __init__(self, *, x, y, at=None, size=None, within=None) -> None:
+        self._set(call("axes", {"canvas": _canvas(), "x": _pair(x), "y": _pair(y), "at": _at(at), "size": _radius(size), "within": _slot(within)}))
+
+    @classmethod
+    def _of(cls, made: dict) -> "Axes":
+        """One the Authoring Core has already made."""
+        value = cls.__new__(cls)
+        value._set(made)
+        return value
+
+    def _set(self, made: dict) -> None:
+        self._fields = {k: v for k, v in made.items() if k != "payload"}
+        self.x0 = made["x0"]
+        self.x1 = made["x1"]
+        self.y0 = made["y0"]
+        self.y1 = made["y1"]
+        self.left = made["left"]
+        self.top = made["top"]
+        self.w = made["w"]
+        self.h = made["h"]
+        self.ink = made["ink"]
+        self.label = made["label"]
+        self.layer = made["layer"]
+        self.right = made["right"]
+        self.bottom = made["bottom"]
+
+    def __repr__(self) -> str:
+        return "Axes(" + f"x0={self.x0!r}" + ", " + f"x1={self.x1!r}" + ", " + f"y0={self.y0!r}" + ", " + f"y1={self.y1!r}" + ", " + f"left={self.left!r}" + ", " + f"top={self.top!r}" + ", " + f"w={self.w!r}" + ", " + f"h={self.h!r}" + ", " + f"ink={self.ink!r}" + ", " + f"label={self.label!r}" + ", " + f"layer={self.layer!r}" + ", " + f"right={self.right!r}" + ", " + f"bottom={self.bottom!r}" + ")"
+
+    def looks(self, ink=None, label=None, layer=None):
+        """Restyle the frame, ticks and labels. Returns a new Axes."""
+        return Axes._of(call("axes_looks", {"axes": self._fields, "ink": _string(ink), "label": _number(label), "layer": _number(layer)}))
+
+    def at(self, x, y):
+        """One data point as a pixel pair, for any shape's `at`."""
+        return _as_size(call("axes_at", {"axes": self._fields, "x": _number(x), "y": _number(y)}))
+
+    def line(self, f, steps=200, over=None):
+        """steps + 1 points along y = f(x), as pixels, for a curve. `over=(lo, hi)` samples part of the range. Every sample is kept, even outside the box: curves only tween when their point counts match."""
+        xs = call("axes_samples", {"axes": self._fields, "steps": _int(steps), "over": _pair(over)})
+        return _as_points(call("axes_points", {"axes": self._fields, "xs": xs, "ys": [float(f(x)) for x in xs]}))
+
+    def ticks(self, axis="x", about=6):
+        """(n, value, label) per tick, where n, the step multiple, is what a tick is named after: an integer cannot drift."""
+        return [tuple(tick) for tick in call("axes_ticks", {"axes": self._fields, "axis": _string(axis), "about": _int(about)})]
+
+    def draw(self, group, name="plot", *, about=6, grid=False):
+        """Draw the frame, ticks and labels, each named under `name`. Returns the Axes, for chaining. Colours and sizes come from `looks`."""
+        group._adopt(call("axes_draw", {"axes": self._fields, "film_font": _film_font(), "group": _group(group), "name": _key(name), "about": _int(about), "grid": _bool(grid)}))
+        return self
+
+
 def words_up(name, content, *, style=None, at=None) -> "TextPreset":
     """A text preset that brings words up into place."""
     return TextPreset(name, content, 'words_up', style=style, at=at)
@@ -233,6 +288,11 @@ def words_right(name, content, *, style=None, at=None) -> "TextPreset":
 def words_up_blur(name, content, *, style=None, at=None) -> "TextPreset":
     """A text preset that brings soft, blurred words up into focus."""
     return TextPreset(name, content, 'words_up_blur', style=style, at=at)
+
+
+def axes(*, x, y, at=None, size=None, within=None) -> "Axes":
+    """A coordinate map from your numbers to pixels: see Axes. `x` and `y` are (low, high)."""
+    return Axes(x=x, y=y, at=at, size=size, within=within)
 
 
 def ngon(sides, r, *, at=(0.0, 0.0), turn=0.0):
