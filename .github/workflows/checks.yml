@@ -88,8 +88,10 @@ jobs:
         run: .venv/bin/python tools/generate.py --check
 
       - name: Build the Python Skin and the JavaScript engine
+        # Release, as tools/check.py builds it: the Waist's budget is for
+        # optimised code, and a debug build is several times slower.
         run: |
-          .venv/bin/maturin develop
+          .venv/bin/maturin develop --release
           .venv/bin/python tools/build_js.py
 
       - name: Conformance Examples agree in every language
