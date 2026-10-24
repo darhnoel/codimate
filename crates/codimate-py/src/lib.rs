@@ -222,6 +222,13 @@ impl Frames {
     }
 }
 
+/// The Waist (ADR 0032): one authoring operation, data in and data out. Every
+/// Skin reaches the Authoring Core through this one function.
+#[pyfunction]
+fn call(op: &str, data: &str) -> String {
+    codimate_author::call(op, data)
+}
+
 /// The easing the Engine applies between two moments.
 ///
 /// Exposed so an author can draw or reason about pacing without writing a
@@ -260,6 +267,7 @@ fn measure_formula(latex: &str, size: f32) -> PyResult<(f32, f32)> {
 
 #[pymodule]
 fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(call, m)?)?;
     m.add_function(wrap_pyfunction!(render, m)?)?;
     m.add_function(wrap_pyfunction!(render_frame_png, m)?)?;
     m.add_function(wrap_pyfunction!(ease, m)?)?;

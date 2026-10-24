@@ -1,0 +1,72 @@
+# The Interface Manifest (ADR 0031): every public operation of the Authoring
+# Surface, once. `tools/generate.py` writes each Skin's declarations and the
+# Core's dispatch table from this file; nothing generated is edited by hand.
+#
+# Names are snake_case here and in Python; JavaScript uses the same names in
+# camelCase, by one rule, no exceptions.
+#
+#   name     the operation, and the method's name
+#   on       where the method lives: Group (a Scene is one), Handle
+#   kind     builder (draws or changes a shape) or query (answers at once)
+#   context  what the Skin supplies itself, never the author:
+#              group      the Group's frame (path, point, width)
+#              shape      the shape a Handle stands for
+#              film_font  the film's font (`font()`)
+#   args     the author's arguments, in order. `positional = true` ones come
+#            first and are passed by position; the rest are keyword arguments
+#            in Python and one options object in JavaScript. `default` makes
+#            one optional; a default of "none" means "not given".
+#
+# Types: key (a name or a path of names), number, text (anything shown as
+# text), string, at (a point, a Slot or a Place).
+
+[[op]]
+name = "rect"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A rectangle. Say where with a point, a Slot, or `at(...)`. Round the corners with `.round(12)`."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "h", type = "number" },
+  { name = "w", type = "number", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "circle"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A filled circle. `fill(\"none\", edge=...)` draws a ring."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "r", type = "number" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "text"
+on = "Group"
+kind = "builder"
+context = ["group", "film_font"]
+doc = "Text, centred horizontally. `font` is a font file or an installed font's name, for this text only; unset, the film's font."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "size", type = "number", default = "16" },
+  { name = "font", type = "string", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "fill"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "Colour it. `edge` outlines it; `color=\"none\"` leaves it unfilled. Saying nothing about the outline leaves it alone."
+args = [
+  { name = "color", type = "string", positional = true, default = "\"white\"" },
+  { name = "edge", type = "string", default = "none" },
+  { name = "edge_w", type = "number", default = "none" },
+]

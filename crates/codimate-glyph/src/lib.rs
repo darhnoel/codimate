@@ -6,7 +6,7 @@ use codimate_fonts::{FontId, FontRegistry};
 pub enum GlyphError {
     /// No font data for the given `FontId`.
     NoFont(FontId),
-    /// HarfBuzz shaping failed.
+    /// Shaping failed: the font could not be read for shaping.
     Shaping(String),
     /// Glyph outline extraction failed.
     Outline(String),
@@ -29,21 +29,27 @@ pub fn shape(
         return Err(GlyphError::NoFont(font_id));
     }
 
-    // 1. HarfBuzz shaping — get glyph IDs + positions.
+    // 1. Shaping — glyph IDs + positions. rustybuzz is HarfBuzz ported to Rust,
+    // so the same code builds for the browser (WebAssembly) and the server.
     let index = registry.index(font_id);
-    let hb_face = harfbuzz_rs::Face::new(data, index);
-    let upem = hb_face.upem();
+    let face = rustybuzz::Face::from_slice(data, index)
+        .ok_or_else(|| GlyphError::Shaping(format!("cannot read font {font_id:?}")))?;
+    let upem = face.units_per_em() as i64;
 
-    let mut hb_font = harfbuzz_rs::Font::new(hb_face);
-    // Scale so positions are in 26.6 fixed-point pixels
-    let hb_scale = (font_size * 64.0) as i32;
-    hb_font.set_scale(hb_scale, hb_scale);
+    let mut buffer = rustybuzz::UnicodeBuffer::new();
+    buffer.push_str(text);
+    let glyph_buffer = rustybuzz::shape(&face, &[], buffer);
 
-    let buffer = harfbuzz_rs::UnicodeBuffer::new().add_str(text);
-    let glyph_info = harfbuzz_rs::shape(&hb_font, buffer, &[]);
+    let positions = glyph_buffer.glyph_positions();
+    let infos = glyph_buffer.glyph_infos();
 
-    let positions = glyph_info.get_glyph_positions();
-    let infos = glyph_info.get_glyph_infos();
+    // rustybuzz answers in font units. HarfBuzz used to be asked for 26.6
+    // fixed-point pixels and rounded each value there, so do the same rounding,
+    // the way HarfBuzz does it (`em_mult`, then round half up): text lands on
+    // exactly the 1/64 px it always did, and golden images stay put.
+    let scale_26_6 = (font_size * 64.0) as i64;
+    let em_mult = (scale_26_6 << 16) / upem;
+    let to_26_6 = |v: i32| ((v as i64 * em_mult + 32768) >> 16) as f32;
 
     // 2. TTF outline extraction — convert each glyph to path segments.
     // `outline_glyph` reads TrueType and CFF outlines alike, so an `.otf`
@@ -51,17 +57,17 @@ pub fn shape(
     let ttf_face = ttf_parser::Face::parse(data, index)
         .map_err(|e| GlyphError::Outline(format!("ttf_face: {e}")))?;
 
-    let scale_factor = font_size / upem as f32;
+    let scale_factor = font_size / upem as f32; // font units to pixels, for outlines
     let inv_64 = 1.0 / 64.0;
     let mut cursor_x: f32 = 0.0;
     let mut glyph_nodes = Vec::new();
 
     for (info, pos) in infos.iter().zip(positions.iter()) {
-        let ox = cursor_x + (pos.x_offset as f32) * inv_64;
-        let oy = -(pos.y_offset as f32) * inv_64;
-        let advance = (pos.x_advance as f32) * inv_64;
+        let ox = cursor_x + to_26_6(pos.x_offset) * inv_64;
+        let oy = -to_26_6(pos.y_offset) * inv_64;
+        let advance = to_26_6(pos.x_advance) * inv_64;
 
-        let gid = ttf_parser::GlyphId(info.codepoint as u16);
+        let gid = ttf_parser::GlyphId(info.glyph_id as u16);
         let mut collector = OutlineCollector::new(ox, oy, scale_factor);
         let outlines_ok = ttf_face.outline_glyph(gid, &mut collector).is_some();
         let segs = collector.segments();

@@ -49,17 +49,54 @@ jobs:
       - name: Lint
         run: .venv/bin/ruff check
 
-      # The same harfbuzz the wheels vendor, so the metrics tested here are
-      # the metrics a `pip install` actually gets. Without this, a runner with
-      # libharfbuzz-dev would quietly test a different shaper.
       # With the `painted` extra (numpy, Pillow), so the science kit's painted
-      # balls are tested rather than skipped.
+      # balls are tested rather than skipped. Text is shaped by rustybuzz, in
+      # Rust, so the runner's own libraries cannot change the metrics.
       - name: Build the extension
-        env:
-          HARFBUZZ_SYS_NO_PKG_CONFIG: "1"
         run: .venv/bin/maturin develop --extras painted
 
       # The fast suite: no video, so no ffmpeg and no typst. Rendering every
       # example takes minutes and is the job of a release, not of every push.
       - name: Tests
         run: .venv/bin/python python/tests/run.py
+
+  # Every Skin over the one Authoring Core (ADR 0030–0033): the generated files
+  # match the Interface Manifest, every Conformance Example writes the same film
+  # data in every language, and the JavaScript Skin's own parts work.
+  skins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install the toolchain
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet maturin
+          cargo install --quiet wasm-bindgen-cli --version \
+            "$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | grep version | cut -d'"' -f2)"
+
+      - name: Generated files match the Interface Manifest
+        run: .venv/bin/python tools/generate.py --check
+
+      - name: Build the Python Skin and the JavaScript engine
+        run: |
+          .venv/bin/maturin develop
+          .venv/bin/python tools/build_js.py
+
+      - name: Conformance Examples agree in every language
+        run: .venv/bin/python tools/conformance.py
+
+      - name: The JavaScript Skin's own parts
+        run: node --test skins/js/test/skin.test.ts
+
+      - name: The Waist's overhead stays within budget
+        run: .venv/bin/python tools/bench_waist.py

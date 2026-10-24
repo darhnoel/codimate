@@ -1,0 +1,10 @@
+[package]
+name = "codimate-author"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+description = "The Authoring Core: everything an Authoring Surface does that is not the author's own code"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }

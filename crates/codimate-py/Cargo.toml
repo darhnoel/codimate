@@ -9,6 +9,7 @@ name = "_codimate"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+codimate-author = { path = "../codimate-author" }
 codimate-core = { path = "../codimate-core" }
 codimate-layout = { path = "../codimate-layout" }
 # Only for the `Playable` trait, to resolve one moment for a debug frame.

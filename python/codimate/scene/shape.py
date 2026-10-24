@@ -38,7 +38,14 @@ class _Shape:
     pivot: str = "center"
 
 
-PIVOTS = ("center", "top", "bottom", "left", "right")
+def _shape_of(fields: dict) -> _Shape:
+    """A shape from the Authoring Core's answer. Its points arrive as a list
+    and are kept as a tuple, as everywhere else, so two shapes compare alike."""
+    if fields["points"]:
+        fields["points"] = tuple(fields["points"])
+    else:
+        fields["points"] = ()
+    return _Shape(**fields)
 
 
 def _key(path) -> str:

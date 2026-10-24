@@ -38,13 +38,54 @@ network signal flow, a swap. Avoid treating the video timeline as the concept.
 **Explanation Author**: The primary human actor Codimate optimizes for. This is
 a **Python developer** who can express a concept as an algorithm and wants a
 reliable daily workflow from concept to preview/export without learning
-renderer internals — or Rust — first. An Explanation Author never writes Rust
+renderer internals — or Rust — first. They write Python, or JavaScript or
+TypeScript through codimate-js: the concepts and names are the same in both.
+An Explanation Author never writes Rust
 and never encounters `Animated<T>`, Slots, Effects, or the three-layer model.
 
-**Authoring Surface**: The Python API an Explanation Author writes: `emit`,
-`trace`, `Scene`, `Rule`, `Timing`, `explain`. It is the only supported way to
-author an explanation. The Rust crates are the **Engine** — machinery the
-Authoring Surface drives, not a second front door.
+**Authoring Surface**: The API an Explanation Author writes: `emit`, `trace`,
+`Scene`, `Rule`, `Timing`, `explain`. It exists in two languages, Python and
+JavaScript/TypeScript, with one meaning: each language's Surface is a thin
+**Skin** over the shared **Authoring Core**. The Rust crates are the **Engine**
+— machinery the Authoring Surface drives, not a third front door.
+
+**Authoring Core**: The one implementation of everything an Authoring Surface
+does that is not the author's own code: building Scenes and their shapes,
+anchors and Slots, Rules and Timing, text presets. Written once; every Skin
+exposes it.
+_Avoid_: shared library, backend
+
+**Skin**: One language's Authoring Surface: the Authoring Core in that language's
+idiom, plus what can only happen in that language: calling the author's
+algorithm and view, `emit`, and reading and writing files. A Skin holds no
+authoring logic: it records the author's calls and sends them across the Waist.
+_Avoid_: binding, wrapper, port
+
+**Waist**: The one narrow boundary between every Skin and the Authoring Core:
+a few functions that take and return plain data. However many languages there
+are, there is one Waist.
+_Avoid_: FFI layer, API, bridge
+
+**Builder call**: An authoring call that only describes what to draw
+(`rect`, `fill`, `round`): a Skin records it, and the Core carries it out when
+the Scene crosses the Waist.
+
+**Query**: An authoring call whose answer the author needs at once (`measure`,
+a Slot's edges, `ease`): it crosses the Waist on its own. Queries are few, and
+each is marked as one in the Interface Manifest.
+_Avoid_: getter, sync call
+
+**Interface Manifest**: The one description of every public name of the
+Authoring Surface: functions, their arguments, types and defaults. Both Skins'
+declarations are generated from it, so a name exists in both languages or in
+neither. Python names are snake_case; JavaScript names are the same names in
+camelCase, by one fixed rule with no exceptions.
+_Avoid_: schema, API spec, IDL
+
+**Conformance Example**: A small explanation written in both languages that must
+produce identical film data. Together they are the behavioural specification of
+the Authoring Surface: a new feature starts as one, failing in both.
+_Avoid_: parity test, golden test
 
 **Engine**: The Rust crates behind the Authoring Surface. The Engine owns every
 per-frame concern (diffing, interpolation, rasterization, encoding); the

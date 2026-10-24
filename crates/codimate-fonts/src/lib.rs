@@ -119,6 +119,25 @@ impl FontRegistry {
         } else {
             installed(spec)?
         };
+        self.register(spec, bytes, index)
+    }
+
+    /// Register a font from bytes the caller already has, under the `spec` its
+    /// scenes name it by. Where there is no file system (the browser), this is
+    /// how a scene's font reaches the registry: [`load`] then finds it by `spec`
+    /// and never reads a file.
+    ///
+    /// [`load`]: Self::load
+    pub fn provide(&self, spec: &str, bytes: Vec<u8>) -> Result<FontId, String> {
+        let embedded = generated::entries().len();
+        if let Some(i) = loaded().read().unwrap().iter().position(|f| f.spec == spec) {
+            return Ok(FontId((embedded + i) as u16));
+        }
+        self.register(spec, bytes, 0)
+    }
+
+    fn register(&self, spec: &str, bytes: Vec<u8>, index: u32) -> Result<FontId, String> {
+        let embedded = generated::entries().len();
         // ponytail: leaked — a film names a handful of fonts and keeps them all
         // to the end, the way formulas and pictures are cached.
         let data: &'static [u8] = Box::leak(bytes.into_boxed_slice());

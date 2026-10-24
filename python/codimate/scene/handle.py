@@ -5,10 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 
 from . import marker as mk
-from .shape import PIVOTS
+from .._surface import _HandleSurface
+from .._waist import call
+from .shape import PIVOTS, _shape_of
 
 
-class Handle:
+class Handle(_HandleSurface):
     """What a shape call gives back: a way to say more about that shape.
 
     Chained rather than passed, so no function carries eighteen arguments:
@@ -50,7 +52,16 @@ class Handle:
         self._shapes[self._name] = replace(self._shapes[self._name], **changes)
         return self
 
-    def fill(self, color: str = "white", edge: str = None,
+    def _shape(self) -> dict:
+        # A shallow copy of its fields: everything in it is already plain data,
+        # and `asdict`'s recursive copy cost more than the crossing itself.
+        return dict(vars(self._shapes[self._name]))
+
+    def _change(self, op: str, data: dict) -> None:
+        """Change this shape with the Authoring Core and keep the result."""
+        self._shapes[self._name] = _shape_of(call(op, data))
+
+    def fill(self, color: str = "white", *, edge: str = None,
              edge_w: float = None) -> "Handle":
         """Colour it. `edge` outlines it; `color="none"` leaves it unfilled.
 
@@ -59,17 +70,10 @@ class Handle:
         by an earlier `fill`, or by `curve`, which carries its stroke width
         there.
         """
+        # ponytail: markers still live here until their slice moves to the Core.
         if self._stroke() is not None:
             color = mk.HIGHLIGHTS.get(color, color)
-        changes = {"color": color}
-        if edge is not None:
-            changes["edge"] = edge
-        if edge_w is not None:
-            changes["edge_w"] = float(edge_w)
-        elif edge is not None:
-            # An edge with no width was asked to be visible, so give it one.
-            changes["edge_w"] = max(self._shapes[self._name].edge_w, 1.0)
-        self._set(**changes)
+        super().fill(color, edge=edge, edge_w=edge_w)
         marker = self._marks.get(self._name)
         if isinstance(marker, str):   # a highlight's words: this is them unmarked
             self._marks[marker] = replace(self._marks[marker], paper=color)

@@ -5,16 +5,18 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Hashable
 
-from ..layout import _FONT, Place, Slot, _UNSET, _resolve
+from .._surface import _GroupSurface
+from .._waist import call
+from ..layout import Place, Slot, _UNSET, _resolve
 from . import marker as mk
 from .handle import Handle
-from .shape import _Shape, _key, _point
+from .shape import _Shape, _key, _point, _shape_of
 
 if TYPE_CHECKING:
     from .root import Scene
 
 
-class Group:
+class Group(_GroupSurface):
     """Somewhere to draw, with its own origin and its own name.
 
     Everything drawn on a Group moves as one thing, because the Engine sees
@@ -59,6 +61,26 @@ class Group:
         self._scene._shapes[name] = shape
         return Handle(self._scene._shapes, name, self._scene._markers)
 
+    def _frame(self) -> dict:
+        """This Group as the Core needs it: its name path, point and width.
+        Built once: a Group never moves after it is made."""
+        frame = self.__dict__.get("_frame_data")
+        if frame is None:
+            frame = self._frame_data = {"path": [_key(p) for p in self._path],
+                                        "ox": self._ox, "oy": self._oy, "w": self._w}
+        return frame
+
+    def _build(self, op: str, data: dict) -> "Handle":
+        """Draw with the Authoring Core: it places the shape, this keeps it."""
+        shape = _shape_of(call(op, data))
+        if shape.item in self._scene._shapes:
+            raise ValueError(
+                f"two shapes share the name {shape.item!r} — "
+                "a name means exactly one thing"
+            )
+        self._scene._shapes[shape.item] = shape
+        return Handle(self._scene._shapes, shape.item, self._scene._markers)
+
     def _where(self, at, half: float):
         """One placement argument in, a centre out.
 
@@ -89,37 +111,6 @@ class Group:
     # That keeps every function small enough to hold in your head, and small
     # enough for a linter: `ruff --select PLR0913` allows five arguments and
     # these signatures used to carry eighteen.
-
-    def rect(self, key: Hashable, *, h: float, w: float = None, at=None) -> "Handle":
-        """A rectangle. Say where with a point, a Slot, or `cm.at(...)`.
-
-            scene.rect("box", h=40, at=cm.at(bottom=0)).fill("blue")
-
-        Round the corners with `.round(12)`.
-        """
-        if w is None:
-            fallback = self._w if self._path else _UNSET
-            w = _resolve((None, None, None), 0, ("w",), fallback)
-        x, y = self._where(at, h / 2)
-        return self._place(key, "rect", x=x, y=y, w=w, h=h)
-
-    def circle(self, key: Hashable, *, r: float, at=None) -> "Handle":
-        """A filled circle. `color="none"` with `.fill(edge=...)` draws a ring."""
-        x, y = self._where(at, r)
-        return self._place(key, "circle", x=x, y=y, r=r)
-
-    def text(self, key: Hashable, content: Any, *,
-             size: float = 16.0, font: str = None, at=None) -> "Handle":
-        """Text, centred horizontally. You never deal with baselines.
-
-            scene.text("title", "Bubble sort", size=48, font="fonts/Inter-Bold.ttf")
-
-        ``font`` is a ``.ttf``/``.otf`` file or an installed font's name, for this
-        text only; unset, the film's font (``cm.font``).
-        """
-        x, y = self._where(at, size / 2)
-        return self._place(key, "text", x=x, y=y, text=str(content), size=size,
-                           font=str(font or _FONT[0]), layer=10)
 
     def marker(self, key: Hashable, *, w: float, h: float, at=None) -> "Handle":
         """A highlighter stroke over any box on screen.

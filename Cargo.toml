@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/codimate-author",
     "crates/codimate-core",
     "crates/codimate-animation",
     "crates/codimate-layout",
@@ -11,6 +12,7 @@ members = [
     "crates/codimate-glyph",
     "crates/codimate-py",
     "crates/codimate-reconcile",
+    "crates/codimate-wasm",
 ]
 
 [workspace.package]

@@ -352,6 +352,29 @@ class Explanation:
                 check=True)
         return output
 
+    def export_web(self, output: str) -> str:
+        """Save the film for the browser, where codimate-js plays it.
+
+            cm.explain(...).export_web("film.json")
+
+        The file is what :meth:`render` hands the Engine (every scene, the
+        cameras, the motion rules and the durations), so the browser draws the
+        same frames the video has, from the same Rust code. Nothing is
+        rendered here. ``fonts`` lists the fonts the scenes name: the page
+        must provide those before playing. The Authoring Core writes the file,
+        so the same film written from any language is the same bytes.
+        """
+        from pathlib import Path
+
+        from .._waist import call
+
+        text = call("film", {"width": width(), "height": height(),
+                             "durations": list(self.durations), **self._payloads()})
+        path = Path(output).expanduser().resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        return output
+
     def frame_at(self, seconds: float, output: str = "frame.png",
                  scale: float = 1.0) -> str:
         """Save a single moment as a PNG, without rendering the video.

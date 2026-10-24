@@ -34,3 +34,6 @@ __pycache__/
 # locals
 output/
 branding/
+
+/skins/js/pkg/
+/skins/js/dist/

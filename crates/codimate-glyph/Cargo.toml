@@ -7,5 +7,5 @@ license.workspace = true
 [dependencies]
 codimate-core = { path = "../codimate-core" }
 codimate-fonts = { path = "../codimate-fonts" }
-harfbuzz_rs = "2.0"
+rustybuzz = "0.20"   # HarfBuzz in Rust: also builds for WebAssembly
 ttf-parser = "0.25"
