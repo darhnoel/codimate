@@ -99,3 +99,10 @@ def _pair(pair) -> "list[float]":
 
 def _bool(value) -> bool:
     return bool(value)
+
+
+def _slot(slot):
+    """A Slot as data: its centre, its size and its anchor."""
+    if slot is None:
+        return None
+    return {"x": slot.x, "y": slot.y, "w": slot.w, "h": slot.h, "anchor": slot.anchor}

@@ -22,8 +22,16 @@ export class Group extends GroupSurface {
     this.w = w;
   }
 
+  private frameData: Frame | null = null;
+
   protected _frame(): Frame {
-    return { path: this.path.map((p) => to.key(p).join("/")), ox: this.ox, oy: this.oy, w: this.w };
+    return (this.frameData ??= { path: this.path.map((p) => to.key(p).join("/")), ox: this.ox, oy: this.oy, w: this.w });
+  }
+
+  protected _nest(frame: Frame): Group {
+    const group = new Group(this.scene, frame.path, frame.ox, frame.oy, frame.w);
+    group.frameData = frame;
+    return group;
   }
 
   protected _build(op: string, data: object): Handle {

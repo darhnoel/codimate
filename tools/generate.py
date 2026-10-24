@@ -45,11 +45,13 @@ def load() -> list[dict]:
 # -- Rust: the Core's dispatch -------------------------------------------------
 
 def rust(ops: list[dict]) -> str:
-    arms = "\n".join(f'        "{op["name"]}" => run(data, surface::{op["name"]}),'
-                     for op in ops)
+    arms = "\n".join(
+        f'        "{op["name"]}" => '
+        f'{"run_frame" if op.get("returns") == "Group" else "run"}(data, surface::{op["name"]}),'
+        for op in ops)
     return f"""// {HEADER}
 
-use crate::surface::{{self, run}};
+use crate::surface::{{self, run, run_frame}};
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -87,8 +89,10 @@ def python(ops: list[dict]) -> str:
         params = ["self", *positional] + (["*", *keywords] if keywords else [])
         data = [PY_CONTEXT[c] for c in op["context"]]
         data += [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in op["args"]]
-        returns = "Handle" if op["on"] == "Group" else "self"
-        body = (f'        return self._build("{op["name"]}", {{{", ".join(data)}}})'
+        returns = op.get("returns") or ("Handle" if op["on"] == "Group" else "self")
+        body = (f'        return self._nest(call("{op["name"]}", {{{", ".join(data)}}}))'
+                if op.get("returns") == "Group" else
+                f'        return self._build("{op["name"]}", {{{", ".join(data)}}})'
                 if op["on"] == "Group" else
                 f'        self._change("{op["name"]}", {{{", ".join(data)}}})\n'
                 f'        return self')
@@ -100,8 +104,8 @@ def python(ops: list[dict]) -> str:
            "from __future__ import annotations\n",
            "from typing import TYPE_CHECKING\n",
            "from ._waist import " + ", ".join(sorted(
-               {"_film_font"} | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
-           "if TYPE_CHECKING:\n    from .scene import Handle\n"]
+               {"_film_font", "call"} | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
+           "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
     return "\n".join(out)
@@ -111,7 +115,7 @@ def python(ops: list[dict]) -> str:
 
 TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "string", "at": "At",
            "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
-           "pair": "readonly [number, number]", "bool": "boolean"}
+           "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
@@ -141,7 +145,10 @@ def typescript(ops: list[dict]) -> str:
                 source = f"({source} ?? {default})"
             data.append(f'{a["name"]}: to.{a["type"]}({source})')
         call = f'"{op["name"]}", {{ {", ".join(data)} }}'
-        if op["on"] == "Group":
+        if op.get("returns") == "Group":
+            body = f"    return this._nest(call({call}));"
+            returns = "Group"
+        elif op["on"] == "Group":
             body = f"    return this._build({call});"
             returns = "Handle"
         else:
@@ -152,11 +159,13 @@ def typescript(ops: list[dict]) -> str:
             f'  {camel(op["name"])}({", ".join(params)}): {returns} {{\n{body}\n  }}\n')
     out = [f"// {HEADER}\n//\n// The JavaScript Skin's side of the Interface Manifest: each method sends\n"
            "// its arguments across the Waist and keeps what comes back.\n",
-           'import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData } from "./waist.ts";\n'
-           'import type { Handle } from "./scene.ts";\n']
+           'import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";\n'
+           'import { call } from "./waist.ts";\n'
+           'import type { Group, Handle } from "./scene.ts";\n']
     for owner, methods in classes.items():
         hooks = ("  protected abstract _frame(): Frame;\n"
                  "  protected abstract _build(op: string, data: object): Handle;\n"
+                 "  protected abstract _nest(frame: Frame): Group;\n"
                  if owner == "Group" else
                  "  protected abstract _shape(): ShapeData;\n"
                  "  protected abstract _change(op: string, data: object): void;\n")

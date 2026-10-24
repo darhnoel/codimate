@@ -31,6 +31,9 @@ export type Key = string | number | readonly Key[];
 export type At = readonly [number, number] | { x: number; y: number; w: number; h: number } | Place;
 /** A point `[x, y]`, or a Slot (its centre). */
 export type Point = readonly [number, number] | { x: number; y: number; w: number; h: number };
+/** A place to put something: its centre, its size, and the edge things placed
+ * there line up on. `row` and `column` hand these out. */
+export interface Slot { x: number; y: number; w: number; h: number; anchor: string }
 /** A placement by edges: one horizontal anchor and one vertical. */
 export interface Place { x?: number; y?: number; top?: number; bottom?: number; readonly place: true }
 /** A Group as the Core needs it. */
@@ -55,6 +58,8 @@ export const to = {
   radius: (r: number | Point) => (typeof r === "number" ? r : to.point(r)),
   pair: (pair: readonly [number, number]) => [Number(pair[0]), Number(pair[1])],
   bool: (value: boolean) => Boolean(value),
+  slot: (slot?: Slot) =>
+    slot === undefined || slot === null ? null : { x: slot.x, y: slot.y, w: slot.w, h: slot.h, anchor: slot.anchor },
   at(at?: At) {
     if (at === undefined || at === null) return null;
     if (Array.isArray(at)) return [Number(at[0]), Number(at[1])];

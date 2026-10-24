@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._waist import _at, _bool, _film_font, _key, _number, _pair, _point, _points, _radius, _string, _text
+from ._waist import _at, _bool, _film_font, _key, _number, _pair, _point, _points, _radius, _slot, _string, _text, call
 
 if TYPE_CHECKING:
-    from .scene import Handle
+    from .scene import Group, Handle
 
 
 class _GroupSurface:
@@ -45,6 +45,10 @@ class _GroupSurface:
     def arc(self, key, *, r, sweep, at=None) -> "Handle":
         """A slice of a circle: an angle mark, a pie, a dial, an orbit. `sweep` is (start, end) in degrees, clockwise from twelve o'clock; `r` is the radius, or (rx, ry) for an ellipse. Open by default; `.round(1)` closes it into a pie slice."""
         return self._build("arc", {"group": self._frame(), "key": _key(key), "r": _radius(r), "sweep": _pair(sweep), "at": _at(at)})
+
+    def group(self, key, slot=None, *, at=None, anchor=None, w=None) -> "Group":
+        """A place to draw a thing made of several shapes. Give it a Slot and it sits where the Slot says (at `anchor`: center, top or bottom), or place it with `at` like any shape. Inside it, 0 is that point, and everything drawn on it moves as one."""
+        return self._nest(call("group", {"group": self._frame(), "key": _key(key), "slot": _slot(slot), "at": _at(at), "anchor": _string(anchor), "w": _number(w)}))
 
 
 class _HandleSurface:

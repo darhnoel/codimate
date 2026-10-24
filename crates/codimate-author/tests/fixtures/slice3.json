@@ -1,0 +1,524 @@
+[
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": [
+    10,
+    20
+   ],
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "a"
+    ],
+    "ox": 10.0,
+    "oy": 20.0,
+    "w": 1280.0
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": [
+    10,
+    20
+   ],
+   "anchor": null,
+   "w": 50
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "a"
+    ],
+    "ox": 10.0,
+    "oy": 20.0,
+    "w": 50
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "bar",
+    "3"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "bar/3"
+    ],
+    "ox": 300.0,
+    "oy": 440.0,
+    "w": 120
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "top",
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "a"
+    ],
+    "ox": 300.0,
+    "oy": 360.0,
+    "w": 120
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "center",
+   "w": 9
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "a"
+    ],
+    "ox": 300.0,
+    "oy": 400.0,
+    "w": 9
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "left",
+   "w": null
+  },
+  "expected": {
+   "error": "unknown anchor 'left' \u2014 use center, top or bottom"
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": {
+    "x": 5,
+    "y": null,
+    "top": null,
+    "bottom": 50
+   },
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "a"
+    ],
+    "ox": 5.0,
+    "oy": 50.0,
+    "w": 1280.0
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": null,
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "error": "give one of x="
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": [
+    10,
+    20
+   ],
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 110.0,
+    "oy": 220.0,
+    "w": 300.0
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": [
+    10,
+    20
+   ],
+   "anchor": null,
+   "w": 50
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 110.0,
+    "oy": 220.0,
+    "w": 50
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "bar",
+    "3"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "bar/3"
+    ],
+    "ox": 400.0,
+    "oy": 640.0,
+    "w": 120
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "top",
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 400.0,
+    "oy": 560.0,
+    "w": 120
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "center",
+   "w": 9
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 400.0,
+    "oy": 600.0,
+    "w": 9
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": {
+    "x": 300,
+    "y": 400,
+    "w": 120,
+    "h": 80,
+    "anchor": "bottom"
+   },
+   "at": null,
+   "anchor": "left",
+   "w": null
+  },
+  "expected": {
+   "error": "unknown anchor 'left' \u2014 use center, top or bottom"
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": {
+    "x": 5,
+    "y": null,
+    "top": null,
+    "bottom": 50
+   },
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 105.0,
+    "oy": 250.0,
+    "w": 300.0
+   }
+  }
+ },
+ {
+  "op": "group",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "slot": null,
+   "at": null,
+   "anchor": null,
+   "w": null
+  },
+  "expected": {
+   "ok": {
+    "path": [
+     "g",
+     "a"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   }
+  }
+ }
+]

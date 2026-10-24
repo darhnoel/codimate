@@ -76,6 +76,46 @@ def slice2():
     return cases
 
 
+def group_case(frame, make, data):
+    """A Group's case: what is recorded is the frame it makes (name path,
+    point, width), which every shape drawn on it then measures from."""
+    _, target = where(frame)
+    try:
+        g = make(target)
+        expected = {"ok": {"path": [cm.scene._key(p) for p in g._path],
+                           "ox": g._ox, "oy": g._oy, "w": g._w}}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "group", "data": {"group": frame, **data}, "expected": expected}
+
+
+def slice3():
+    slot = cm.Slot(x=300, y=400, w=120, h=80, anchor="bottom")
+    as_data = {"x": 300, "y": 400, "w": 120, "h": 80, "anchor": "bottom"}
+    cases = []
+    for frame in (ROOT, GROUP):
+        cases += [
+            group_case(frame, lambda g: g.group("a", at=(10, 20)),
+                       {"key": ["a"], "slot": None, "at": [10, 20], "anchor": None, "w": None}),
+            group_case(frame, lambda g: g.group("a", at=(10, 20), w=50),
+                       {"key": ["a"], "slot": None, "at": [10, 20], "anchor": None, "w": 50}),
+            group_case(frame, lambda g: g.group(("bar", 3), slot),
+                       {"key": ["bar", "3"], "slot": as_data, "at": None, "anchor": None, "w": None}),
+            group_case(frame, lambda g: g.group("a", slot, anchor="top"),
+                       {"key": ["a"], "slot": as_data, "at": None, "anchor": "top", "w": None}),
+            group_case(frame, lambda g: g.group("a", slot, anchor="center", w=9),
+                       {"key": ["a"], "slot": as_data, "at": None, "anchor": "center", "w": 9}),
+            group_case(frame, lambda g: g.group("a", slot, anchor="left"),
+                       {"key": ["a"], "slot": as_data, "at": None, "anchor": "left", "w": None}),
+            group_case(frame, lambda g: g.group("a", at=cm.at(x=5, bottom=50)),
+                       {"key": ["a"], "slot": None, "at": {"x": 5, "y": None, "top": None, "bottom": 50},
+                        "anchor": None, "w": None}),
+            group_case(frame, lambda g: g.group("a"),
+                       {"key": ["a"], "slot": None, "at": None, "anchor": None, "w": None}),
+        ]
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

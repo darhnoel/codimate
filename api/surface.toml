@@ -135,3 +135,18 @@ args = [
   { name = "sweep", type = "pair" },
   { name = "at", type = "at", default = "none" },
 ]
+
+[[op]]
+name = "group"
+on = "Group"
+kind = "builder"
+returns = "Group"
+context = ["group"]
+doc = "A place to draw a thing made of several shapes. Give it a Slot and it sits where the Slot says (at `anchor`: center, top or bottom), or place it with `at` like any shape. Inside it, 0 is that point, and everything drawn on it moves as one."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "slot", type = "slot", positional = true, default = "none" },
+  { name = "at", type = "at", default = "none" },
+  { name = "anchor", type = "string", default = "none" },
+  { name = "w", type = "number", default = "none" },
+]

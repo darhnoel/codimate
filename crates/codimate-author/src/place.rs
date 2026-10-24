@@ -8,7 +8,7 @@ use crate::Refusal;
 
 /// The Group a shape is drawn on: its name path, its point, and its width.
 /// The root of a Scene has an empty path and sits at the canvas origin.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, serde::Serialize)]
 pub struct Frame {
     pub path: Vec<String>,
     pub ox: f64,

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Hashable
 
 from .._surface import _GroupSurface
 from .._waist import call
-from ..layout import Place, Slot, _UNSET, _resolve
+from ..layout import Place, _UNSET, _resolve
 from . import marker as mk
 from .handle import Handle
 from .shape import _Shape, _key, _point, _shape_of
@@ -69,6 +69,13 @@ class Group(_GroupSurface):
             frame = self._frame_data = {"path": [_key(p) for p in self._path],
                                         "ox": self._ox, "oy": self._oy, "w": self._w}
         return frame
+
+    def _nest(self, frame: dict) -> "Group":
+        """A Group at the frame the Authoring Core worked out."""
+        group = Group(self._scene, tuple(frame["path"]), frame["ox"], frame["oy"],
+                      frame["w"])
+        group._frame_data = frame
+        return group
 
     def _build(self, op: str, data: dict) -> "Handle":
         """Draw with the Authoring Core: it places the shape, this keeps it."""
@@ -241,28 +248,3 @@ class Group(_GroupSurface):
             # starts at zero — no pen — because `w` is the fit box.
             r=1.0, size=0.0,
         )
-
-    # -- nesting --------------------------------------------------------------
-
-    def group(self, key: Hashable, slot: "Slot | None" = None, *,
-              at=None, anchor: str = None, w: float = None) -> "Group":
-        """A place to draw a thing made of several shapes.
-
-            bar = scene.group(item.id, slot)
-            bar.rect("bar", h=item.value * 70, at=cm.at(bottom=0))
-            bar.text("label", item.value, at=cm.at(top=20))
-
-        Give it a Slot and it sits where the Slot says, or place it with ``at``
-        like any shape. Inside it, ``0`` is that point, and everything drawn on
-        it moves as one.
-        """
-        if slot is not None:
-            gx, gy = slot.point(anchor)
-            gw = slot.w if w is None else w
-        else:
-            # A group with no Slot and no anchors sits exactly where its
-            # parent does — a group that exists only to name things.
-            gw = self._w if w is None else w
-            gx, gy = self._where(at, 0.0)
-
-        return Group(self._scene, self._path + (key,), self._ox + gx, self._oy + gy, gw)

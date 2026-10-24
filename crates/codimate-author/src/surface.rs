@@ -330,3 +330,69 @@ pub fn arc(a: Arc) -> Result<Shape, Refusal> {
         ..placed(&a.group, &a.key, "arc", at)
     })
 }
+
+/// Run `f` on `data` read as its arguments, the Group frame it makes written
+/// back as JSON.
+pub fn run_frame<A: for<'de> Deserialize<'de>>(
+    data: &str,
+    f: impl FnOnce(A) -> Result<Frame, Refusal>,
+) -> Result<String, Refusal> {
+    Ok(serde_json::to_string(&f(serde_json::from_str(data)?)?)?)
+}
+
+/// A Slot: a place to put something, its centre and size, and the edge
+/// things placed there line up on.
+#[derive(Deserialize)]
+pub struct Slot {
+    x: f64,
+    y: f64,
+    #[allow(dead_code)]
+    w: f64,
+    h: f64,
+    anchor: String,
+}
+
+impl Slot {
+    /// The single point this Slot anchors things at.
+    fn point(&self, anchor: Option<&str>) -> Result<(f64, f64), Refusal> {
+        match anchor.unwrap_or(&self.anchor) {
+            "center" => Ok((self.x, self.y)),
+            "bottom" => Ok((self.x, self.y + self.h / 2.0)),
+            "top" => Ok((self.x, self.y - self.h / 2.0)),
+            other => Err(Refusal(format!(
+                "unknown anchor '{other}' — use center, top or bottom"
+            ))),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct Group {
+    group: Frame,
+    key: Vec<String>,
+    slot: Option<Slot>,
+    at: Option<Value>,
+    anchor: Option<String>,
+    w: Option<f64>,
+}
+
+/// A place to draw a thing made of several shapes: where a Slot says, or
+/// placed by `at` like any shape. A Group with neither, inside another, sits
+/// at its parent's point: a group that exists only to name things.
+pub fn group(a: Group) -> Result<Frame, Refusal> {
+    let ((gx, gy), gw) = match &a.slot {
+        Some(slot) => (slot.point(a.anchor.as_deref())?, a.w.unwrap_or(slot.w)),
+        None => (
+            centre(&a.group, a.at.as_ref(), 0.0)?,
+            a.w.unwrap_or(a.group.w),
+        ),
+    };
+    let mut path = a.group.path.clone();
+    path.push(a.key.join("/"));
+    Ok(Frame {
+        path,
+        ox: a.group.ox + gx,
+        oy: a.group.oy + gy,
+        w: gw,
+    })
+}

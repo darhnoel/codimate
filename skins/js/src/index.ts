@@ -10,7 +10,7 @@
 //   };
 //   cm.explain({ trace: cm.trace(walk, { x: 200 }), view }).play(canvas);
 
-export { at, canvas, font, height, width } from "./waist.ts";
+export { at, canvas, font, height, width, type Slot } from "./waist.ts";
 export { Group, Handle, Scene } from "./scene.ts";
 export { Frame, Item, items, trace, type Emit, type Event, type Trace } from "./trace.ts";
 export { Explanation, Timing, explain, type View } from "./explain.ts";

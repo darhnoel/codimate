@@ -3,12 +3,14 @@
 // The JavaScript Skin's side of the Interface Manifest: each method sends
 // its arguments across the Waist and keeps what comes back.
 
-import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData } from "./waist.ts";
-import type { Handle } from "./scene.ts";
+import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";
+import { call } from "./waist.ts";
+import type { Group, Handle } from "./scene.ts";
 
 export abstract class GroupSurface {
   protected abstract _frame(): Frame;
   protected abstract _build(op: string, data: object): Handle;
+  protected abstract _nest(frame: Frame): Group;
 
   /** A rectangle. Say where with a point, a Slot, or `at(...)`. Round the corners with `.round(12)`. */
   rect(key: Key, options: { h: number; w?: number; at?: At }): Handle {
@@ -48,6 +50,11 @@ export abstract class GroupSurface {
   /** A slice of a circle: an angle mark, a pie, a dial, an orbit. `sweep` is (start, end) in degrees, clockwise from twelve o'clock; `r` is the radius, or (rx, ry) for an ellipse. Open by default; `.round(1)` closes it into a pie slice. */
   arc(key: Key, options: { r: number | Point; sweep: readonly [number, number]; at?: At }): Handle {
     return this._build("arc", { group: this._frame(), key: to.key(key), r: to.radius(options?.r), sweep: to.pair(options?.sweep), at: to.at(options?.at) });
+  }
+
+  /** A place to draw a thing made of several shapes. Give it a Slot and it sits where the Slot says (at `anchor`: center, top or bottom), or place it with `at` like any shape. Inside it, 0 is that point, and everything drawn on it moves as one. */
+  group(key: Key, slot?: Slot, options?: { at?: At; anchor?: string; w?: number }): Group {
+    return this._nest(call("group", { group: this._frame(), key: to.key(key), slot: to.slot(slot), at: to.at(options?.at), anchor: to.string(options?.anchor), w: to.number(options?.w) }));
   }
 }
 
