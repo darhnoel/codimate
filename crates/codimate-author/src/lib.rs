@@ -7,8 +7,10 @@
 //! it, so any language can drive it and every call can be tested on its own.
 
 mod generated;
+mod marker;
 mod place;
 mod preset;
+mod pyrandom;
 mod shape;
 mod surface;
 

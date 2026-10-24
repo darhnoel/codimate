@@ -11,6 +11,12 @@ codimate-fonts = { path = "../codimate-fonts" }
 codimate-reconcile = { path = "../codimate-reconcile" }
 codimate-render = { path = "../codimate-render" }
 serde = { version = "1", features = ["derive"] }
+# One portable libm for every target: native and WebAssembly builds then give
+# the same last bit for sin, cos and hypot, so film data is the same bytes
+# from every language on every platform.
+libm = "0.2"
+# Python's random, seeded by a string as Python seeds it (markers).
+sha2 = "0.10"
 # Which characters attach to the one before them, for letter-by-letter text.
 unicode-general-category = "1"
-serde_json = { version = "1", features = ["preserve_order"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }

@@ -150,6 +150,10 @@ pub fn fill_shape(shape: Shape, color: String, edge: Option<String>, edge_w: Opt
 pub fn internal(op: &str, data: &str) -> Result<String, Refusal> {
     match op {
         "film" => Ok(serde_json::to_string(&film(serde_json::from_str(data)?)?)?),
+        // A Handle method on a marked shape (a marker's stroke, a highlight).
+        "marked" => Ok(serde_json::to_string(&crate::marker::marked(
+            serde_json::from_str(data)?,
+        )?)?),
         // What a Rule may say, for Skins that list the choices.
         "choices" => {
             Ok(serde_json::json!({"paths": PATHS, "eases": EASES, "orders": ORDERS}).to_string())
@@ -250,7 +254,7 @@ pub struct Arrow {
 pub fn arrow(a: Arrow) -> Result<Shape, Refusal> {
     let ([x0, y0], [x1, y1]) = (a.start, a.end);
     let (dx, dy) = (x1 - x0, y1 - y0);
-    let span = match dx.hypot(dy) {
+    let span = match libm::hypot(dx, dy) {
         0.0 => 1.0,
         s => s,
     };
@@ -452,7 +456,10 @@ pub fn ngon(a: Ngon) -> Result<Vec<[f64; 2]>, Refusal> {
     Ok((0..a.sides)
         .map(|i| {
             let angle = start + step * i as f64;
-            [a.at[0] + a.r * angle.cos(), a.at[1] + a.r * angle.sin()]
+            [
+                a.at[0] + a.r * libm::cos(angle),
+                a.at[1] + a.r * libm::sin(angle),
+            ]
         })
         .collect())
 }
@@ -476,7 +483,10 @@ pub fn star(a: Star) -> Result<Vec<[f64; 2]>, Refusal> {
         .map(|i| {
             let reach = if i % 2 == 0 { a.r } else { inner };
             let angle = start + step * i as f64;
-            [a.at[0] + reach * angle.cos(), a.at[1] + reach * angle.sin()]
+            [
+                a.at[0] + reach * libm::cos(angle),
+                a.at[1] + reach * libm::sin(angle),
+            ]
         })
         .collect())
 }

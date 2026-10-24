@@ -62,6 +62,14 @@ class _GroupSurface:
         """Vector art from a file, drawn as real geometry: it tweens, turns, grows and draws on like anything else. `size` is a box it fits inside, one number or (w, h). It keeps its own colours unless `fill` overrides them."""
         return self._build("svg", {"group": self._frame(), "key": _key(key), "file": _text(file), "size": _radius(size), "at": _at(at)})
 
+    def marker(self, key, *, w, h, at=None) -> "Handle":
+        """A highlighter stroke over any box on screen. `.write(reveal=0..1)` draws it on from its left end; `.turn(degrees)` sets its angle; `.fill(name)` colours it: yellow, orange, pink, green, blue or purple, or any #rrggbb. Slightly translucent, under the words' layer, drawn by hand the same way every time for the same name."""
+        return self._keep_marked(call("marker", {"group": self._frame(), "key": _key(key), "w": _number(w), "h": _number(h), "at": _at(at)}))
+
+    def highlight(self, key, content, *, size=16.0, font=None, at=None) -> "tuple[Handle, Handle]":
+        """Words under a highlighter stroke, the stroke sized to them: gives (band, words). Marked, the words are near-black; `band.write(reveal=...)` blends them back to their own colour (white unless `words.fill(...)` says) as the stroke rubs out."""
+        return self._keep_marked(call("highlight", {"group": self._frame(), "film_font": _film_font(), "key": _key(key), "content": _text(content), "size": _number(size), "font": _string(font), "at": _at(at)}))
+
 
 class _HandleSurface:
     def fill(self, color="white", *, edge=None, edge_w=None) -> "Handle":

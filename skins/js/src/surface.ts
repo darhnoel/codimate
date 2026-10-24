@@ -11,6 +11,7 @@ export abstract class GroupSurface {
   protected abstract _frame(): Frame;
   protected abstract _build(op: string, data: object): Handle;
   protected abstract _nest(frame: Frame): Group;
+  protected abstract _keepMarked(answer: any): any;
 
   /** A rectangle. Say where with a point, a Slot, or `at(...)`. Round the corners with `.round(12)`. */
   rect(key: Key, options: { h: number; w?: number; at?: At }): Handle {
@@ -70,6 +71,16 @@ export abstract class GroupSurface {
   /** Vector art from a file, drawn as real geometry: it tweens, turns, grows and draws on like anything else. `size` is a box it fits inside, one number or (w, h). It keeps its own colours unless `fill` overrides them. */
   svg(key: Key, file: unknown, options?: { size?: number | Point; at?: At }): Handle {
     return this._build("svg", { group: this._frame(), key: to.key(key), file: to.text(file), size: to.radius((options?.size ?? 120.0)), at: to.at(options?.at) });
+  }
+
+  /** A highlighter stroke over any box on screen. `.write(reveal=0..1)` draws it on from its left end; `.turn(degrees)` sets its angle; `.fill(name)` colours it: yellow, orange, pink, green, blue or purple, or any #rrggbb. Slightly translucent, under the words' layer, drawn by hand the same way every time for the same name. */
+  marker(key: Key, options: { w: number; h: number; at?: At }): Handle {
+    return this._keepMarked(call("marker", { group: this._frame(), key: to.key(key), w: to.number(options?.w), h: to.number(options?.h), at: to.at(options?.at) }));
+  }
+
+  /** Words under a highlighter stroke, the stroke sized to them: gives (band, words). Marked, the words are near-black; `band.write(reveal=...)` blends them back to their own colour (white unless `words.fill(...)` says) as the stroke rubs out. */
+  highlight(key: Key, content: unknown, options?: { size?: number; font?: string; at?: At }): [Handle, Handle] {
+    return this._keepMarked(call("highlight", { group: this._frame(), film_font: filmFont(), key: to.key(key), content: to.text(content), size: to.number((options?.size ?? 16.0)), font: to.string(options?.font), at: to.at(options?.at) }));
   }
 }
 

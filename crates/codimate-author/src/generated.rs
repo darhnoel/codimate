@@ -1,8 +1,8 @@
 // Generated from api/surface.toml by tools/generate.py. Do not edit.
 
-use crate::preset;
 use crate::surface::{self, run};
 use crate::Refusal;
+use crate::{marker, preset};
 
 /// Every operation the manifest names, to its Core function; anything else
 /// is one of the Core's own operations, which Skins use but authors never see.
@@ -26,6 +26,8 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "formula" => run(data, surface::formula),
         "image" => run(data, surface::image),
         "svg" => run(data, surface::svg),
+        "marker" => run(data, marker::marker),
+        "highlight" => run(data, marker::highlight),
         "focus" => run(data, surface::focus),
         "overlay" => run(data, surface::overlay),
         "ngon" => run(data, surface::ngon),

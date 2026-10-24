@@ -248,6 +248,37 @@ args = [
 ]
 
 [[op]]
+name = "marker"
+module = "marker"
+on = "Group"
+kind = "builder"
+returns = "marked"
+context = ["group"]
+doc = "A highlighter stroke over any box on screen. `.write(reveal=0..1)` draws it on from its left end; `.turn(degrees)` sets its angle; `.fill(name)` colours it: yellow, orange, pink, green, blue or purple, or any #rrggbb. Slightly translucent, under the words' layer, drawn by hand the same way every time for the same name."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "w", type = "number" },
+  { name = "h", type = "number" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "highlight"
+module = "marker"
+on = "Group"
+kind = "builder"
+returns = "highlight"
+context = ["group", "film_font"]
+doc = "Words under a highlighter stroke, the stroke sized to them: gives (band, words). Marked, the words are near-black; `band.write(reveal=...)` blends them back to their own colour (white unless `words.fill(...)` says) as the stroke rubs out."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "content", type = "text", positional = true },
+  { name = "size", type = "number", default = "16.0" },
+  { name = "font", type = "string", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
 name = "focus"
 on = "Scene"
 kind = "builder"

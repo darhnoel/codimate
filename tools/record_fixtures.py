@@ -380,6 +380,115 @@ def slice8():
     return cases
 
 
+def mark_of(mark):
+    """A Python mark as the data every Skin keeps: a stroke, or a link from a
+    highlight's words to its band."""
+    if isinstance(mark, str):
+        return {"kind": "link", "band": mark}
+    return {"kind": "stroke", "w": mark.w, "h": mark.h, "seed": mark.seed,
+            "reveal": mark.reveal, "angle": mark.angle, "words": mark.words,
+            "paper": mark.paper}
+
+
+def shape_of(shape):
+    return json.loads(json.dumps(asdict(shape)))
+
+
+def related(scene, name):
+    """A marked shape's partner: a stroke's words, or a link's band."""
+    mark = scene._markers.get(name)
+    names = [name]
+    if isinstance(mark, str):
+        names.append(mark)
+    elif mark is not None and mark.words:
+        names.append(mark.words)
+    return names
+
+
+def marked_case(op, draw, change, data):
+    """A Handle method on a marked shape: what is sent (the shape, its mark,
+    its partner) and what comes back (every shape and mark that changed)."""
+    scene = cm.Scene()
+    name = draw(scene)
+    names = related(scene, name)
+    before = {"shapes": {n: shape_of(scene._shapes[n]) for n in names},
+              "marks": {n: mark_of(scene._markers[n]) for n in names if n in scene._markers}}
+    from codimate.scene.handle import Handle
+    handle = Handle(scene._shapes, name, scene._markers)
+    try:
+        change(handle)
+        expected = {"ok": {"shapes": {n: shape_of(scene._shapes[n]) for n in names},
+                           "marks": {n: mark_of(scene._markers[n]) for n in names
+                                     if n in scene._markers}}}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "marked",
+            "data": {"op": op, "name": name, **before,
+                     "data": {"shape": before["shapes"][name], **data}},
+            "expected": expected}
+
+
+def slice9():
+    cases = []
+    for frame in (ROOT, GROUP):
+        def marker(g):
+            g.marker("note", w=260, h=70, at=(40, 30))
+
+        scene, target = where(frame)
+        marker(target)
+        (shape,) = scene._shapes.values()
+        cases.append({"op": "marker",
+                      "data": {"group": frame, "key": ["note"], "w": 260, "h": 70, "at": [40, 30]},
+                      "expected": {"ok": {"shape": shape_of(shape),
+                                          "mark": mark_of(scene._markers[shape.item])}}})
+        scene, target = where(frame)
+        band, words = target.highlight("pivot", "Pivot", size=30, at=(100, 60))
+        cases.append({"op": "highlight",
+                      "data": {"group": frame, "key": ["pivot"], "content": "Pivot",
+                               "size": 30, "font": None, "film_font": "", "at": [100, 60]},
+                      "expected": {"ok": {
+                          "shapes": [shape_of(scene._shapes[band._name]),
+                                     shape_of(scene._shapes[words._name])],
+                          "marks": {n: mark_of(scene._markers[n])
+                                    for n in (band._name, words._name)}}}})
+
+    def a_marker(scene):
+        scene.marker("note", w=260, h=70, at=(640, 300))
+        return "note"
+
+    def a_band(scene):
+        scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
+        return "pivot marker"
+
+    def the_words(scene):
+        scene.highlight("pivot", "Pivot", size=30, at=(640, 360))
+        return "pivot"
+
+    cases += [
+        marked_case("fill", a_marker, lambda h: h.fill("pink"),
+                    {"color": "pink", "edge": None, "edge_w": None}),
+        marked_case("fill", a_marker, lambda h: h.fill("#123456"),
+                    {"color": "#123456", "edge": None, "edge_w": None}),
+        marked_case("turn", a_marker, lambda h: h.turn(-8), {"degrees": -8, "pivot": "center"}),
+        marked_case("turn", a_marker, lambda h: h.turn(5, "corner"),
+                    {"degrees": 5, "pivot": "corner"}),
+        marked_case("write", a_marker, lambda h: h.write(0.5), {"reveal": 0.5, "pen": 0.0}),
+        marked_case("write", a_marker, lambda h: h.write(), {"reveal": None, "pen": 0.0}),
+        marked_case("write", a_marker, lambda h: h.write(0.0), {"reveal": 0.0, "pen": 0.0}),
+        marked_case("on", a_marker, lambda h: h.on(opacity=0.5), {"layer": None, "opacity": 0.5}),
+        marked_case("write", a_band, lambda h: h.write(0.25), {"reveal": 0.25, "pen": 0.0}),
+        marked_case("write", a_band, lambda h: h.write(0.0), {"reveal": 0.0, "pen": 0.0}),
+        marked_case("fill", the_words, lambda h: h.fill("#ffd60a"),
+                    {"color": "#ffd60a", "edge": None, "edge_w": None}),
+        marked_case("fill", the_words, lambda h: h.fill("grey"),
+                    {"color": "grey", "edge": None, "edge_w": None}),
+        marked_case("fill", the_words, lambda h: h.fill("teal"),
+                    {"color": "teal", "edge": None, "edge_w": None}),
+        marked_case("turn", the_words, lambda h: h.turn(10), {"degrees": 10, "pivot": "center"}),
+    ]
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

@@ -52,7 +52,7 @@ def rust(ops: list[dict]) -> str:
     return f"""// {HEADER}
 
 use crate::surface::{{self, run}};
-use crate::preset;
+use crate::{{marker, preset}};
 use crate::Refusal;
 
 /// Every operation the manifest names, to its Core function; anything else
@@ -173,11 +173,14 @@ def python(ops: list[dict]) -> str:
                 if op.get("returns") == "aim" else
                 f'        return self._open_overlay({crossing})'
                 if op.get("returns") == "overlay" else
+                f'        return self._keep_marked({crossing})'
+                if op.get("returns") in ("marked", "highlight") else
                 f'        return self._build("{op["name"]}", {{{", ".join(data)}}})'
                 if op["on"] == "Group" else
                 f'        self._change("{op["name"]}", {{{", ".join(data)}}})\n'
                 f'        return self')
-        annotation = {"self": op["on"], "aim": "None", "overlay": "Group"}.get(returns, returns)
+        annotation = {"self": op["on"], "aim": "None", "overlay": "Group", "marked": "Handle",
+                      "highlight": "tuple[Handle, Handle]"}.get(returns, returns)
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{annotation}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
@@ -273,6 +276,9 @@ def typescript(ops: list[dict]) -> str:
         if op.get("returns") == "aim":
             body = f"    this._aim(call({call}));"
             returns = "void"
+        elif op.get("returns") in ("marked", "highlight"):
+            body = f"    return this._keepMarked(call({call}));"
+            returns = "Handle" if op["returns"] == "marked" else "[Handle, Handle]"
         elif op.get("returns") == "overlay":
             body = f"    return this._openOverlay(call({call}));"
             returns = "Group"
@@ -308,6 +314,7 @@ def typescript(ops: list[dict]) -> str:
         hooks = ("  protected abstract _frame(): Frame;\n"
                  "  protected abstract _build(op: string, data: object): Handle;\n"
                  "  protected abstract _nest(frame: Frame): Group;\n"
+                 "  protected abstract _keepMarked(answer: any): any;\n"
                  if owner == "Group" else
                  "  protected abstract _shape(): ShapeData;\n"
                  "  protected abstract _change(op: string, data: object): void;\n")

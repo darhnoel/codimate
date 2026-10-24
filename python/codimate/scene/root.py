@@ -8,7 +8,6 @@ from typing import Any
 from ..layout import width
 from .._surface import _SceneSurface
 from .group import Group
-from .marker import Stroke
 from .shape import _Shape
 
 
@@ -30,7 +29,7 @@ class Scene(_SceneSurface, Group):
 
     def __init__(self) -> None:
         self._shapes: dict[str, _Shape] = {}
-        self._markers: dict[str, Stroke] = {}
+        self._markers: dict[str, dict] = {}  # marks the Core drew: strokes, links
         self._overlays: set = set()
         self._focus: "dict[str, Any] | None" = None
         super().__init__(self, (), 0.0, 0.0, width())

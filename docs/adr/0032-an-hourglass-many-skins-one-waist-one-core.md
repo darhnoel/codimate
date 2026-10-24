@@ -14,6 +14,13 @@ Adding a language is then a generator template, a transport and a Conformance ru
 - A benchmark on a large film guards the cost of crossing the Waist. Measured when slice 1 landed (C lesson 06, 729 Scenes, about 41,000 calls): building Scenes went from about 1.0 s to 1.2 s, 17–23% slower, almost all of it Python turning shapes into JSON text and back; the Rust side is 68 ms. Accepted with a budget of 25%. The old Surface is deleted as slices move, so CI cannot compare against it: it guards one crossing instead (`tools/bench_waist.py`, about 10 µs a crossing on a laptop, failing above 25 µs), which catches what regresses this (a second parse, an import per call, a deep copy). The overhead shrinks as slices move the features that still read shapes in Python (markers, the covered-label check, the index, the Previewer) into the Core; when the last has moved, Scenes stay in the Core from building to rendering and the guard tightens to "no slower than before".
 - Queries stay few and visible in the Manifest; each one is a round trip.
 
+## Same bytes everywhere
+
+Two rules found by the Conformance Examples, both needed for one film to be the same bytes from every language on every platform:
+
+- **Numbers cross exactly.** The Core parses JSON with `serde_json`'s `float_roundtrip`; its default parser can be off by one bit for some decimals, which nudged values crossing the Waist (a marker's points did).
+- **One portable libm.** The Core's `sin`, `cos` and `hypot` come from the `libm` crate on every target, not the operating system's (native) or musl's (WebAssembly), which disagree in the last bit for some inputs. Values recorded from the old Python Surface, which used the platform's, are compared to within a few units in the last place.
+
 ## Considered Options
 
 - **Binding each Core function per language (PyO3, wasm-bindgen, …).** Simplest for two languages; the glue grows with every function and every language.

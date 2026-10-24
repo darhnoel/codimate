@@ -5,7 +5,7 @@ A package of small parts behind this one front door:
 - `shape`    — the flat payload record the Engine diffs, and names (`_key`)
 - `handle`   — what a shape call returns: fill, turn, grow, on, write
 - `group`    — the shapes you draw, placed relative to a group's point
-- `marker`   — the highlighter stroke's geometry and colours (ADR 0027)
+- markers and highlights are drawn by the Authoring Core (ADR 0027, 0032)
 - `coverage` — where a shape sits, and which labels are drawn over
 - `root`     — `Scene`, the root group
 """
