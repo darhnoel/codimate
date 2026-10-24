@@ -78,11 +78,13 @@ PY_CONTEXT = {
     "canvas": '"canvas": _canvas()',
     "preset": '"preset": self._fields',
     "axes": '"axes": self._fields',
+    "film": '**self._film()',
 }
 PY_RETURNS = {"points": "_as_points({})", "size": "_as_size({})", "number": "{}",
               "slots": "_paired(items, {})", "handles": "group._adopt({})",
               "rules": "tuple(Rule._of(made) for made in {})",
-              "point": "_as_size({})", "ticks": "[tuple(tick) for tick in {}]"}
+              "point": "_as_size({})", "ticks": "[tuple(tick) for tick in {}]",
+              "rows": "[tuple(row) for row in {}]", "text": "{}"}
 
 
 def py_param(arg: dict) -> str:
@@ -203,6 +205,14 @@ def python(ops: list[dict]) -> str:
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{annotation}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
+    values = {op["class"] for op in ops if op["kind"] == "value"}
+    for op in ops:
+        if op["kind"] == "method" and op["on"] not in values:
+            crossing = f'call("{op["name"]}", {py_data(op)})'
+            body = f'        return {PY_RETURNS[op["returns"]].format(crossing)}\n'
+            classes.setdefault(op["on"], []).append(
+                f'    def {op["method"]}({py_signature(op["args"], ["self"])}):\n'
+                f'        """{op["doc"]}"""\n{body}')
     functions = [py_value(op, ops) for op in ops if op["kind"] == "value"]
     functions += [py_shortcut(op, ops) for op in ops if op["kind"] == "shortcut"]
     for op in (o for o in ops if o["on"] == "module" and o["kind"] == "query"):
@@ -249,13 +259,15 @@ TS_CONTEXT = {
     "canvas": "canvas: [width(), height()]",
     "preset": "preset: this._fields",
     "axes": "axes: this._fields",
+    "film": "...this._film()",
 }
 TS_DEFAULT = {"origin": "[0, 0]"}
 TS_RETURNS = {"points": ("[number, number][]", "{}"), "size": ("[number, number]", "{}"),
               "number": ("number", "{}"), "slots": ("any[]", "paired(items, {})"),
               "handles": ("Handle[]", "group._adopt({})"),
               "rules": ("Rule[]", "{}.map((made: any) => Rule._of(made))"),
-              "point": ("[number, number]", "{}"), "ticks": ("[number, number, string][]", "{}")}
+              "point": ("[number, number]", "{}"), "ticks": ("[number, number, string][]", "{}"),
+              "rows": ("any[][]", "{}"), "text": ("string", "{}")}
 
 
 def typescript(ops: list[dict]) -> str:
@@ -269,6 +281,12 @@ def typescript(ops: list[dict]) -> str:
             functions.append(ts_shortcut(op, ops))
             continue
         if op["kind"] == "method":
+            if op["on"] not in {o["class"] for o in ops if o["kind"] == "value"}:
+                kind, answer = TS_RETURNS[op["returns"]]
+                crossing = f'call("{op["name"]}", {ts_data(op)})'
+                classes.setdefault(op["on"], []).append(
+                    f'  /** {op["doc"]} */\n'
+                    f'  {camel(op["method"])}(): {kind} {{\n    return {answer.format(crossing)};\n  }}\n')
             continue
         positional = [a for a in op["args"] if a["positional"]]
         options = [a for a in op["args"] if not a["positional"]]
@@ -333,6 +351,10 @@ def typescript(ops: list[dict]) -> str:
                        "    protected abstract _openOverlay(frame: Frame): Group;\n\n"
                        + "\n".join("  " + m.replace("\n", "\n  ").rstrip() + "\n" for m in methods)
                        + "  }\n  return SceneMethods;\n}\n")
+            continue
+        if owner == "Explanation":
+            out.append("export abstract class ExplanationSurface {\n"
+                       "  protected abstract _film(): object;\n\n" + "\n".join(methods) + "}\n")
             continue
         hooks = ("  protected abstract _frame(): Frame;\n"
                  "  protected abstract _build(op: string, data: object): Handle;\n"

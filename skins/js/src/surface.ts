@@ -145,6 +145,30 @@ export function SceneSurface<B extends abstract new (...args: any[]) => any>(Bas
   return SceneMethods;
 }
 
+export abstract class ExplanationSurface {
+  protected abstract _film(): object;
+
+  /** Every beat as (start, duration, event name), in seconds: what is on screen when, and how long each beat lasts. */
+  timeline(): any[][] {
+    return call("timeline", { ...this._film() });
+  }
+
+  /** Where each part of the film starts, as (start, name): `emit(..., chapter="Water")` starts one as that beat begins. */
+  chapters(): any[][] {
+    return call("chapters", { ...this._film() });
+  }
+
+  /** Every label something was drawn on: (seconds, above, below). Checked once per beat, on the picture it settles into; a collision that lasts is reported where it starts. */
+  covered(): any[][] {
+    return call("film_covered", { ...this._film() });
+  }
+
+  /** `covered`, worded: what a render prints when it is not empty. */
+  report(): string {
+    return call("report", { ...this._film() });
+  }
+}
+
 /** The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up. */
 export function ngon(sides: number, r: number, options?: { at?: Point; turn?: number }): [number, number][] {
   return call("ngon", { sides: to.int(sides), r: to.number(r), at: to.point((options?.at ?? [0, 0])), turn: to.number((options?.turn ?? 0.0)) });

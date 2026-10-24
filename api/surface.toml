@@ -699,3 +699,52 @@ args = [
   { name = "size", type = "radius", default = "none" },
   { name = "within", type = "slot", default = "none" },
 ]
+
+# -- The Explanation: what a film knows once its scenes are made ---------------
+#
+# The Explanation is made by each Skin (it runs the author's trace and view);
+# these are its methods, sent with the film as context.
+
+[[op]]
+name = "timeline"
+module = "film"
+method = "timeline"
+on = "Explanation"
+kind = "method"
+returns = "rows"
+context = ["film"]
+doc = "Every beat as (start, duration, event name), in seconds: what is on screen when, and how long each beat lasts."
+args = []
+
+[[op]]
+name = "chapters"
+module = "film"
+method = "chapters"
+on = "Explanation"
+kind = "method"
+returns = "rows"
+context = ["film"]
+doc = "Where each part of the film starts, as (start, name): `emit(..., chapter=\"Water\")` starts one as that beat begins."
+args = []
+
+[[op]]
+name = "film_covered"
+module = "film"
+method = "covered"
+on = "Explanation"
+kind = "method"
+returns = "rows"
+context = ["film"]
+doc = "Every label something was drawn on: (seconds, above, below). Checked once per beat, on the picture it settles into; a collision that lasts is reported where it starts."
+args = []
+
+[[op]]
+name = "report"
+module = "film"
+method = "report"
+on = "Explanation"
+kind = "method"
+returns = "text"
+context = ["film"]
+doc = "`covered`, worded: what a render prints when it is not empty."
+args = []

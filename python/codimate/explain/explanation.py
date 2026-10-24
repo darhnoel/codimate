@@ -10,6 +10,8 @@ from typing import Callable
 from ..trace import Frame, Trace
 from .encoder import _ffmpeg, _find_encoder, _mixing
 from .timing import Rule, Timing
+from .._surface import _ExplanationSurface
+from .._waist import _film_font
 
 
 View = Callable[[Frame], Scene]
@@ -56,7 +58,7 @@ def _plain(value, depth: int = 0):
     return repr(value)
 
 
-class Explanation:
+class Explanation(_ExplanationSurface):
     """A trace, a view and a timing, ready to render.
 
     Built by :func:`explain` rather than directly. Holds one Scene per Trace
@@ -89,6 +91,16 @@ class Explanation:
         self.durations.insert(0, self.timing.opening)
         self.scenes.append(self.scenes[-1])
         self.durations.append(self.timing.final_hold)
+
+    def _film(self) -> dict:
+        """This film as the Authoring Core reads it (timeline, chapters,
+        covered labels)."""
+        return {"durations": list(self.durations),
+                "events": [{"name": e.name, "chapter": e.data.get("chapter")}
+                           for e in self.trace.events],
+                "scenes": self._payloads()["scenes"],
+                "cameras": self._payloads()["cameras"],
+                "film_font": _film_font()}
 
     @property
     def duration(self) -> float:
@@ -194,19 +206,6 @@ class Explanation:
             found.append((round(beats[k + 1][0], 3), str(clip)))
         return found
 
-    def chapters(self) -> "list[tuple[float, str]]":
-        """Where each part of the film starts, as `(start, name)`:
-        `emit("water", chapter="Water")` starts one as that beat begins.
-
-        A film is hundreds of events — a highlighted word is one — so the
-        Previewer cannot show a picture of each. A chapter is the author saying
-        where a part begins, which nothing downstream could work out.
-        """
-        beats = self.timeline()
-        return [(round(beats[k + 1][0], 3), str(event.data["chapter"]))
-                for k, event in enumerate(self.trace.events)
-                if event.data.get("chapter")]
-
     def mix_sound(self, output: str) -> "str | None":
         """Every clip laid at its start and summed, as one audio file —
         what `render` puts under the picture, without the picture. `None` if
@@ -239,34 +238,6 @@ class Explanation:
              "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", str(out)],
             check=True)
         out.replace(video)
-
-    def covered(self) -> "list[tuple[float, str, str]]":
-        """Every label something was drawn on: `(seconds, above, below)`.
-
-        Checked once per Trace Event, on the picture the event settles into
-        (ADR 0017). A collision that lasts is reported where it starts, not
-        at every beat it survives.
-        """
-        from ..scene import covered
-
-        found, before = [], set()
-        for i, (at, secs, _) in enumerate(self.timeline()):
-            now = set(covered(self._arrives(i)))
-            found += [(round(at + secs, 2), a, b) for a, b in now - before]
-            before = now
-        return sorted(found)
-
-    def report(self) -> str:
-        """:meth:`covered`, worded — what `render` prints when it is not empty."""
-        found = self.covered()
-        if not found:
-            return ""
-        many = len(found) != 1
-        lines = [f"{len(found)} label{'s are' if many else ' is'} covered:"]
-        for at, above, below in found:
-            stamp = f"{int(at // 60)}:{at % 60:05.2f}"
-            lines.append(f"  {stamp}  {_quoted(above)} is drawn over {_quoted(below)}")
-        return "\n".join(lines) + "\n\nrendered anyway."
 
     def _arrives(self, beat: int):
         """The Scene beat `beat` travels to — what its event produced."""
@@ -478,26 +449,6 @@ class Explanation:
         """Every shape on screen once beat `beat` has arrived, read off its scene
         when asked, so a film in memory needs no index built to answer."""
         return list(self._shape_map(self._arrives(beat)).values())
-
-    def timeline(self) -> "list[tuple[float, float, str]]":
-        """Every beat as ``(start, duration, event name)``, in seconds.
-
-            for start, length, name in cm.explain(...).timeline():
-                print(f"{start:6.2f}  {length:4.2f}  {name}")
-
-        What is on screen at 0:42, and how long each beat actually lasts —
-        the two questions you have when a video feels wrong. Pair it with
-        :meth:`frame_at` to look at the moment you find.
-        """
-        # Read from `durations`, which already carries the held opening and
-        # ending, rather than recomputing them — a second copy of that
-        # arithmetic is how a timeline starts disagreeing with the video.
-        names = ["(opening)"] + [e.name for e in self.trace.events] + ["(final hold)"]
-        out, at = [], 0.0
-        for name, length in zip(names, self.durations):
-            out.append((round(at, 3), length, name))
-            at += length
-        return out
 
 
 def explain(

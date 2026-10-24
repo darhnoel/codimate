@@ -6,7 +6,8 @@
 import { Frame, type Event, type Trace } from "./trace.ts";
 import type { Scene } from "./scene.ts";
 import type { Rule } from "./surface.ts";
-import { call, engine, height, memory, width } from "./waist.ts";
+import { call, engine, filmFont, height, memory, width } from "./waist.ts";
+import { ExplanationSurface } from "./surface.ts";
 
 /** How long each event lasts, in seconds. */
 export class Timing {
@@ -31,7 +32,7 @@ export class Timing {
 export type View<S> = (frame: Frame<S>) => Scene;
 
 /** A trace, a view and a timing, ready to play or render. Built by `explain`. */
-export class Explanation<S = unknown> {
+export class Explanation<S = unknown> extends ExplanationSurface {
   readonly trace: Trace<S>;
   readonly timing: Timing;
   readonly motion: Rule[];
@@ -39,6 +40,7 @@ export class Explanation<S = unknown> {
   readonly durations: number[];
 
   constructor(options: { trace: Trace<S>; view: View<S>; motion?: Rule[]; timing?: Timing }) {
+    super();
     this.trace = options.trace;
     this.timing = options.timing ?? new Timing();
     this.motion = options.motion ?? [];
@@ -50,6 +52,18 @@ export class Explanation<S = unknown> {
     this.durations.unshift(this.timing.opening);
     this.scenes.push(this.scenes[this.scenes.length - 1]);
     this.durations.push(this.timing.finalHold);
+  }
+
+  /** @internal This film as the Authoring Core reads it (timeline, chapters,
+   * covered labels). */
+  protected _film(): object {
+    return {
+      durations: this.durations,
+      events: this.trace.events.map((e) => ({ name: e.name, chapter: e.data.chapter ?? null })),
+      scenes: this.scenes.map((s) => s._payload()),
+      cameras: this.scenes.map((s) => s._camera()),
+      film_font: filmFont(),
+    };
   }
 
   /** The film's length, in seconds. */

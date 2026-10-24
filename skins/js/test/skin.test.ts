@@ -104,3 +104,43 @@ test("a Rule is checked by the Core, with the words Python uses", () => {
   assert.equal(rule.pattern, "bar/*");
   assert.deepEqual(rule._payload(), ["bar/*", "arc", { bend: -0.4 }, "out", "screen"]);
 });
+
+test("timeline, chapters and covered labels are Python's, from the same film", async () => {
+  const { readFileSync } = await import("node:fs");
+  const recorded = JSON.parse(
+    readFileSync(new URL("../../../crates/codimate-author/tests/fixtures/slice11.json", import.meta.url), "utf8"));
+  const answer = (op: string) => recorded.find((c: any) => c.op === op).expected.ok;
+  const walk = (state: { x: number }, emit: cm.Emit) => {
+    state.x = 300;
+    emit("slide", { chapter: "Start" });
+    state.x = 640;
+    emit("cover");
+    state.x = 900;
+    emit("clear", { chapter: "End" });
+  };
+  const view = (frame: cm.Frame<{ x: number }>) => {
+    const scene = new cm.Scene();
+    const x = frame.state.x;
+    scene.rect("plate", { w: 240, h: 60, at: [640, 300] }).fill("#1c1c1e");
+    scene.text("label", "A label", { size: 30, at: [640, 300] });
+    scene.circle("ball", { r: 40, at: [x, 300] }).fill("#2997ff").on(11);
+    scene.line("edge", { start: [150, 180], end: [300, 60], w: 2 }).on(11);
+    scene.text("near", "near", { size: 20, at: [220, 130] });
+    scene.text("a", "abc", { size: 24, at: [500, 600] });
+    scene.text("b", "abc", { size: 24, at: [520, 600] });
+    if (x === 900) {
+      scene.overlay().text("title", "Title", { size: 30, at: [640, 40] });
+      scene.rect("box", { w: 100, h: 100, at: [640, 40] }).on(12);
+      scene.focus(["plate"]);
+    }
+    return scene;
+  };
+  const film = cm.explain({
+    trace: cm.trace(walk, { x: 100 }), view,
+    timing: new cm.Timing({ default: 0.7, events: { cover: 1.25 } }),
+  });
+  assert.deepEqual(film.timeline(), answer("timeline"));
+  assert.deepEqual(film.chapters(), answer("chapters"));
+  assert.deepEqual(film.covered(), answer("film_covered"));
+  assert.equal(film.report(), answer("report"));
+});

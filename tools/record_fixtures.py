@@ -554,6 +554,57 @@ def slice10():
     return cases
 
 
+def film_of(exp):
+    """An Explanation as the Core reads it."""
+    return {"durations": list(exp.durations),
+            "events": [{"name": e.name, "chapter": e.data.get("chapter")} for e in exp.trace.events],
+            "scenes": [s._payload() for s in exp.scenes],
+            "cameras": [s._camera() for s in exp.scenes],
+            "film_font": ""}
+
+
+def slice11():
+    def walk(state, emit):
+        state["x"] = 300
+        emit("slide", chapter="Start")
+        state["x"] = 640
+        emit("cover")
+        state["x"] = 900
+        emit("clear", chapter="End")
+
+    def view(frame):
+        scene = cm.Scene()
+        x = frame.state["x"]
+        scene.rect("plate", w=240, h=60, at=(640, 300)).fill("#1c1c1e")
+        scene.text("label", "A label", size=30, at=(640, 300))
+        scene.circle("ball", r=40, at=(x, 300)).fill("#2997ff").on(layer=11)
+        scene.line("edge", start=(150, 180), end=(300, 60), w=2).on(layer=11)
+        scene.text("near", "near", size=20, at=(220, 130))
+        scene.text("a", "abc", size=24, at=(500, 600))
+        scene.text("b", "abc", size=24, at=(520, 600))
+        if x == 900:
+            hud = scene.overlay()
+            hud.text("title", "Title", size=30, at=(640, 40))
+            scene.rect("box", w=100, h=100, at=(640, 40)).on(layer=12)
+            scene.focus("plate")
+        return scene
+
+    exp = cm.explain(trace=cm.trace(walk, {"x": 100}), view=view,
+                     timing=cm.Timing(default=0.7, events={"cover": 1.25}))
+    film = film_of(exp)
+    still = exp.scenes[3]
+    return [
+        {"op": "timeline", "data": film,
+         "expected": {"ok": [list(t) for t in exp.timeline()]}},
+        {"op": "chapters", "data": film, "expected": {"ok": [list(c) for c in exp.chapters()]}},
+        {"op": "film_covered", "data": film, "expected": {"ok": [list(c) for c in exp.covered()]}},
+        {"op": "report", "data": film, "expected": {"ok": exp.report()}},
+        {"op": "covered_scene",
+         "data": {"scene": still._payload(), "camera": still._camera(), "film_font": ""},
+         "expected": {"ok": [list(c) for c in cm.scene.covered(still)]}},
+    ]
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

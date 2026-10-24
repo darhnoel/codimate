@@ -113,6 +113,24 @@ class _SceneSurface:
         return self._open_overlay(call("overlay", {"group": self._frame()}))
 
 
+class _ExplanationSurface:
+    def timeline(self):
+        """Every beat as (start, duration, event name), in seconds: what is on screen when, and how long each beat lasts."""
+        return [tuple(row) for row in call("timeline", {**self._film()})]
+
+    def chapters(self):
+        """Where each part of the film starts, as (start, name): `emit(..., chapter="Water")` starts one as that beat begins."""
+        return [tuple(row) for row in call("chapters", {**self._film()})]
+
+    def covered(self):
+        """Every label something was drawn on: (seconds, above, below). Checked once per beat, on the picture it settles into; a collision that lasts is reported where it starts."""
+        return [tuple(row) for row in call("film_covered", {**self._film()})]
+
+    def report(self):
+        """`covered`, worded: what a render prints when it is not empty."""
+        return call("report", {**self._film()})
+
+
 class Rule:
     """How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre."""
 

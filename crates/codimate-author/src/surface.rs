@@ -154,6 +154,14 @@ pub fn internal(op: &str, data: &str) -> Result<String, Refusal> {
         "marked" => Ok(serde_json::to_string(&crate::marker::marked(
             serde_json::from_str(data)?,
         )?)?),
+        // Where one shape sits, for Python's index.
+        "bounds" => Ok(serde_json::to_string(&crate::film::shape_bounds(
+            serde_json::from_str(data)?,
+        )?)?),
+        // The covered labels of one Scene, for `scene.covered` in Python.
+        "covered_scene" => Ok(serde_json::to_string(&crate::film::covered_scene(
+            serde_json::from_str(data)?,
+        )?)?),
         // What a Rule may say, for Skins that list the choices.
         "choices" => {
             Ok(serde_json::json!({"paths": PATHS, "eases": EASES, "orders": ORDERS}).to_string())
