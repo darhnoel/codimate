@@ -80,3 +80,27 @@ test("a film opens and closes on held moments", () => {
   assert.equal(film.scenes.length, 4);
   assert.equal(film.duration, 3.5);
 });
+
+test("Timing is an extension point: a subclass decides each event's length", () => {
+  class Paced extends cm.Timing {
+    forEvent(event: cm.Event) {
+      return Number(event.data.seconds ?? 0);
+    }
+  }
+  const film = cm.explain({
+    trace: cm.trace((s: object, emit) => {
+      emit("a", { seconds: 2 });
+      emit("b", { seconds: 0.5 });
+    }, {}),
+    view: () => new cm.Scene(),
+    timing: new Paced({ opening: 0, finalHold: 0 }),
+  });
+  assert.deepEqual(film.durations, [0, 2, 0.5, 0]);
+});
+
+test("a Rule is checked by the Core, with the words Python uses", () => {
+  assert.throws(() => new cm.Rule("*", "teleport"), /unknown path 'teleport'/);
+  const rule = new cm.Rule(["bar", "*"], "arc", { bend: -0.4, ease: "out" });
+  assert.equal(rule.pattern, "bar/*");
+  assert.deepEqual(rule._payload(), ["bar/*", "arc", { bend: -0.4 }, "out", "screen"]);
+});

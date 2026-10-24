@@ -1,0 +1,240 @@
+[
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "straight",
+   "ease": null,
+   "order": "screen",
+   "options": {}
+  },
+  "expected": {
+   "ok": {
+    "pattern": "*",
+    "position": "straight",
+    "ease": null,
+    "order": "screen",
+    "options": {},
+    "payload": [
+     "*",
+     "straight",
+     {},
+     "",
+     "screen"
+    ]
+   }
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "item",
+    "*"
+   ],
+   "position": "straight",
+   "ease": null,
+   "order": "screen",
+   "options": {}
+  },
+  "expected": {
+   "ok": {
+    "pattern": "item/*",
+    "position": "straight",
+    "ease": null,
+    "order": "screen",
+    "options": {},
+    "payload": [
+     "item/*",
+     "straight",
+     {},
+     "",
+     "screen"
+    ]
+   }
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "lift_carry_drop",
+   "ease": null,
+   "order": "screen",
+   "options": {
+    "clearance": 90
+   }
+  },
+  "expected": {
+   "ok": {
+    "pattern": "*",
+    "position": "lift_carry_drop",
+    "ease": null,
+    "order": "screen",
+    "options": {
+     "clearance": 90.0
+    },
+    "payload": [
+     "*",
+     "lift_carry_drop",
+     {
+      "clearance": 90.0
+     },
+     "",
+     "screen"
+    ]
+   }
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "bar/*"
+   ],
+   "position": "straight",
+   "ease": "spring",
+   "order": "screen",
+   "options": {
+    "stagger": 0.08
+   }
+  },
+  "expected": {
+   "ok": {
+    "pattern": "bar/*",
+    "position": "straight",
+    "ease": "spring",
+    "order": "screen",
+    "options": {
+     "stagger": 0.08
+    },
+    "payload": [
+     "bar/*",
+     "straight",
+     {
+      "stagger": 0.08
+     },
+     "spring",
+     "screen"
+    ]
+   }
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "card"
+   ],
+   "position": "arc",
+   "ease": "out",
+   "order": "centre",
+   "options": {
+    "bend": -0.4
+   }
+  },
+  "expected": {
+   "ok": {
+    "pattern": "card",
+    "position": "arc",
+    "ease": "out",
+    "order": "centre",
+    "options": {
+     "bend": -0.4
+    },
+    "payload": [
+     "card",
+     "arc",
+     {
+      "bend": -0.4
+     },
+     "out",
+     "centre"
+    ]
+   }
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "teleport",
+   "ease": null,
+   "order": "screen",
+   "options": {}
+  },
+  "expected": {
+   "error": "unknown path 'teleport' \u2014 use one of straight, arc, linear, fall, lift_carry_drop"
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "straight",
+   "ease": "wobble",
+   "order": "screen",
+   "options": {}
+  },
+  "expected": {
+   "error": "unknown ease 'wobble' \u2014 use one of linear, in, out, in_out, back, spring, bounce"
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "straight",
+   "ease": null,
+   "order": "random",
+   "options": {}
+  },
+  "expected": {
+   "error": "unknown order 'random' \u2014 use one of screen, reverse, name, centre"
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "straight",
+   "ease": null,
+   "order": "screen",
+   "options": {
+    "delay": 1.0
+   }
+  },
+  "expected": {
+   "error": "delay is a fraction of the beat, 0 to under 1"
+  }
+ },
+ {
+  "op": "rule",
+  "data": {
+   "pattern": [
+    "*"
+   ],
+   "position": "straight",
+   "ease": null,
+   "order": "screen",
+   "options": {
+    "stagger": -0.1
+   }
+  },
+  "expected": {
+   "error": "stagger is a fraction of the beat, 0 to under 1"
+  }
+ }
+]

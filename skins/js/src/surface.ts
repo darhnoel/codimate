@@ -98,3 +98,29 @@ export function measure(text: unknown, size?: number, font?: string): [number, n
 export function ease(t: number): number {
   return call("ease", { t: to.number(t) });
 }
+
+/** How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre. */
+export class Rule {
+  readonly pattern: any;
+  readonly position: any;
+  readonly ease: any;
+  readonly order: any;
+  readonly options: any;
+  private readonly made: unknown[];
+
+  constructor(pattern: Key, position?: string, options?: { ease?: string; order?: string } & Record<string, unknown>) {
+    const { ease, order, ...rest } = options ?? {};
+    const made = call("rule", { pattern: to.key(pattern), position: to.string((position ?? "straight")), ease: to.string(ease), order: to.string((order ?? "screen")), options: rest });
+    this.made = made.payload;
+    this.pattern = made.pattern;
+    this.position = made.position;
+    this.ease = made.ease;
+    this.order = made.order;
+    this.options = made.options;
+  }
+
+  /** @internal What the Engine takes. */
+  _payload(): unknown[] {
+    return this.made;
+  }
+}

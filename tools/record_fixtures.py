@@ -176,6 +176,42 @@ def slice4():
     return cases
 
 
+def rule_case(make, data):
+    """A Rule's case: its fields, and the payload the Engine takes."""
+    try:
+        rule = make()
+        expected = {"ok": {"pattern": rule.pattern, "position": rule.position,
+                           "ease": rule.ease, "order": rule.order,
+                           "options": rule.options,
+                           "payload": json.loads(json.dumps(rule._payload()))}}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": "rule", "data": data, "expected": expected}
+
+
+def slice5():
+    base = {"position": "straight", "ease": None, "order": "screen", "options": {}}
+    return [
+        rule_case(lambda: cm.Rule("*"), {"pattern": ["*"], **base}),
+        rule_case(lambda: cm.Rule(("item", "*")), {"pattern": ["item", "*"], **base}),
+        rule_case(lambda: cm.Rule("*", position="lift_carry_drop", clearance=90),
+                  {"pattern": ["*"], **base, "position": "lift_carry_drop",
+                   "options": {"clearance": 90}}),
+        rule_case(lambda: cm.Rule("bar/*", ease="spring", stagger=0.08),
+                  {"pattern": ["bar/*"], **base, "ease": "spring", "options": {"stagger": 0.08}}),
+        rule_case(lambda: cm.Rule("card", position="arc", bend=-0.4, ease="out", order="centre"),
+                  {"pattern": ["card"], **base, "position": "arc", "ease": "out",
+                   "order": "centre", "options": {"bend": -0.4}}),
+        rule_case(lambda: cm.Rule("*", position="teleport"),
+                  {"pattern": ["*"], **base, "position": "teleport"}),
+        rule_case(lambda: cm.Rule("*", ease="wobble"), {"pattern": ["*"], **base, "ease": "wobble"}),
+        rule_case(lambda: cm.Rule("*", order="random"), {"pattern": ["*"], **base, "order": "random"}),
+        rule_case(lambda: cm.Rule("*", delay=1.0), {"pattern": ["*"], **base, "options": {"delay": 1.0}}),
+        rule_case(lambda: cm.Rule("*", stagger=-0.1),
+                  {"pattern": ["*"], **base, "options": {"stagger": -0.1}}),
+    ]
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

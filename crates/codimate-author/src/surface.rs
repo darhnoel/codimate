@@ -136,6 +136,10 @@ pub fn fill(a: Fill) -> Result<Shape, Refusal> {
 pub fn internal(op: &str, data: &str) -> Result<String, Refusal> {
     match op {
         "film" => Ok(serde_json::to_string(&film(serde_json::from_str(data)?)?)?),
+        // What a Rule may say, for Skins that list the choices.
+        "choices" => {
+            Ok(serde_json::json!({"paths": PATHS, "eases": EASES, "orders": ORDERS}).to_string())
+        }
         _ => Err(Refusal(format!("unknown operation \"{op}\""))),
     }
 }
@@ -147,7 +151,15 @@ pub struct Film {
     durations: Vec<f64>,
     scenes: Vec<Vec<Shape>>,
     cameras: Vec<Value>,
-    rules: Vec<Value>,
+    /// Read as typed values, so the Core writes every number in them: a rule
+    /// from Python (`90.0`) and from JavaScript (`90`) are the same bytes.
+    rules: Vec<(
+        String,
+        String,
+        std::collections::BTreeMap<String, f64>,
+        String,
+        String,
+    )>,
 }
 
 /// A film's data, as text: what a browser plays and what a Conformance
@@ -573,4 +585,86 @@ pub struct Ease {
 /// The easing curve the Engine applies between two moments.
 pub fn ease(a: Ease) -> Result<f64, Refusal> {
     Ok(codimate_reconcile::ease(a.t as f32) as f64)
+}
+
+// -- Values: things an author builds and hands to `explain` -------------------
+
+const PATHS: [&str; 5] = ["straight", "arc", "linear", "fall", "lift_carry_drop"];
+const EASES: [&str; 7] = ["linear", "in", "out", "in_out", "back", "spring", "bounce"];
+const ORDERS: [&str; 4] = ["screen", "reverse", "name", "centre"];
+
+#[derive(Deserialize)]
+pub struct RuleArgs {
+    pattern: Vec<String>,
+    position: String,
+    ease: Option<String>,
+    order: String,
+    #[serde(default)]
+    options: serde_json::Map<String, Value>,
+}
+
+/// A motion rule, checked: its fields, and the payload the Engine takes.
+#[derive(serde::Serialize)]
+pub struct Rule {
+    pattern: String,
+    position: String,
+    ease: Option<String>,
+    order: String,
+    options: serde_json::Map<String, Value>,
+    payload: (
+        String,
+        String,
+        serde_json::Map<String, Value>,
+        String,
+        String,
+    ),
+}
+
+fn one_of(what: &str, value: &str, choices: &[&str]) -> Result<(), Refusal> {
+    if choices.contains(&value) {
+        return Ok(());
+    }
+    Err(Refusal(format!(
+        "unknown {what} '{value}' — use one of {}",
+        choices.join(", ")
+    )))
+}
+
+/// How things matching a pattern change. First matching rule wins.
+pub fn rule(a: RuleArgs) -> Result<Rule, Refusal> {
+    one_of("path", &a.position, &PATHS)?;
+    if let Some(ease) = &a.ease {
+        one_of("ease", ease, &EASES)?;
+    }
+    one_of("order", &a.order, &ORDERS)?;
+    let mut options = serde_json::Map::new();
+    for (name, value) in a.options {
+        let number = value
+            .as_f64()
+            .ok_or_else(|| Refusal(format!("{name} must be a number")))?;
+        options.insert(name, Value::from(number));
+    }
+    for name in ["delay", "stagger"] {
+        let fraction = options.get(name).and_then(Value::as_f64).unwrap_or(0.0);
+        if !(0.0..1.0).contains(&fraction) {
+            return Err(Refusal(format!(
+                "{name} is a fraction of the beat, 0 to under 1"
+            )));
+        }
+    }
+    let pattern = a.pattern.join("/");
+    Ok(Rule {
+        payload: (
+            pattern.clone(),
+            a.position.clone(),
+            options.clone(),
+            a.ease.clone().unwrap_or_default(),
+            a.order.clone(),
+        ),
+        pattern,
+        position: a.position,
+        ease: a.ease,
+        order: a.order,
+        options,
+    })
 }

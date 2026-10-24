@@ -101,7 +101,25 @@ def python(ops: list[dict]) -> str:
             f'    def {op["name"]}({", ".join(params)}) -> "{returns if returns != "self" else op["on"]}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
     functions = []
-    for op in (o for o in ops if o["on"] == "module"):
+    for op in (o for o in ops if o["kind"] == "value"):
+        named = [a for a in op["args"] if a["type"] != "options"]
+        positional = [py_param(a) for a in named if a["positional"]]
+        keywords = [py_param(a) for a in named if not a["positional"]]
+        params = ["self", *positional] + (["*", *keywords] if keywords else []) + ["**options"]
+        data = [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in named]
+        data.append('"options": options')
+        fields = "\n".join(f'        self.{f} = made["{f}"]' for f in op["fields"])
+        shown = " + \", \" + ".join(f'f"{f}={{self.{f}!r}}"' for f in op["fields"])
+        functions.append(
+            f'class {op["class"]}:\n    """{op["doc"]}"""\n\n'
+            f'    def __init__({", ".join(params)}) -> None:\n'
+            f'        made = call("{op["name"]}", {{{", ".join(data)}}})\n'
+            f'        self._made = tuple(made["payload"])\n{fields}\n\n'
+            f'    def _payload(self) -> tuple:\n        """What the Engine takes."""\n'
+            f'        return self._made\n\n'
+            f'    def __repr__(self) -> str:\n'
+            f'        return "{op["class"]}(" + {shown} + ")"\n')
+    for op in (o for o in ops if o["on"] == "module" and o["kind"] != "value"):
         positional = [py_param(a) for a in op["args"] if a["positional"]]
         keywords = [py_param(a) for a in op["args"] if not a["positional"]]
         params = positional + (["*", *keywords] if keywords else [])
@@ -120,7 +138,7 @@ def python(ops: list[dict]) -> str:
            "from typing import TYPE_CHECKING\n",
            "from ._waist import " + ", ".join(sorted(
                {"_film_font", "_canvas", "_as_points", "_as_size", "_paired", "call"}
-               | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
+               | {f"_{a['type']}" for op in ops for a in op["args"] if a["type"] != "options"})) + "\n",
            "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
@@ -149,6 +167,9 @@ def typescript(ops: list[dict]) -> str:
     classes: dict[str, list[str]] = {}
     functions: list[str] = []
     for op in ops:
+        if op["kind"] == "value":
+            functions.append(ts_value(op))
+            continue
         positional = [a for a in op["args"] if a["positional"]]
         options = [a for a in op["args"] if not a["positional"]]
         params = []
@@ -202,6 +223,36 @@ def typescript(ops: list[dict]) -> str:
         out.append(f"export abstract class {owner}Surface {{\n{hooks}\n" + "\n".join(methods) + "}\n")
     out += functions
     return "\n".join(out)
+
+
+def ts_value(op: dict) -> str:
+    """A value class: built by the Core, its fields set from the answer."""
+    named = [a for a in op["args"] if a["type"] != "options"]
+    positional = [a for a in named if a["positional"]]
+    keywords = [a for a in named if not a["positional"]]
+    params = [f'{camel(a["name"])}{"?" if "default" in a else ""}: {TS_TYPE[a["type"]]}'
+              for a in positional]
+    fields = "; ".join(f'{camel(a["name"])}?: {TS_TYPE[a["type"]]}' for a in keywords)
+    params.append(f"options?: {{ {fields} }} & Record<string, unknown>")
+    unpack = ", ".join(camel(a["name"]) for a in keywords)
+    data = []
+    for a in named:
+        default = a.get("default")
+        source = camel(a["name"])
+        if default not in (None, "none"):
+            source = f"({source} ?? {TS_DEFAULT.get(default, default)})"
+        data.append(f'{a["name"]}: to.{a["type"]}({source})')
+    data.append("options: rest")
+    declared = "\n".join(f"  readonly {camel(f)}: any;" for f in op["fields"])
+    assigned = "\n".join(f'    this.{camel(f)} = made.{f};' for f in op["fields"])
+    return (f'/** {op["doc"]} */\n'
+            f'export class {op["class"]} {{\n{declared}\n  private readonly made: unknown[];\n\n'
+            f'  constructor({", ".join(params)}) {{\n'
+            f'    const {{ {unpack}, ...rest }} = options ?? {{}};\n'
+            f'    const made = call("{op["name"]}", {{ {", ".join(data)} }});\n'
+            f'    this.made = made.payload;\n{assigned}\n  }}\n\n'
+            f'  /** @internal What the Engine takes. */\n'
+            f'  _payload(): unknown[] {{\n    return this.made;\n  }}\n}}\n')
 
 
 OUTPUTS = {

@@ -238,3 +238,25 @@ doc = "The easing curve the Engine applies between two moments: the same curve y
 args = [
   { name = "t", type = "number", positional = true },
 ]
+
+# -- Values: things an author builds and hands to `explain` -------------------
+#
+# A value is a class whose fields come from the Core. `options` collects every
+# other keyword (Python's **options; in JavaScript, the options object's other
+# fields).
+
+[[op]]
+name = "rule"
+class = "Rule"
+on = "module"
+kind = "value"
+context = []
+doc = "How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre."
+args = [
+  { name = "pattern", type = "key", positional = true },
+  { name = "position", type = "string", positional = true, default = "\"straight\"" },
+  { name = "ease", type = "string", default = "none" },
+  { name = "order", type = "string", default = "\"screen\"" },
+  { name = "options", type = "options" },
+]
+fields = ["pattern", "position", "ease", "order", "options"]

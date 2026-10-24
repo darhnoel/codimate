@@ -5,6 +5,7 @@
 
 import { Frame, type Event, type Trace } from "./trace.ts";
 import type { Scene } from "./scene.ts";
+import type { Rule } from "./surface.ts";
 import { call, engine, height, memory, width } from "./waist.ts";
 
 /** How long each event lasts, in seconds. */
@@ -33,11 +34,11 @@ export type View<S> = (frame: Frame<S>) => Scene;
 export class Explanation<S = unknown> {
   readonly trace: Trace<S>;
   readonly timing: Timing;
-  readonly motion: unknown[];
+  readonly motion: Rule[];
   readonly scenes: Scene[];
   readonly durations: number[];
 
-  constructor(options: { trace: Trace<S>; view: View<S>; motion?: unknown[]; timing?: Timing }) {
+  constructor(options: { trace: Trace<S>; view: View<S>; motion?: Rule[]; timing?: Timing }) {
     this.trace = options.trace;
     this.timing = options.timing ?? new Timing();
     this.motion = options.motion ?? [];
@@ -65,7 +66,7 @@ export class Explanation<S = unknown> {
       durations: this.durations,
       scenes: this.scenes.map((s) => s._payload()),
       cameras: this.scenes.map((s) => s._camera()),
-      rules: this.motion,
+      rules: this.motion.map((rule) => rule._payload()),
     });
   }
 
@@ -132,6 +133,6 @@ export class Explanation<S = unknown> {
 }
 
 /** Put a trace, a view, motion rules and timing together into a film. */
-export function explain<S>(options: { trace: Trace<S>; view: View<S>; motion?: unknown[]; timing?: Timing }): Explanation<S> {
+export function explain<S>(options: { trace: Trace<S>; view: View<S>; motion?: Rule[]; timing?: Timing }): Explanation<S> {
   return new Explanation(options);
 }

@@ -23,6 +23,7 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "column" => run(data, surface::column),
         "measure" => run(data, surface::measure),
         "ease" => run(data, surface::ease),
+        "rule" => run(data, surface::rule),
         _ => surface::internal(op, data),
     }
 }

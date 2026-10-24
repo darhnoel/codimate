@@ -58,6 +58,26 @@ class _HandleSurface:
         return self
 
 
+class Rule:
+    """How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre."""
+
+    def __init__(self, pattern, position="straight", *, ease=None, order="screen", **options) -> None:
+        made = call("rule", {"pattern": _key(pattern), "position": _string(position), "ease": _string(ease), "order": _string(order), "options": options})
+        self._made = tuple(made["payload"])
+        self.pattern = made["pattern"]
+        self.position = made["position"]
+        self.ease = made["ease"]
+        self.order = made["order"]
+        self.options = made["options"]
+
+    def _payload(self) -> tuple:
+        """What the Engine takes."""
+        return self._made
+
+    def __repr__(self) -> str:
+        return "Rule(" + f"pattern={self.pattern!r}" + ", " + f"position={self.position!r}" + ", " + f"ease={self.ease!r}" + ", " + f"order={self.order!r}" + ", " + f"options={self.options!r}" + ")"
+
+
 def ngon(sides, r, *, at=(0.0, 0.0), turn=0.0):
     """The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up."""
     return _as_points(call("ngon", {"sides": _int(sides), "r": _number(r), "at": _point(at), "turn": _number(turn)}))
