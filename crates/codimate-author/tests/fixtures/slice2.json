@@ -1,0 +1,1398 @@
+[
+ {
+  "op": "line",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "l"
+   ],
+   "start": [
+    10,
+    20
+   ],
+   "end": [
+    110,
+    70
+   ],
+   "w": 2.0
+  },
+  "expected": {
+   "ok": {
+    "item": "l",
+    "kind": "line",
+    "x": 10.0,
+    "y": 20.0,
+    "x2": 110.0,
+    "y2": 70.0,
+    "w": 2.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "line",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "l"
+   ],
+   "start": [
+    0,
+    0
+   ],
+   "end": [
+    5,
+    5
+   ],
+   "w": 6.0
+  },
+  "expected": {
+   "ok": {
+    "item": "l",
+    "kind": "line",
+    "x": 0.0,
+    "y": 0.0,
+    "x2": 5.0,
+    "y2": 5.0,
+    "w": 6,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    0,
+    0
+   ],
+   "end": [
+    200,
+    100
+   ],
+   "w": 4.0,
+   "head": 16.0
+  },
+  "expected": {
+   "ok": {
+    "item": "a",
+    "kind": "polygon",
+    "x": 99.55278640450004,
+    "y": 49.46334368540005,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     -0.8944271909999159,
+     1.7888543819998317,
+     184.7947377530014,
+     94.6334368540005,
+     181.7536853036017,
+     100.71554175279992,
+     200.0,
+     100.0,
+     189.62464458440095,
+     84.97362319120141,
+     186.58359213500125,
+     91.05572809000084,
+     0.8944271909999159,
+     -1.7888543819998317
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    50,
+    50
+   ],
+   "end": [
+    55,
+    50
+   ],
+   "w": 8.0,
+   "head": 30.0
+  },
+  "expected": {
+   "ok": {
+    "item": "a",
+    "kind": "polygon",
+    "x": 52.5,
+    "y": 50.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     50.0,
+     54.0,
+     50.0,
+     54.0,
+     50.0,
+     58.0,
+     55.0,
+     50.0,
+     50.0,
+     42.0,
+     50.0,
+     46.0,
+     50.0,
+     46.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    9,
+    9
+   ],
+   "end": [
+    9,
+    9
+   ],
+   "w": 4.0,
+   "head": 16.0
+  },
+  "expected": {
+   "ok": {
+    "item": "a",
+    "kind": "polygon",
+    "x": 9.0,
+    "y": 9.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     100,
+     0
+    ],
+    [
+     50,
+     80
+    ]
+   ],
+   "closed": true
+  },
+  "expected": {
+   "ok": {
+    "item": "p",
+    "kind": "polygon",
+    "x": 50.0,
+    "y": 40.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     100.0,
+     0.0,
+     50.0,
+     80.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
+   "closed": false
+  },
+  "expected": {
+   "ok": {
+    "item": "p",
+    "kind": "polygon",
+    "x": 2.0,
+    "y": 3.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 0.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     1.0,
+     2.0,
+     3.0,
+     4.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [],
+   "closed": true
+  },
+  "expected": {
+   "error": "polygon 'p' has no points"
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     50,
+     40
+    ],
+    [
+     100,
+     0
+    ]
+   ],
+   "w": 2.0,
+   "closed": false
+  },
+  "expected": {
+   "ok": {
+    "item": "c",
+    "kind": "curve",
+    "x": 50.0,
+    "y": 20.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 0.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     50.0,
+     40.0,
+     100.0,
+     0.0
+    ],
+    "edge": "white",
+    "edge_w": 2.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     0,
+     9
+    ]
+   ],
+   "w": 5.0,
+   "closed": true
+  },
+  "expected": {
+   "ok": {
+    "item": "c",
+    "kind": "curve",
+    "x": 4.5,
+    "y": 4.5,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     9.0,
+     9.0,
+     0.0,
+     9.0
+    ],
+    "edge": "white",
+    "edge_w": 5.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ]
+   ],
+   "w": 2.0,
+   "closed": false
+  },
+  "expected": {
+   "error": "curve 'c' needs at least 2 points"
+  }
+ },
+ {
+  "op": "arc",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "r": 90,
+   "sweep": [
+    0,
+    50
+   ],
+   "at": [
+    10,
+    10
+   ]
+  },
+  "expected": {
+   "ok": {
+    "item": "a",
+    "kind": "arc",
+    "x": 10.0,
+    "y": 10.0,
+    "x2": 0.0,
+    "y2": 50.0,
+    "w": 180.0,
+    "h": 180.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arc",
+  "data": {
+   "group": {
+    "path": [],
+    "ox": 0.0,
+    "oy": 0.0,
+    "w": 1280.0
+   },
+   "key": [
+    "a"
+   ],
+   "r": [
+    120,
+    60
+   ],
+   "sweep": [
+    -30,
+    200
+   ],
+   "at": {
+    "x": 5,
+    "y": null,
+    "top": 0,
+    "bottom": null
+   }
+  },
+  "expected": {
+   "ok": {
+    "item": "a",
+    "kind": "arc",
+    "x": 5.0,
+    "y": 0.0,
+    "x2": -30.0,
+    "y2": 200.0,
+    "w": 240.0,
+    "h": 120.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "line",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "l"
+   ],
+   "start": [
+    10,
+    20
+   ],
+   "end": [
+    110,
+    70
+   ],
+   "w": 2.0
+  },
+  "expected": {
+   "ok": {
+    "item": "g/l",
+    "kind": "line",
+    "x": 110.0,
+    "y": 220.0,
+    "x2": 210.0,
+    "y2": 270.0,
+    "w": 2.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "line",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "l"
+   ],
+   "start": [
+    0,
+    0
+   ],
+   "end": [
+    5,
+    5
+   ],
+   "w": 6.0
+  },
+  "expected": {
+   "ok": {
+    "item": "g/l",
+    "kind": "line",
+    "x": 100.0,
+    "y": 200.0,
+    "x2": 105.0,
+    "y2": 205.0,
+    "w": 6,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    0,
+    0
+   ],
+   "end": [
+    200,
+    100
+   ],
+   "w": 4.0,
+   "head": 16.0
+  },
+  "expected": {
+   "ok": {
+    "item": "g/a",
+    "kind": "polygon",
+    "x": 199.55278640450004,
+    "y": 249.46334368540005,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     -0.8944271909999159,
+     1.7888543819998317,
+     184.7947377530014,
+     94.6334368540005,
+     181.7536853036017,
+     100.71554175279992,
+     200.0,
+     100.0,
+     189.62464458440095,
+     84.97362319120141,
+     186.58359213500125,
+     91.05572809000084,
+     0.8944271909999159,
+     -1.7888543819998317
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    50,
+    50
+   ],
+   "end": [
+    55,
+    50
+   ],
+   "w": 8.0,
+   "head": 30.0
+  },
+  "expected": {
+   "ok": {
+    "item": "g/a",
+    "kind": "polygon",
+    "x": 152.5,
+    "y": 250.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     50.0,
+     54.0,
+     50.0,
+     54.0,
+     50.0,
+     58.0,
+     55.0,
+     50.0,
+     50.0,
+     42.0,
+     50.0,
+     46.0,
+     50.0,
+     46.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "arrow",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "start": [
+    9,
+    9
+   ],
+   "end": [
+    9,
+    9
+   ],
+   "w": 4.0,
+   "head": 16.0
+  },
+  "expected": {
+   "ok": {
+    "item": "g/a",
+    "kind": "polygon",
+    "x": 109.0,
+    "y": 209.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0,
+     9.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     100,
+     0
+    ],
+    [
+     50,
+     80
+    ]
+   ],
+   "closed": true
+  },
+  "expected": {
+   "ok": {
+    "item": "g/p",
+    "kind": "polygon",
+    "x": 150.0,
+    "y": 240.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     100.0,
+     0.0,
+     50.0,
+     80.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
+   "closed": false
+  },
+  "expected": {
+   "ok": {
+    "item": "g/p",
+    "kind": "polygon",
+    "x": 102.0,
+    "y": 203.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 0.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     1.0,
+     2.0,
+     3.0,
+     4.0
+    ],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "polygon",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "p"
+   ],
+   "points": [],
+   "closed": true
+  },
+  "expected": {
+   "error": "polygon 'p' has no points"
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     50,
+     40
+    ],
+    [
+     100,
+     0
+    ]
+   ],
+   "w": 2.0,
+   "closed": false
+  },
+  "expected": {
+   "ok": {
+    "item": "g/c",
+    "kind": "curve",
+    "x": 150.0,
+    "y": 220.0,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 0.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     50.0,
+     40.0,
+     100.0,
+     0.0
+    ],
+    "edge": "white",
+    "edge_w": 2.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     0,
+     9
+    ]
+   ],
+   "w": 5.0,
+   "closed": true
+  },
+  "expected": {
+   "ok": {
+    "item": "g/c",
+    "kind": "curve",
+    "x": 104.5,
+    "y": 204.5,
+    "x2": 0.0,
+    "y2": 0.0,
+    "w": 1.0,
+    "h": 0.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [
+     0.0,
+     0.0,
+     9.0,
+     9.0,
+     0.0,
+     9.0
+    ],
+    "edge": "white",
+    "edge_w": 5.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  }
+ },
+ {
+  "op": "curve",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "c"
+   ],
+   "points": [
+    [
+     0,
+     0
+    ]
+   ],
+   "w": 2.0,
+   "closed": false
+  },
+  "expected": {
+   "error": "curve 'c' needs at least 2 points"
+  }
+ },
+ {
+  "op": "arc",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "r": 90,
+   "sweep": [
+    0,
+    50
+   ],
+   "at": [
+    10,
+    10
+   ]
+  },
+  "expected": {
+   "ok": {
+    "item": "g/a",
+    "kind": "arc",
+    "x": 110.0,
+    "y": 210.0,
+    "x2": 0,
+    "y2": 50,
+    "w": 180.0,
+    "h": 180.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  },
+  "fixed": "an arc's sweep is angles, not coordinates: a Group no longer moves it"
+ },
+ {
+  "op": "arc",
+  "data": {
+   "group": {
+    "path": [
+     "g"
+    ],
+    "ox": 100.0,
+    "oy": 200.0,
+    "w": 300.0
+   },
+   "key": [
+    "a"
+   ],
+   "r": [
+    120,
+    60
+   ],
+   "sweep": [
+    -30,
+    200
+   ],
+   "at": {
+    "x": 5,
+    "y": null,
+    "top": 0,
+    "bottom": null
+   }
+  },
+  "expected": {
+   "ok": {
+    "item": "g/a",
+    "kind": "arc",
+    "x": 105.0,
+    "y": 200.0,
+    "x2": -30,
+    "y2": 200,
+    "w": 240.0,
+    "h": 120.0,
+    "r": 0.0,
+    "color": "white",
+    "points": [],
+    "edge": "white",
+    "edge_w": 0.0,
+    "text": "",
+    "size": 16.0,
+    "font": "",
+    "layer": 0,
+    "opacity": 1.0,
+    "scale_x": 1.0,
+    "scale_y": 1.0,
+    "rotate": 0.0,
+    "pivot": "center"
+   }
+  },
+  "fixed": "an arc's sweep is angles, not coordinates: a Group no longer moves it"
+ }
+]

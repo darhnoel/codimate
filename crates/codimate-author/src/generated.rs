@@ -11,6 +11,11 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "circle" => run(data, surface::circle),
         "text" => run(data, surface::text),
         "fill" => run(data, surface::fill),
+        "line" => run(data, surface::line),
+        "arrow" => run(data, surface::arrow),
+        "polygon" => run(data, surface::polygon),
+        "curve" => run(data, surface::curve),
+        "arc" => run(data, surface::arc),
         _ => surface::internal(op, data),
     }
 }

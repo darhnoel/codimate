@@ -65,7 +65,7 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {{
 
 # -- Python: the Skin's methods ------------------------------------------------
 
-PY_DEFAULT = {"none": "None"}
+PY_DEFAULT = {"none": "None", "true": "True", "false": "False"}
 PY_CONTEXT = {
     "group": '"group": self._frame()',
     "shape": '"shape": self._shape()',
@@ -99,7 +99,8 @@ def python(ops: list[dict]) -> str:
            'arguments across the Waist and keeps what comes back."""\n',
            "from __future__ import annotations\n",
            "from typing import TYPE_CHECKING\n",
-           "from ._waist import _at, _film_font, _key, _number, _string, _text\n",
+           "from ._waist import " + ", ".join(sorted(
+               {"_film_font"} | {f"_{a['type']}" for op in ops for a in op["args"]})) + "\n",
            "if TYPE_CHECKING:\n    from .scene import Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
@@ -108,7 +109,9 @@ def python(ops: list[dict]) -> str:
 
 # -- TypeScript: the Skin's methods --------------------------------------------
 
-TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "string", "at": "At"}
+TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "string", "at": "At",
+           "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
+           "pair": "readonly [number, number]", "bool": "boolean"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
@@ -149,7 +152,7 @@ def typescript(ops: list[dict]) -> str:
             f'  {camel(op["name"])}({", ".join(params)}): {returns} {{\n{body}\n  }}\n')
     out = [f"// {HEADER}\n//\n// The JavaScript Skin's side of the Interface Manifest: each method sends\n"
            "// its arguments across the Waist and keeps what comes back.\n",
-           'import { filmFont, to, type At, type Frame, type Key, type ShapeData } from "./waist.ts";\n'
+           'import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData } from "./waist.ts";\n'
            'import type { Handle } from "./scene.ts";\n']
     for owner, methods in classes.items():
         hooks = ("  protected abstract _frame(): Frame;\n"

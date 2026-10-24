@@ -3,7 +3,7 @@
 // The JavaScript Skin's side of the Interface Manifest: each method sends
 // its arguments across the Waist and keeps what comes back.
 
-import { filmFont, to, type At, type Frame, type Key, type ShapeData } from "./waist.ts";
+import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData } from "./waist.ts";
 import type { Handle } from "./scene.ts";
 
 export abstract class GroupSurface {
@@ -23,6 +23,31 @@ export abstract class GroupSurface {
   /** Text, centred horizontally. `font` is a font file or an installed font's name, for this text only; unset, the film's font. */
   text(key: Key, content: unknown, options?: { size?: number; font?: string; at?: At }): Handle {
     return this._build("text", { group: this._frame(), film_font: filmFont(), key: to.key(key), content: to.text(content), size: to.number((options?.size ?? 16)), font: to.string(options?.font), at: to.at(options?.at) });
+  }
+
+  /** A line between two points. `w` is its thickness. Each end may be a Slot (a line joins the middles of two places) or a point. */
+  line(key: Key, options: { start: Point; end: Point; w?: number }): Handle {
+    return this._build("line", { group: this._frame(), key: to.key(key), start: to.point(options?.start), end: to.point(options?.end), w: to.number((options?.w ?? 2.0)) });
+  }
+
+  /** An arrow, as a single filled shape: one name, travelling as one thing. `w` is the shaft, `head` the point. */
+  arrow(key: Key, options: { start: Point; end: Point; w?: number; head?: number }): Handle {
+    return this._build("arrow", { group: this._frame(), key: to.key(key), start: to.point(options?.start), end: to.point(options?.end), w: to.number((options?.w ?? 4.0)), head: to.number((options?.head ?? 16.0)) });
+  }
+
+  /** A shape with corners. `points` is a sequence of points. Closed and filled by default; `closed=False` leaves an open outline. Two polygons tween only if they have the same number of corners. */
+  polygon(key: Key, points: readonly Point[], options?: { closed?: boolean }): Handle {
+    return this._build("polygon", { group: this._frame(), key: to.key(key), points: to.points(points), closed: to.bool((options?.closed ?? true)) });
+  }
+
+  /** A smooth line through every one of `points`: samples, not control points. `w` is the stroke width. Open by default; `closed=True` makes a fillable shape. Two curves tween only if they have the same number of points. */
+  curve(key: Key, points: readonly Point[], options?: { w?: number; closed?: boolean }): Handle {
+    return this._build("curve", { group: this._frame(), key: to.key(key), points: to.points(points), w: to.number((options?.w ?? 2.0)), closed: to.bool((options?.closed ?? false)) });
+  }
+
+  /** A slice of a circle: an angle mark, a pie, a dial, an orbit. `sweep` is (start, end) in degrees, clockwise from twelve o'clock; `r` is the radius, or (rx, ry) for an ellipse. Open by default; `.round(1)` closes it into a pie slice. */
+  arc(key: Key, options: { r: number | Point; sweep: readonly [number, number]; at?: At }): Handle {
+    return this._build("arc", { group: this._frame(), key: to.key(key), r: to.radius(options?.r), sweep: to.pair(options?.sweep), at: to.at(options?.at) });
   }
 }
 

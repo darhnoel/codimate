@@ -70,3 +70,68 @@ args = [
   { name = "edge", type = "string", default = "none" },
   { name = "edge_w", type = "number", default = "none" },
 ]
+
+[[op]]
+name = "line"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A line between two points. `w` is its thickness. Each end may be a Slot (a line joins the middles of two places) or a point."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "start", type = "point" },
+  { name = "end", type = "point" },
+  { name = "w", type = "number", default = "2.0" },
+]
+
+[[op]]
+name = "arrow"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "An arrow, as a single filled shape: one name, travelling as one thing. `w` is the shaft, `head` the point."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "start", type = "point" },
+  { name = "end", type = "point" },
+  { name = "w", type = "number", default = "4.0" },
+  { name = "head", type = "number", default = "16.0" },
+]
+
+[[op]]
+name = "polygon"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A shape with corners. `points` is a sequence of points. Closed and filled by default; `closed=False` leaves an open outline. Two polygons tween only if they have the same number of corners."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "points", type = "points", positional = true },
+  { name = "closed", type = "bool", default = "true" },
+]
+
+[[op]]
+name = "curve"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A smooth line through every one of `points`: samples, not control points. `w` is the stroke width. Open by default; `closed=True` makes a fillable shape. Two curves tween only if they have the same number of points."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "points", type = "points", positional = true },
+  { name = "w", type = "number", default = "2.0" },
+  { name = "closed", type = "bool", default = "false" },
+]
+
+[[op]]
+name = "arc"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A slice of a circle: an angle mark, a pie, a dial, an orbit. `sweep` is (start, end) in degrees, clockwise from twelve o'clock; `r` is the radius, or (rx, ry) for an ellipse. Open by default; `.round(1)` closes it into a pie slice."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "r", type = "radius" },
+  { name = "sweep", type = "pair" },
+  { name = "at", type = "at", default = "none" },
+]

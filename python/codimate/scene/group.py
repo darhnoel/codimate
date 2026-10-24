@@ -182,36 +182,6 @@ class Group(_GroupSurface):
         return self._place(key, "formula", x=x, y=y, text=latex, size=size,
                            layer=10, r=1.0)
 
-    def arc(self, key: Hashable, *, r, sweep, at=None) -> "Handle":
-        """A slice of a circle — an angle mark, a pie, a dial, an orbit.
-
-            scene.arc("angle", r=90, sweep=(0, 50)).fill("none", edge="cyan",
-                                                          edge_w=3)
-            scene.arc("slice", r=120, sweep=(0, 120)).fill("orange").round(1)
-
-        `sweep` is `(start, end)` in degrees, clockwise from twelve o'clock —
-        the same zero `cm.ngon` uses. `r` is the radius, or `(rx, ry)` for an
-        ellipse.
-
-        Open by default, so it draws as a curved line. `.round(1)` closes it
-        back to the centre and makes a pie slice you can fill.
-
-        Two arcs always tween, however far apart their angles are, so an angle
-        mark grows and a pie fills smoothly. That is what this cannot be done
-        with `curve`: a curve through points on a circle changes its point
-        count when the sweep changes, and then it snaps instead of sweeping.
-        """
-        rx, ry = (r, r) if isinstance(r, (int, float)) else r
-        start, end = sweep
-        x, y = self._where(at, 0.0)
-        return self._place(
-            key, "arc", x=x, y=y,
-            # The bounding box, so an ellipse costs nothing extra.
-            w=float(rx) * 2, h=float(ry) * 2,
-            # `x2`/`y2` are the line's endpoints elsewhere and free here.
-            x2=float(start), y2=float(end),
-        )
-
     def image(self, key: Hashable, file, *, size=None, at=None) -> "Handle":
         """A picture — a photo, a screenshot, a figure — drawn into the frame.
 
@@ -271,99 +241,6 @@ class Group(_GroupSurface):
             # starts at zero — no pen — because `w` is the fit box.
             r=1.0, size=0.0,
         )
-
-    def polygon(self, key: Hashable, points, *, closed: bool = True) -> "Handle":
-        """A shape with corners: a triangle, a wedge, an arrow head, a wing.
-
-            scene.polygon("tri", cm.ngon(3, r=50, at=(640, 360))).fill("green")
-
-        `points` is a sequence of `(x, y)`. Closed and filled by default;
-        `closed=False` leaves an open outline, which shows only with an edge.
-
-        Two polygons tween only if they have the same number of corners —
-        interpolating a triangle into a pentagon has no answer worth inventing,
-        so the later shape stands for the whole beat instead.
-        """
-        flat, xs, ys = [], [], []
-        for px, py in points:
-            flat += [float(px), float(py)]
-            xs.append(float(px))
-            ys.append(float(py))
-        if not flat:
-            raise ValueError(f"polygon {key!r} has no points")
-        return self._place(
-            key, "polygon",
-            # Anchored at the middle of its corners, so it travels as one thing.
-            x=(min(xs) + max(xs)) / 2, y=(min(ys) + max(ys)) / 2,
-            points=tuple(flat), w=1.0 if closed else 0.0,
-        )
-
-    def curve(self, key: Hashable, points, *, w: float = 2.0,
-              closed: bool = False) -> "Handle":
-        """A smooth line through every one of `points`.
-
-            scene.curve("plot", samples, w=3).fill("cyan")
-
-        The points are on the curve, not control points: you hand it samples —
-        a function you plotted, a path something travelled — and it draws a
-        smooth line through them. `w` is the stroke width.
-
-        Open by default, and an open curve is *drawn* rather than filled, the
-        way a line is. `closed=True` joins the ends and makes it a fillable
-        shape, like a polygon with rounded-off corners.
-
-        Two curves tween only if they have the same number of points, the same
-        rule polygons follow; otherwise the later one stands for the beat.
-        """
-        flat, xs, ys = [], [], []
-        for px, py in points:
-            flat += [float(px), float(py)]
-            xs.append(float(px))
-            ys.append(float(py))
-        if len(flat) < 4:
-            raise ValueError(f"curve {key!r} needs at least 2 points")
-        return self._place(
-            key, "curve",
-            # Anchored at the middle of its samples, so it travels as one thing.
-            x=(min(xs) + max(xs)) / 2, y=(min(ys) + max(ys)) / 2,
-            points=tuple(flat),
-            # `w` is the closed flag in the payload, the way it is for a
-            # polygon, so the stroke width travels as `edge_w`.
-            w=1.0 if closed else 0.0, edge_w=float(w),
-        )
-
-    def arrow(self, key: Hashable, *, start, end, w: float = 4.0,
-              head: float = 16.0) -> "Handle":
-        """An arrow, as a single filled shape.
-
-        One shape rather than a line plus a separate head, so it carries one
-        name and travels as one thing. `w` is the shaft, `head` the point.
-        """
-        import math
-
-        (x0, y0), (x1, y1) = _point(start), _point(end)
-        dx, dy = x1 - x0, y1 - y0
-        span = math.hypot(dx, dy) or 1.0
-        ux, uy = dx / span, dy / span
-        px, py = -uy, ux
-        head = min(head, span)
-        bx, by = x1 - ux * head, y1 - uy * head
-        half, wing = w / 2, max(head * 0.55, w)
-        return self.polygon(key, [
-            (x0 + px * half, y0 + py * half), (bx + px * half, by + py * half),
-            (bx + px * wing, by + py * wing), (x1, y1),
-            (bx - px * wing, by - py * wing), (bx - px * half, by - py * half),
-            (x0 - px * half, y0 - py * half),
-        ])
-
-    def line(self, key: Hashable, *, start, end, w: float = 2.0) -> "Handle":
-        """A line between two points. `w` is its thickness.
-
-        A line has no centre to anchor, so it takes its two ends directly. Each
-        may be a Slot — a line joins the middles of two places — or an `(x, y)`.
-        """
-        (x, y), (x2, y2) = _point(start), _point(end)
-        return self._place(key, "line", x=x, y=y, x2=x2, y2=y2, w=w)
 
     # -- nesting --------------------------------------------------------------
 

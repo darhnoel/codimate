@@ -64,6 +64,8 @@ ignore = ["E741"]
 # lines are the lines of the code they write.
 "python/codimate/_surface.py" = ["E501"]
 "tools/generate.py" = ["E501"]
+# A table of recorded calls, one per line.
+"tools/record_fixtures.py" = ["E501"]
 
 [tool.ruff.lint.pylint]
 max-args = 5

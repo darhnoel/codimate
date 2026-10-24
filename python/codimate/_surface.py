@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._waist import _at, _film_font, _key, _number, _string, _text
+from ._waist import _at, _bool, _film_font, _key, _number, _pair, _point, _points, _radius, _string, _text
 
 if TYPE_CHECKING:
     from .scene import Handle
@@ -25,6 +25,26 @@ class _GroupSurface:
     def text(self, key, content, *, size=16, font=None, at=None) -> "Handle":
         """Text, centred horizontally. `font` is a font file or an installed font's name, for this text only; unset, the film's font."""
         return self._build("text", {"group": self._frame(), "film_font": _film_font(), "key": _key(key), "content": _text(content), "size": _number(size), "font": _string(font), "at": _at(at)})
+
+    def line(self, key, *, start, end, w=2.0) -> "Handle":
+        """A line between two points. `w` is its thickness. Each end may be a Slot (a line joins the middles of two places) or a point."""
+        return self._build("line", {"group": self._frame(), "key": _key(key), "start": _point(start), "end": _point(end), "w": _number(w)})
+
+    def arrow(self, key, *, start, end, w=4.0, head=16.0) -> "Handle":
+        """An arrow, as a single filled shape: one name, travelling as one thing. `w` is the shaft, `head` the point."""
+        return self._build("arrow", {"group": self._frame(), "key": _key(key), "start": _point(start), "end": _point(end), "w": _number(w), "head": _number(head)})
+
+    def polygon(self, key, points, *, closed=True) -> "Handle":
+        """A shape with corners. `points` is a sequence of points. Closed and filled by default; `closed=False` leaves an open outline. Two polygons tween only if they have the same number of corners."""
+        return self._build("polygon", {"group": self._frame(), "key": _key(key), "points": _points(points), "closed": _bool(closed)})
+
+    def curve(self, key, points, *, w=2.0, closed=False) -> "Handle":
+        """A smooth line through every one of `points`: samples, not control points. `w` is the stroke width. Open by default; `closed=True` makes a fillable shape. Two curves tween only if they have the same number of points."""
+        return self._build("curve", {"group": self._frame(), "key": _key(key), "points": _points(points), "w": _number(w), "closed": _bool(closed)})
+
+    def arc(self, key, *, r, sweep, at=None) -> "Handle":
+        """A slice of a circle: an angle mark, a pie, a dial, an orbit. `sweep` is (start, end) in degrees, clockwise from twelve o'clock; `r` is the radius, or (rx, ry) for an ellipse. Open by default; `.round(1)` closes it into a pie slice."""
+        return self._build("arc", {"group": self._frame(), "key": _key(key), "r": _radius(r), "sweep": _pair(sweep), "at": _at(at)})
 
 
 class _HandleSurface:

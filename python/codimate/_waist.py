@@ -73,3 +73,29 @@ def _film_font() -> str:
     from .layout import _FONT
 
     return _FONT[0]
+
+
+def _point(point) -> "list[float]":
+    """A point as data: a Slot is its centre."""
+    from .layout import Slot
+
+    if isinstance(point, Slot):
+        return [point.x, point.y]
+    return [float(point[0]), float(point[1])]
+
+
+def _points(points) -> "list[list[float]]":
+    return [[float(x), float(y)] for x, y in points]
+
+
+def _radius(r):
+    """One radius, or ``(rx, ry)`` for an ellipse."""
+    return float(r) if isinstance(r, (int, float)) else [float(r[0]), float(r[1])]
+
+
+def _pair(pair) -> "list[float]":
+    return [float(pair[0]), float(pair[1])]
+
+
+def _bool(value) -> bool:
+    return bool(value)
