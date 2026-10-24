@@ -67,6 +67,36 @@ export abstract class HandleSurface {
     this._change("fill", { shape: this._shape(), color: to.string((color ?? "white")), edge: to.string(options?.edge), edge_w: to.number(options?.edgeW) });
     return this;
   }
+
+  /** Rotate it. `pivot` is center, top, bottom, left or right. Text moves but does not turn. */
+  turn(degrees: number, pivot?: string): this {
+    this._change("turn", { shape: this._shape(), degrees: to.number(degrees), pivot: to.string((pivot ?? "center")) });
+    return this;
+  }
+
+  /** Scale it: a number for both axes, or (sx, sy) to stretch. */
+  grow(scale: number | Point): this {
+    this._change("grow", { shape: this._shape(), scale: to.radius(scale) });
+    return this;
+  }
+
+  /** Which layer it draws on, and how solid it is. */
+  on(layer?: number, opacity?: number): this {
+    this._change("on", { shape: this._shape(), layer: to.number(layer), opacity: to.number(opacity) });
+    return this;
+  }
+
+  /** Round a rectangle's corners, clamped to half its short side. */
+  round(radius: number): this {
+    this._change("round", { shape: this._shape(), radius: to.number(radius) });
+    return this;
+  }
+
+  /** How much of a formula or an imported SVG shows (`reveal`, 0 to 1), and whether a pen draws it on (`pen`, its width). On a marker, how far its stroke has been drawn on. */
+  write(reveal?: number, pen?: number): this {
+    this._change("write", { shape: this._shape(), reveal: to.number(reveal), pen: to.number((pen ?? 0.0)) });
+    return this;
+  }
 }
 
 /** The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up. */

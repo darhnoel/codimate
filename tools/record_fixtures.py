@@ -212,6 +212,49 @@ def slice5():
     ]
 
 
+def handle_case(op, draw, change, data):
+    """A Handle method's case: the shape before (sent as context) and after."""
+    scene = cm.Scene()
+    handle = draw(scene)
+    before = json.loads(json.dumps(asdict(scene._shapes[handle._name])))
+    try:
+        change(handle)
+        expected = {"ok": json.loads(json.dumps(asdict(scene._shapes[handle._name])))}
+    except ValueError as error:
+        expected = {"error": str(error)}
+    return {"op": op, "data": {"shape": before, **data}, "expected": expected}
+
+
+def slice6():
+    def rect(s):
+        return s.rect("r", w=10, h=10, at=(0, 0))
+
+    def formula(s):
+        return s.formula("f", "x^2", at=(0, 0))
+
+    def svg(s):
+        return s.svg("s", "logo.svg", at=(0, 0))
+
+    return [
+        handle_case("turn", rect, lambda h: h.turn(30), {"degrees": 30, "pivot": "center"}),
+        handle_case("turn", rect, lambda h: h.turn(-15, pivot="bottom"),
+                    {"degrees": -15, "pivot": "bottom"}),
+        handle_case("turn", rect, lambda h: h.turn(5, pivot="corner"),
+                    {"degrees": 5, "pivot": "corner"}),
+        handle_case("grow", rect, lambda h: h.grow(2), {"scale": 2}),
+        handle_case("grow", rect, lambda h: h.grow((1.5, 0.5)), {"scale": [1.5, 0.5]}),
+        handle_case("on", rect, lambda h: h.on(layer=4), {"layer": 4, "opacity": None}),
+        handle_case("on", rect, lambda h: h.on(opacity=0.25), {"layer": None, "opacity": 0.25}),
+        handle_case("on", rect, lambda h: h.on(layer=-2, opacity=0), {"layer": -2, "opacity": 0}),
+        handle_case("on", rect, lambda h: h.on(), {"layer": None, "opacity": None}),
+        handle_case("round", rect, lambda h: h.round(4), {"radius": 4}),
+        handle_case("write", formula, lambda h: h.write(reveal=0.5), {"reveal": 0.5, "pen": 0.0}),
+        handle_case("write", formula, lambda h: h.write(pen=2), {"reveal": None, "pen": 2}),
+        handle_case("write", svg, lambda h: h.write(reveal=0.25, pen=3), {"reveal": 0.25, "pen": 3}),
+        handle_case("write", svg, lambda h: h.write(), {"reveal": None, "pen": 0.0}),
+    ]
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

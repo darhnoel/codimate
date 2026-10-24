@@ -72,6 +72,59 @@ args = [
 ]
 
 [[op]]
+name = "turn"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "Rotate it. `pivot` is center, top, bottom, left or right. Text moves but does not turn."
+args = [
+  { name = "degrees", type = "number", positional = true },
+  { name = "pivot", type = "string", positional = true, default = "\"center\"" },
+]
+
+[[op]]
+name = "grow"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "Scale it: a number for both axes, or (sx, sy) to stretch."
+args = [
+  { name = "scale", type = "radius", positional = true },
+]
+
+[[op]]
+name = "on"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "Which layer it draws on, and how solid it is."
+args = [
+  { name = "layer", type = "number", positional = true, default = "none" },
+  { name = "opacity", type = "number", positional = true, default = "none" },
+]
+
+[[op]]
+name = "round"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "Round a rectangle's corners, clamped to half its short side."
+args = [
+  { name = "radius", type = "number", positional = true },
+]
+
+[[op]]
+name = "write"
+on = "Handle"
+kind = "builder"
+context = ["shape"]
+doc = "How much of a formula or an imported SVG shows (`reveal`, 0 to 1), and whether a pen draws it on (`pen`, its width). On a marker, how far its stroke has been drawn on."
+args = [
+  { name = "reveal", type = "number", positional = true, default = "none" },
+  { name = "pen", type = "number", positional = true, default = "0.0" },
+]
+
+[[op]]
 name = "line"
 on = "Group"
 kind = "builder"

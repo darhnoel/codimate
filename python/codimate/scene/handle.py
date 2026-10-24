@@ -81,51 +81,25 @@ class Handle(_HandleSurface):
                 self._marks[marker].reveal)
         return self
 
+    # ponytail: markers still live here until their slice moves to the Core;
+    # every other shape is turned and written by the generated methods.
     def turn(self, degrees: float, pivot: str = "center") -> "Handle":
         """Rotate it. `pivot` is center, top, bottom, left or right.
 
         Text moves but does not turn — rotating glyphs is renderer work that
         has not been done.
         """
-        if pivot not in PIVOTS:
-            raise ValueError(
-                f"unknown pivot {pivot!r} — use one of {', '.join(PIVOTS)}")
         if self._stroke() is not None:   # turned here, with the hand's tilt
+            if pivot not in PIVOTS:
+                raise ValueError(
+                    f"unknown pivot {pivot!r} — use one of {', '.join(PIVOTS)}")
             self._marks[self._name] = replace(self._stroke(), angle=float(degrees))
             return self._redraw(self._stroke().reveal)
-        return self._set(rotate=float(degrees), pivot=pivot)
-
-    def grow(self, scale) -> "Handle":
-        """Scale it: a number for both axes, or `(sx, sy)` to stretch."""
-        sx, sy = (scale, scale) if isinstance(scale, (int, float)) else scale
-        return self._set(scale_x=float(sx), scale_y=float(sy))
-
-    def on(self, layer: int = None, opacity: float = None) -> "Handle":
-        """Which layer it draws on, and how solid it is."""
-        changes = {}
-        if layer is not None:
-            changes["layer"] = int(layer)
-        if opacity is not None:
-            changes["opacity"] = float(opacity)
-        return self._set(**changes)
-
-    def round(self, radius: float) -> "Handle":
-        """Round a rectangle's corners, clamped to half its short side."""
-        return self._set(r=float(radius))
+        return super().turn(degrees, pivot)
 
     def write(self, reveal: float = None, pen: float = 0.0) -> "Handle":
         """How much of a formula or an imported SVG shows, and whether a pen
-        draws it on. On a marker, how far its stroke has been drawn on.
-
-        The pen rides in a different field for the two kinds — `w` for a
-        formula, `size` for an SVG, whose `w` is already the box it fits
-        inside. The payload reuses fields per kind by design (ADR 0008); this
-        is the one place that reuse is visible from Python.
-        """
+        draws it on. On a marker, how far its stroke has been drawn on."""
         if self._stroke() is not None:
             return self if reveal is None else self._redraw(float(reveal))
-        svg = self._shapes[self._name].kind == "svg"
-        changes = {"size" if svg else "w": float(pen)}
-        if reveal is not None:
-            changes["r"] = float(reveal)
-        return self._set(**changes)
+        return super().write(reveal, pen)

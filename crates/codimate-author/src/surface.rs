@@ -668,3 +668,103 @@ pub fn rule(a: RuleArgs) -> Result<Rule, Refusal> {
         options,
     })
 }
+
+// -- Saying more about a shape: what its Handle changes ------------------------
+
+const PIVOTS: [&str; 5] = ["center", "top", "bottom", "left", "right"];
+
+#[derive(Deserialize)]
+pub struct Turn {
+    shape: Shape,
+    degrees: f64,
+    pivot: String,
+}
+
+/// Rotate it about its centre or one of its edges. Text moves but does not
+/// turn: rotating glyphs is renderer work that has not been done.
+pub fn turn(a: Turn) -> Result<Shape, Refusal> {
+    if !PIVOTS.contains(&a.pivot.as_str()) {
+        return Err(Refusal(format!(
+            "unknown pivot '{}' — use one of {}",
+            a.pivot,
+            PIVOTS.join(", ")
+        )));
+    }
+    Ok(Shape {
+        rotate: a.degrees,
+        pivot: a.pivot,
+        ..a.shape
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Grow {
+    shape: Shape,
+    scale: Radius,
+}
+
+/// Scale it: one number for both axes, or (sx, sy) to stretch.
+pub fn grow(a: Grow) -> Result<Shape, Refusal> {
+    let (scale_x, scale_y) = match a.scale {
+        Radius::Round(s) => (s, s),
+        Radius::Oval([sx, sy]) => (sx, sy),
+    };
+    Ok(Shape {
+        scale_x,
+        scale_y,
+        ..a.shape
+    })
+}
+
+#[derive(Deserialize)]
+pub struct On {
+    shape: Shape,
+    layer: Option<f64>,
+    opacity: Option<f64>,
+}
+
+/// Which layer it draws on, and how solid it is; saying nothing leaves each.
+pub fn on(a: On) -> Result<Shape, Refusal> {
+    Ok(Shape {
+        layer: a.layer.map_or(a.shape.layer, |l| l as i64),
+        opacity: a.opacity.unwrap_or(a.shape.opacity),
+        ..a.shape
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Round {
+    shape: Shape,
+    radius: f64,
+}
+
+/// Round a rectangle's corners, clamped to half its short side when drawn.
+pub fn round(a: Round) -> Result<Shape, Refusal> {
+    Ok(Shape {
+        r: a.radius,
+        ..a.shape
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Write {
+    shape: Shape,
+    reveal: Option<f64>,
+    pen: f64,
+}
+
+/// How much of a formula or an imported SVG shows, and whether a pen draws it
+/// on. The pen rides in `w` for a formula and in `size` for an SVG, whose `w`
+/// is already the box it fits inside (ADR 0008's reuse of fields, visible).
+pub fn write(a: Write) -> Result<Shape, Refusal> {
+    let mut shape = a.shape;
+    if shape.kind == "svg" {
+        shape.size = a.pen;
+    } else {
+        shape.w = a.pen;
+    }
+    if let Some(reveal) = a.reveal {
+        shape.r = reveal;
+    }
+    Ok(shape)
+}

@@ -57,6 +57,31 @@ class _HandleSurface:
         self._change("fill", {"shape": self._shape(), "color": _string(color), "edge": _string(edge), "edge_w": _number(edge_w)})
         return self
 
+    def turn(self, degrees, pivot="center") -> "Handle":
+        """Rotate it. `pivot` is center, top, bottom, left or right. Text moves but does not turn."""
+        self._change("turn", {"shape": self._shape(), "degrees": _number(degrees), "pivot": _string(pivot)})
+        return self
+
+    def grow(self, scale) -> "Handle":
+        """Scale it: a number for both axes, or (sx, sy) to stretch."""
+        self._change("grow", {"shape": self._shape(), "scale": _radius(scale)})
+        return self
+
+    def on(self, layer=None, opacity=None) -> "Handle":
+        """Which layer it draws on, and how solid it is."""
+        self._change("on", {"shape": self._shape(), "layer": _number(layer), "opacity": _number(opacity)})
+        return self
+
+    def round(self, radius) -> "Handle":
+        """Round a rectangle's corners, clamped to half its short side."""
+        self._change("round", {"shape": self._shape(), "radius": _number(radius)})
+        return self
+
+    def write(self, reveal=None, pen=0.0) -> "Handle":
+        """How much of a formula or an imported SVG shows (`reveal`, 0 to 1), and whether a pen draws it on (`pen`, its width). On a marker, how far its stroke has been drawn on."""
+        self._change("write", {"shape": self._shape(), "reveal": _number(reveal), "pen": _number(pen)})
+        return self
+
 
 class Rule:
     """How things matching `pattern` change; the first matching rule wins. `position` is the path: straight, linear, fall, lift_carry_drop or arc. `ease` is linear, in, out, in_out, back, spring or bounce. `delay` and `stagger` are fractions of the beat; `order` is screen, reverse, name or centre."""
