@@ -7,7 +7,10 @@
 #
 #   name     the operation, and the method's name
 #   module   the Core module that answers it (default: surface)
-#   on       where the method lives: Group (a Scene is one), Handle
+#   on       where the method lives: Group (a Scene is one), Scene, Handle
+#   variadic an argument that takes any number of values: `*names` in Python,
+#            one array in JavaScript (an options object cannot follow rest
+#            arguments there)
 #   kind     builder (draws or changes a shape) or query (answers at once)
 #   context  what the Skin supplies itself, never the author:
 #              group      the Group's frame (path, point, width)
@@ -204,6 +207,67 @@ args = [
   { name = "anchor", type = "string", default = "none" },
   { name = "w", type = "number", default = "none" },
 ]
+
+[[op]]
+name = "formula"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "Real mathematics, written as LaTeX. `size` means what it means for text. Draw it on with `write(reveal=, pen=)`. Typeset once when the film is built."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "latex", type = "string", positional = true },
+  { name = "size", type = "number", default = "16.0" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "image"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "A picture (PNG or JPEG) drawn into the frame. `size` is a box it fits inside, one number or (w, h), aspect always kept; leave it out and it is drawn at its own pixel size."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "file", type = "text", positional = true },
+  { name = "size", type = "radius", default = "none" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "svg"
+on = "Group"
+kind = "builder"
+context = ["group"]
+doc = "Vector art from a file, drawn as real geometry: it tweens, turns, grows and draws on like anything else. `size` is a box it fits inside, one number or (w, h). It keeps its own colours unless `fill` overrides them."
+args = [
+  { name = "key", type = "key", positional = true },
+  { name = "file", type = "text", positional = true },
+  { name = "size", type = "radius", default = "120.0" },
+  { name = "at", type = "at", default = "none" },
+]
+
+[[op]]
+name = "focus"
+on = "Scene"
+kind = "builder"
+returns = "aim"
+context = []
+doc = "Look at these things; the camera works out where to stand. No names frames the whole canvas again. `pad` is room around them; `least` is the smallest thing the camera fills the frame with. Anything on an overlay stays where it is put."
+args = [
+  { name = "names", type = "keys", positional = true, variadic = true },
+  { name = "pad", type = "number", default = "40.0" },
+  { name = "least", type = "number", default = "240.0" },
+]
+
+[[op]]
+name = "overlay"
+on = "Scene"
+kind = "builder"
+returns = "overlay"
+context = ["group"]
+doc = "A place for things the camera does not move: titles and narration. The diagram pans and zooms underneath; whatever is drawn here stays put, in plain screen coordinates."
+args = []
 
 # -- Queries: module functions that answer at once ----------------------------
 #

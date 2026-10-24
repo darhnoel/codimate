@@ -164,7 +164,8 @@ pub struct Film {
     height: f64,
     durations: Vec<f64>,
     scenes: Vec<Vec<Shape>>,
-    cameras: Vec<Value>,
+    /// Typed, like the rules below, so the Core writes every number.
+    cameras: Vec<Option<Camera>>,
     /// Read as typed values, so the Core writes every number in them: a rule
     /// from Python (`90.0`) and from JavaScript (`90`) are the same bytes.
     rules: Vec<(
@@ -174,6 +175,15 @@ pub struct Film {
         String,
         String,
     )>,
+}
+
+/// Where one Scene's camera looks, as the film data carries it.
+#[derive(Deserialize, serde::Serialize)]
+pub struct Camera {
+    names: Vec<String>,
+    pad: f64,
+    min_size: f64,
+    fixed: Vec<String>,
 }
 
 /// A film's data, as text: what a browser plays and what a Conformance
@@ -781,4 +791,126 @@ pub fn write(a: Write) -> Result<Shape, Refusal> {
         shape.r = reveal;
     }
     Ok(shape)
+}
+
+// -- Formulas, pictures and the camera -----------------------------------------
+
+#[derive(Deserialize)]
+pub struct Formula {
+    group: Frame,
+    key: Vec<String>,
+    latex: String,
+    size: f64,
+    at: Option<Value>,
+}
+
+/// Mathematics written as LaTeX, typeset when the film is built. Fully
+/// written (`r` = 1) unless `write(reveal=)` says otherwise.
+pub fn formula(a: Formula) -> Result<Shape, Refusal> {
+    let at = centre(&a.group, a.at.as_ref(), a.size / 2.0)?;
+    Ok(Shape {
+        text: a.latex,
+        size: a.size,
+        layer: 10,
+        r: 1.0,
+        ..placed(&a.group, &a.key, "formula", at)
+    })
+}
+
+/// A box something fits inside: one number for a square, or (w, h).
+fn fit_box(size: &Option<Radius>) -> (f64, f64) {
+    match size {
+        None => (0.0, 0.0),
+        Some(Radius::Round(s)) => (*s, *s),
+        Some(Radius::Oval([w, h])) => (*w, *h),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct Image {
+    group: Frame,
+    key: Vec<String>,
+    file: String,
+    size: Option<Radius>,
+    at: Option<Value>,
+}
+
+/// A picture, fitted inside `size` with its aspect kept; unsized, its own
+/// pixel size (0 × 0 tells the Engine so).
+pub fn image(a: Image) -> Result<Shape, Refusal> {
+    let (w, h) = fit_box(&a.size);
+    let at = centre(&a.group, a.at.as_ref(), 0.0)?;
+    Ok(Shape {
+        text: a.file,
+        w,
+        h,
+        ..placed(&a.group, &a.key, "image", at)
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Svg {
+    group: Frame,
+    key: Vec<String>,
+    file: String,
+    size: Radius,
+    at: Option<Value>,
+}
+
+/// Vector art drawn as geometry, fitted inside `size`. Its own colours
+/// (`color` empty means as authored), fully written, no pen yet.
+pub fn svg(a: Svg) -> Result<Shape, Refusal> {
+    let (w, h) = fit_box(&Some(a.size));
+    let at = centre(&a.group, a.at.as_ref(), 0.0)?;
+    Ok(Shape {
+        text: a.file,
+        w,
+        h,
+        color: String::new(),
+        r: 1.0,
+        size: 0.0,
+        ..placed(&a.group, &a.key, "svg", at)
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Focus {
+    names: Vec<Vec<String>>,
+    pad: f64,
+    least: f64,
+}
+
+/// What the camera looks at: names, room around them, and the smallest
+/// thing it will fill the frame with. Where it stands is the Engine's job.
+#[derive(serde::Serialize)]
+pub struct Aim {
+    names: Vec<String>,
+    pad: f64,
+    min_size: f64,
+}
+
+pub fn focus(a: Focus) -> Result<Aim, Refusal> {
+    Ok(Aim {
+        names: a.names.iter().map(|n| n.join("/")).collect(),
+        pad: a.pad,
+        min_size: a.least,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Overlay {
+    group: Frame,
+}
+
+/// A place for things the camera does not move: a Group at the canvas
+/// origin, so its children are placed in plain screen coordinates.
+pub fn overlay(a: Overlay) -> Result<Frame, Refusal> {
+    let mut path = a.group.path.clone();
+    path.push("_overlay".into());
+    Ok(Frame {
+        path,
+        ox: a.group.ox,
+        oy: a.group.oy,
+        w: a.group.w,
+    })
 }

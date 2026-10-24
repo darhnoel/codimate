@@ -152,3 +152,8 @@ def _style(style):
 def _group(group) -> dict:
     """The Group (or Scene) to draw on, as the Core needs it."""
     return group._frame()
+
+
+def _keys(keys) -> "list[list[str]]":
+    """Several names, each a name or a path of names."""
+    return [_key(key) for key in keys]

@@ -340,6 +340,46 @@ def slice7():
     return cases
 
 
+def focus_case(names, kwargs, data):
+    scene = cm.Scene()
+    scene.focus(*names, **kwargs)
+    focus = scene._focus
+    return {"op": "focus", "data": data,
+            "expected": {"ok": {"names": focus["names"], "pad": focus["pad"],
+                                "min_size": focus["min_size"]}}}
+
+
+def slice8():
+    cases = []
+    for frame in (ROOT, GROUP):
+        cases += [
+            case("formula", frame, lambda g: g.formula("f", r"\frac{a}{b}", size=34, at=(10, 20)),
+                 {"key": ["f"], "latex": r"\frac{a}{b}", "size": 34, "at": [10, 20]}),
+            case("formula", frame, lambda g: g.formula("f", "x^2", at=cm.at(x=5, top=0)),
+                 {"key": ["f"], "latex": "x^2", "size": 16.0,
+                  "at": {"x": 5, "y": None, "top": 0, "bottom": None}}),
+            case("image", frame, lambda g: g.image("i", "a.png", at=(1, 2)),
+                 {"key": ["i"], "file": "a.png", "size": None, "at": [1, 2]}),
+            case("image", frame, lambda g: g.image("i", "a.png", size=400, at=(1, 2)),
+                 {"key": ["i"], "file": "a.png", "size": 400, "at": [1, 2]}),
+            case("image", frame, lambda g: g.image("i", "a.png", size=(520, 300), at=(1, 2)),
+                 {"key": ["i"], "file": "a.png", "size": [520, 300], "at": [1, 2]}),
+            case("svg", frame, lambda g: g.svg("s", "logo.svg", at=(3, 4)),
+                 {"key": ["s"], "file": "logo.svg", "size": 120.0, "at": [3, 4]}),
+            case("svg", frame, lambda g: g.svg("s", "flow.svg", size=(900, 420), at=(3, 4)),
+                 {"key": ["s"], "file": "flow.svg", "size": [900, 420], "at": [3, 4]}),
+        ]
+    cases += [
+        focus_case(["cat"], {}, {"names": [["cat"]], "pad": 40.0, "least": 240.0}),
+        focus_case([("cell", 2, 1)], {"pad": 60}, {"names": [["cell", "2", "1"]], "pad": 60,
+                                                   "least": 240.0}),
+        focus_case(["The", "cat", "sat"], {"least": 100}, {"names": [["The"], ["cat"], ["sat"]],
+                                                          "pad": 40.0, "least": 100}),
+        focus_case([], {}, {"names": [], "pad": 40.0, "least": 240.0}),
+    ]
+    return cases
+
+
 # Where the Python Surface was wrong, the Core is not: each fix is named here
 # and applied to the recording, so the fixture says what is right and why.
 FIXES = {

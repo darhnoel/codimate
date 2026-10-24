@@ -2,7 +2,7 @@
 // in the Authoring Core (the generated methods in surface.ts send it there);
 // what is left here is keeping the shapes and naming their places.
 
-import { GroupSurface, HandleSurface } from "./surface.ts";
+import { GroupSurface, HandleSurface, SceneSurface } from "./surface.ts";
 import { call, to, width, type Frame, type Key, type ShapeData } from "./waist.ts";
 
 /** Somewhere to draw, with its own origin and its own name. */
@@ -54,11 +54,22 @@ export class Group extends GroupSurface {
 
 /** The picture at one moment. No animation, no timing, no memory of the
  * frame before. Shapes are paired between moments by name. */
-export class Scene extends Group {
+export class Scene extends SceneSurface(Group) {
   readonly shapes = new Map<string, ShapeData>();
+  private aim: Record<string, unknown> | null = null;
+  private readonly overlays = new Set<string>();
 
   constructor() {
     super(null, [], 0, 0, width());
+  }
+
+  protected _aim(aim: Record<string, unknown>): void {
+    this.aim = aim;
+  }
+
+  protected _openOverlay(frame: Frame): Group {
+    this.overlays.add(frame.path[frame.path.length - 1]);
+    return this._nest(frame);
   }
 
   /** @internal The scene as the Engine takes it. */
@@ -66,9 +77,9 @@ export class Scene extends Group {
     return [...this.shapes.values()];
   }
 
-  /** @internal Where the camera looks; none until focus() arrives. */
-  _camera(): null {
-    return null;
+  /** @internal Where the camera looks, and what it leaves where it is. */
+  _camera(): Record<string, unknown> | null {
+    return this.aim === null ? null : { ...this.aim, fixed: [...this.overlays].sort() };
   }
 }
 

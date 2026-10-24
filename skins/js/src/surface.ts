@@ -56,6 +56,21 @@ export abstract class GroupSurface {
   group(key: Key, slot?: Slot, options?: { at?: At; anchor?: string; w?: number }): Group {
     return this._nest(call("group", { group: this._frame(), key: to.key(key), slot: to.slot(slot), at: to.at(options?.at), anchor: to.string(options?.anchor), w: to.number(options?.w) }));
   }
+
+  /** Real mathematics, written as LaTeX. `size` means what it means for text. Draw it on with `write(reveal=, pen=)`. Typeset once when the film is built. */
+  formula(key: Key, latex: string, options?: { size?: number; at?: At }): Handle {
+    return this._build("formula", { group: this._frame(), key: to.key(key), latex: to.string(latex), size: to.number((options?.size ?? 16.0)), at: to.at(options?.at) });
+  }
+
+  /** A picture (PNG or JPEG) drawn into the frame. `size` is a box it fits inside, one number or (w, h), aspect always kept; leave it out and it is drawn at its own pixel size. */
+  image(key: Key, file: unknown, options?: { size?: number | Point; at?: At }): Handle {
+    return this._build("image", { group: this._frame(), key: to.key(key), file: to.text(file), size: to.radius(options?.size), at: to.at(options?.at) });
+  }
+
+  /** Vector art from a file, drawn as real geometry: it tweens, turns, grows and draws on like anything else. `size` is a box it fits inside, one number or (w, h). It keeps its own colours unless `fill` overrides them. */
+  svg(key: Key, file: unknown, options?: { size?: number | Point; at?: At }): Handle {
+    return this._build("svg", { group: this._frame(), key: to.key(key), file: to.text(file), size: to.radius((options?.size ?? 120.0)), at: to.at(options?.at) });
+  }
 }
 
 export abstract class HandleSurface {
@@ -97,6 +112,26 @@ export abstract class HandleSurface {
     this._change("write", { shape: this._shape(), reveal: to.number(reveal), pen: to.number((pen ?? 0.0)) });
     return this;
   }
+}
+
+/** A Scene's own methods, mixed into a Group class. */
+export function SceneSurface<B extends abstract new (...args: any[]) => any>(Base: B) {
+  abstract class SceneMethods extends Base {
+    protected abstract _frame(): Frame;
+    protected abstract _aim(aim: unknown): void;
+    protected abstract _openOverlay(frame: Frame): Group;
+
+    /** Look at these things; the camera works out where to stand. No names frames the whole canvas again. `pad` is room around them; `least` is the smallest thing the camera fills the frame with. Anything on an overlay stays where it is put. */
+    focus(names: readonly Key[], options?: { pad?: number; least?: number }): void {
+      this._aim(call("focus", { names: to.keys(names), pad: to.number((options?.pad ?? 40.0)), least: to.number((options?.least ?? 240.0)) }));
+    }
+
+    /** A place for things the camera does not move: titles and narration. The diagram pans and zooms underneath; whatever is drawn here stays put, in plain screen coordinates. */
+    overlay(): Group {
+      return this._openOverlay(call("overlay", { group: this._frame() }));
+    }
+  }
+  return SceneMethods;
 }
 
 /** The corners of a regular polygon, for `polygon`. A triangle is three sides, a hexagon six; `turn` rotates it in degrees, the first corner otherwise pointing straight up. */

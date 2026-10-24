@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _group, _int, _items, _key, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _style, _text, call
+from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _group, _int, _items, _key, _keys, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _style, _text, call
 
 if TYPE_CHECKING:
     from .scene import Group, Handle
@@ -50,6 +50,18 @@ class _GroupSurface:
         """A place to draw a thing made of several shapes. Give it a Slot and it sits where the Slot says (at `anchor`: center, top or bottom), or place it with `at` like any shape. Inside it, 0 is that point, and everything drawn on it moves as one."""
         return self._nest(call("group", {"group": self._frame(), "key": _key(key), "slot": _slot(slot), "at": _at(at), "anchor": _string(anchor), "w": _number(w)}))
 
+    def formula(self, key, latex, *, size=16.0, at=None) -> "Handle":
+        """Real mathematics, written as LaTeX. `size` means what it means for text. Draw it on with `write(reveal=, pen=)`. Typeset once when the film is built."""
+        return self._build("formula", {"group": self._frame(), "key": _key(key), "latex": _string(latex), "size": _number(size), "at": _at(at)})
+
+    def image(self, key, file, *, size=None, at=None) -> "Handle":
+        """A picture (PNG or JPEG) drawn into the frame. `size` is a box it fits inside, one number or (w, h), aspect always kept; leave it out and it is drawn at its own pixel size."""
+        return self._build("image", {"group": self._frame(), "key": _key(key), "file": _text(file), "size": _radius(size), "at": _at(at)})
+
+    def svg(self, key, file, *, size=120.0, at=None) -> "Handle":
+        """Vector art from a file, drawn as real geometry: it tweens, turns, grows and draws on like anything else. `size` is a box it fits inside, one number or (w, h). It keeps its own colours unless `fill` overrides them."""
+        return self._build("svg", {"group": self._frame(), "key": _key(key), "file": _text(file), "size": _radius(size), "at": _at(at)})
+
 
 class _HandleSurface:
     def fill(self, color="white", *, edge=None, edge_w=None) -> "Handle":
@@ -81,6 +93,16 @@ class _HandleSurface:
         """How much of a formula or an imported SVG shows (`reveal`, 0 to 1), and whether a pen draws it on (`pen`, its width). On a marker, how far its stroke has been drawn on."""
         self._change("write", {"shape": self._shape(), "reveal": _number(reveal), "pen": _number(pen)})
         return self
+
+
+class _SceneSurface:
+    def focus(self, *names, pad=40.0, least=240.0) -> "None":
+        """Look at these things; the camera works out where to stand. No names frames the whole canvas again. `pad` is room around them; `least` is the smallest thing the camera fills the frame with. Anything on an overlay stays where it is put."""
+        self._aim(call("focus", {"names": _keys(names), "pad": _number(pad), "least": _number(least)}))
+
+    def overlay(self) -> "Group":
+        """A place for things the camera does not move: titles and narration. The diagram pans and zooms underneath; whatever is drawn here stays put, in plain screen coordinates."""
+        return self._open_overlay(call("overlay", {"group": self._frame()}))
 
 
 class Rule:

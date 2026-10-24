@@ -98,6 +98,7 @@ export const to = {
   int: (value: number) => Math.trunc(Number(value)),
   style: (style?: { _fields: unknown } | null) => (style === undefined || style === null ? null : style._fields),
   group: (group: any) => group._frame(),
+  keys: (keys: readonly Key[]) => keys.map((key) => to.key(key)),
   items: (items: number | Iterable<unknown>) => (typeof items === "number" ? items : [...items].length),
   slot: (slot?: Slot | { x: number; y: number; w: number; h: number; anchor?: string }) =>
     slot === undefined || slot === null ? null : { x: slot.x, y: slot.y, w: slot.w, h: slot.h, anchor: slot.anchor ?? "center" },

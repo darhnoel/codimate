@@ -39,6 +39,7 @@ def load() -> list[dict]:
     for op in ops:
         for arg in op["args"]:
             arg.setdefault("positional", False)
+            arg.setdefault("variadic", False)
     return ops
 
 
@@ -81,6 +82,8 @@ PY_RETURNS = {"points": "_as_points({})", "size": "_as_size({})", "number": "{}"
 
 
 def py_param(arg: dict) -> str:
+    if arg["variadic"]:
+        return f'*{arg["name"]}'
     if "default" not in arg:
         return arg["name"]
     return f'{arg["name"]}={PY_DEFAULT.get(arg["default"], arg["default"])}'
@@ -154,21 +157,29 @@ def py_shortcut(op: dict, ops: list[dict]) -> str:
 
 def python(ops: list[dict]) -> str:
     classes: dict[str, list[str]] = {}
-    for op in (o for o in ops if o["on"] in ("Group", "Handle")):
+    for op in (o for o in ops if o["on"] in ("Group", "Scene", "Handle")):
         positional = [py_param(a) for a in op["args"] if a["positional"]]
         keywords = [py_param(a) for a in op["args"] if not a["positional"]]
-        params = ["self", *positional] + (["*", *keywords] if keywords else [])
+        variadic = any(a["variadic"] for a in op["args"])
+        params = (["self", *positional]
+                  + (([] if variadic else ["*"]) + keywords if keywords else []))
         data = [PY_CONTEXT[c] for c in op["context"]]
         data += [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in op["args"]]
         returns = op.get("returns") or ("Handle" if op["on"] == "Group" else "self")
-        body = (f'        return self._nest(call("{op["name"]}", {{{", ".join(data)}}}))'
+        crossing = f'call("{op["name"]}", {{{", ".join(data)}}})'
+        body = (f'        return self._nest({crossing})'
                 if op.get("returns") == "Group" else
+                f'        self._aim({crossing})'
+                if op.get("returns") == "aim" else
+                f'        return self._open_overlay({crossing})'
+                if op.get("returns") == "overlay" else
                 f'        return self._build("{op["name"]}", {{{", ".join(data)}}})'
                 if op["on"] == "Group" else
                 f'        self._change("{op["name"]}", {{{", ".join(data)}}})\n'
                 f'        return self')
+        annotation = {"self": op["on"], "aim": "None", "overlay": "Group"}.get(returns, returns)
         classes.setdefault(op["on"], []).append(
-            f'    def {op["name"]}({", ".join(params)}) -> "{returns if returns != "self" else op["on"]}":\n'
+            f'    def {op["name"]}({", ".join(params)}) -> "{annotation}":\n'
             f'        """{op["doc"]}"""\n{body}\n')
     functions = [py_value(op, ops) for op in ops if op["kind"] == "value"]
     functions += [py_shortcut(op, ops) for op in ops if op["kind"] == "shortcut"]
@@ -206,7 +217,7 @@ TS_TYPE = {"key": "Key", "number": "number", "text": "unknown", "string": "strin
            "point": "Point", "points": "readonly Point[]", "radius": "number | Point",
            "pair": "readonly [number, number]", "bool": "boolean", "slot": "Slot",
            "int": "number", "items": "number | Iterable<unknown>",
-           "style": "TextPresetStyle", "group": "Group"}
+           "style": "TextPresetStyle", "group": "Group", "keys": "readonly Key[]"}
 TS_CONTEXT = {
     "group": "group: this._frame()",
     "shape": "shape: this._shape()",
@@ -259,7 +270,13 @@ def typescript(ops: list[dict]) -> str:
                 f'export function {camel(op["name"])}({", ".join(params)}): {kind} {{\n'
                 f'  return {answer.format(f"call({call})")};\n}}\n')
             continue
-        if op.get("returns") == "Group":
+        if op.get("returns") == "aim":
+            body = f"    this._aim(call({call}));"
+            returns = "void"
+        elif op.get("returns") == "overlay":
+            body = f"    return this._openOverlay(call({call}));"
+            returns = "Group"
+        elif op.get("returns") == "Group":
             body = f"    return this._nest(call({call}));"
             returns = "Group"
         elif op["on"] == "Group":
@@ -277,6 +294,17 @@ def typescript(ops: list[dict]) -> str:
            'import { call, height, paired, width } from "./waist.ts";\n'
            'import type { Group, Handle } from "./scene.ts";\n']
     for owner, methods in classes.items():
+        if owner == "Scene":
+            # A Scene is a Group: its methods arrive as a mixin over Group.
+            out.append("/** A Scene's own methods, mixed into a Group class. */\n"
+                       "export function SceneSurface<B extends abstract new (...args: any[]) => any>"
+                       "(Base: B) {\n  abstract class SceneMethods extends Base {\n"
+                       "    protected abstract _frame(): Frame;\n"
+                       "    protected abstract _aim(aim: unknown): void;\n"
+                       "    protected abstract _openOverlay(frame: Frame): Group;\n\n"
+                       + "\n".join("  " + m.replace("\n", "\n  ").rstrip() + "\n" for m in methods)
+                       + "  }\n  return SceneMethods;\n}\n")
+            continue
         hooks = ("  protected abstract _frame(): Frame;\n"
                  "  protected abstract _build(op: string, data: object): Handle;\n"
                  "  protected abstract _nest(frame: Frame): Group;\n"
