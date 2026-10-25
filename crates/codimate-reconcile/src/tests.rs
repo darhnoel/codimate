@@ -269,6 +269,48 @@ fn bundled_codimate_character_has_connected_joints_and_expression_choices() {
 }
 
 #[test]
+fn bundled_character_keeps_navy_arms_and_visible_hands() {
+    let art = character_art("codimate:codimate-mascot").expect("bundled mascot rig");
+    let luminance = |r: f32, g: f32, b: f32| {
+        let linear = |value: f32| {
+            if value <= 0.04045 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+    };
+    let background = luminance(18.0 / 255.0, 22.0 / 255.0, 31.0 / 255.0);
+
+    let limb_paint = |joint: &str| {
+        art.paths
+            .iter()
+            .find(|path| path.joints.iter().any(|(id, _)| id == joint))
+            .and_then(|path| path.fill)
+            .unwrap_or_else(|| panic!("{joint} needs an authored fill"))
+    };
+
+    for joint in ["left-arm", "right-arm"] {
+        let color = limb_paint(joint);
+        assert!(
+            color.r < 0.1 && color.g < 0.2 && color.b < 0.4,
+            "{joint} should retain its original navy paint"
+        );
+    }
+
+    for joint in ["left-hand", "right-hand"] {
+        let color = limb_paint(joint);
+        let foreground = luminance(color.r, color.g, color.b);
+        let contrast = (foreground.max(background) + 0.05) / (foreground.min(background) + 0.05);
+        assert!(
+            contrast >= 3.0,
+            "{joint} paint has only {contrast:.2}:1 contrast against the dark canvas"
+        );
+    }
+}
+
+#[test]
 fn character_expression_groups_crossfade_between_scenes() {
     let file = svg_on_disk(
         "character-expression",
