@@ -1,0 +1,48 @@
+"""An articulated Character is one named Item with a Scene-local pose."""
+
+import json
+
+import pytest
+
+import codimate as cm
+
+
+def test_character_records_connected_pose_on_its_scene_item():
+    scene = cm.Scene()
+    guide = scene.character("guide", cm.characters.codimate, size=360, at=(640, 360))
+    guide.part("right-arm").turn(-25)
+    guide.expression("thinking")
+
+    [shape] = scene._payload()
+    assert shape["item"] == "guide"
+    assert shape["kind"] == "character"
+    assert shape["text"] == "codimate:codimate-mascot"
+    assert json.loads(shape["pose"]) == {
+        "expression": "thinking",
+        "joints": {"right-arm": -25.0},
+    }
+
+
+def test_character_rejects_non_finite_joint_angles():
+    guide = cm.Scene().character("guide", cm.characters.codimate, at=(640, 360))
+    with pytest.raises(ValueError, match="must be finite"):
+        guide.part("right-arm").turn(float("inf"))
+
+
+def test_character_can_cut_between_expressions_for_speech():
+    scene = cm.Scene()
+    guide = scene.character("guide", cm.characters.codimate, at=(640, 360))
+    guide.expression("talk-open", transition="cut")
+
+    [shape] = scene._payload()
+    assert json.loads(shape["pose"]) == {
+        "expression": "talk-open",
+        "expression_transition": "cut",
+        "joints": {},
+    }
+
+
+def test_character_rejects_unknown_expression_transition():
+    guide = cm.Scene().character("guide", cm.characters.codimate, at=(640, 360))
+    with pytest.raises(ValueError, match="crossfade.*cut"):
+        guide.expression("smile", transition="bounce")

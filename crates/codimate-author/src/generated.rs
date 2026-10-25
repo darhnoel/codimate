@@ -26,6 +26,7 @@ pub fn dispatch(op: &str, data: &str) -> Result<String, Refusal> {
         "formula" => run(data, surface::formula),
         "image" => run(data, surface::image),
         "svg" => run(data, surface::svg),
+        "character" => run(data, surface::character),
         "marker" => run(data, marker::marker),
         "highlight" => run(data, marker::highlight),
         "focus" => run(data, surface::focus),

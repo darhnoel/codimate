@@ -99,7 +99,7 @@ def test_every_shape_carries_every_field():
     shape = scene._payload()[0]
     assert set(shape) == {
         "item", "kind", "x", "y", "x2", "y2", "w", "h", "r",
-        "color", "points", "edge", "edge_w", "text", "size", "font", "layer",
+        "color", "points", "edge", "edge_w", "text", "size", "font", "pose", "layer",
         "opacity",
         "scale_x", "scale_y", "rotate", "pivot",
     }, sorted(shape)

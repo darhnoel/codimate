@@ -224,6 +224,120 @@ fn svg_shape(file: &str, colour: &str, fit: (f32, f32)) -> Shape {
     }
 }
 
+#[test]
+fn bundled_codimate_character_has_connected_joints_and_expression_choices() {
+    let art = character_art("codimate:codimate-mascot").expect("bundled mascot rig");
+    assert_eq!(art.default_expression.as_deref(), Some("smile"));
+    assert_eq!(
+        art.paths[0].path.split_contours().len(),
+        1,
+        "the shared body silhouette must not contain facial cutouts"
+    );
+    assert_eq!(
+        art.expressions,
+        [
+            "angry",
+            "doubt",
+            "excited",
+            "happy",
+            "sad",
+            "smile",
+            "surprised",
+            "talk-closed",
+            "talk-open",
+            "thinking",
+            "worried",
+        ]
+    );
+    let hand = art
+        .paths
+        .iter()
+        .find(|outline| outline.joints.iter().any(|(id, _)| id == "right-hand"))
+        .expect("right hand outline");
+    assert_eq!(
+        hand.joints
+            .iter()
+            .map(|(id, _)| id.as_str())
+            .collect::<Vec<_>>(),
+        ["codimate-mascot", "torso", "right-arm", "right-hand"]
+    );
+    assert!(art
+        .paths
+        .iter()
+        .all(|path| path.expression.as_deref() != Some("thinking")
+            || path.joints.iter().any(|(id, _)| id == "face")));
+}
+
+#[test]
+fn character_expression_groups_crossfade_between_scenes() {
+    let file = svg_on_disk(
+        "character-expression",
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+          <g id="rig" data-codimate-rig="1" data-default-expression="smile">
+            <g id="body" data-pivot="50 50">
+              <path d="M20 20h60v60H20z" fill="#ff0000"/>
+              <g id="smile" data-expression="smile"><circle cx="40" cy="40" r="5" fill="#00ff00"/></g>
+              <g id="surprised" data-expression="surprised"><circle cx="60" cy="40" r="5" fill="#0000ff"/></g>
+            </g>
+          </g>
+        </svg>"##,
+    );
+    let before = Shape {
+        item: "guide".into(),
+        kind: "character".into(),
+        text: file,
+        w: 100.0,
+        h: 100.0,
+        opacity: 1.0,
+        ..Default::default()
+    };
+    let after = Shape {
+        pose: r##"{"expression":"surprised","joints":{"body":90}}"##.into(),
+        ..before.clone()
+    };
+    let parts = primitives(&before, &after, &[]).expect("animated character");
+    assert_eq!(parts.len(), 3, "body plus two expression outlines");
+    assert!((parts[1].resolve(0.0).transform.opacity - 1.0).abs() < 1e-5);
+    assert!(parts[1].resolve(1.0).transform.opacity < 1e-5);
+    assert!(parts[2].resolve(0.0).transform.opacity < 1e-5);
+    assert!((parts[2].resolve(1.0).transform.opacity - 1.0).abs() < 1e-5);
+}
+
+#[test]
+fn character_expression_can_switch_without_crossfading() {
+    let file = svg_on_disk(
+        "character-expression-cut",
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+          <g id="rig" data-codimate-rig="1" data-default-expression="closed">
+            <g id="body" data-pivot="50 50">
+              <path d="M20 20h60v60H20z" fill="#ff0000"/>
+              <g id="closed" data-expression="closed"><path d="M40 60h20" stroke="#000000"/></g>
+              <g id="open" data-expression="open"><ellipse cx="50" cy="60" rx="5" ry="8"/></g>
+            </g>
+          </g>
+        </svg>"##,
+    );
+    let before = Shape {
+        item: "guide".into(),
+        kind: "character".into(),
+        text: file,
+        w: 100.0,
+        h: 100.0,
+        opacity: 1.0,
+        ..Default::default()
+    };
+    let after = Shape {
+        pose: r##"{"expression":"open","expression_transition":"cut"}"##.into(),
+        ..before.clone()
+    };
+    let parts = primitives(&before, &after, &[]).expect("animated character");
+
+    assert!((parts[1].resolve(0.49).transform.opacity - 1.0).abs() < 1e-5);
+    assert!(parts[1].resolve(0.5).transform.opacity < 1e-5);
+    assert!(parts[2].resolve(0.49).transform.opacity < 1e-5);
+    assert!((parts[2].resolve(0.5).transform.opacity - 1.0).abs() < 1e-5);
+}
+
 const TWO_SHAPES: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
     <rect x="0" y="0" width="40" height="40" fill="#ff0000"/>
     <rect x="60" y="0" width="40" height="40" fill="#0000ff"/>

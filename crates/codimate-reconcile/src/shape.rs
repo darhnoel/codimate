@@ -36,6 +36,8 @@ pub struct Shape {
     /// A text's font: a `.ttf`/`.otf` path or an installed family name.
     /// Empty is the built-in font.
     pub font: String,
+    /// Per-Scene joint angles and expression for a character Item.
+    pub pose: String,
     pub layer: i32,
     pub opacity: f32,
     /// The rest of `Transform`, which the surface used to leave unreachable.
@@ -48,8 +50,18 @@ pub struct Shape {
 
 /// Every `kind` Python may send. An unknown kind is a Python `ValueError`,
 /// never a silently missing shape.
-pub const KINDS: [&str; 10] = [
-    "rect", "circle", "text", "line", "formula", "polygon", "curve", "svg", "image", "arc",
+pub const KINDS: [&str; 11] = [
+    "rect",
+    "circle",
+    "text",
+    "line",
+    "formula",
+    "polygon",
+    "curve",
+    "svg",
+    "image",
+    "arc",
+    "character",
 ];
 
 /// A rectangle with rounded corners, in local space, centred on the anchor.
@@ -348,7 +360,9 @@ impl Shape {
             // `primitives()` handles these three and returns before asking
             // for a Geometry: a formula and an SVG are many, and an image can
             // fail to decode, which this signature cannot report.
-            "formula" | "svg" | "image" => Geometry::rect(0.0.into_animated(), 0.0.into_animated()),
+            "formula" | "svg" | "image" | "character" => {
+                Geometry::rect(0.0.into_animated(), 0.0.into_animated())
+            }
 
             // Square corners stay a real Rect — the common case keeps the
             // cheaper primitive and the renderer's own rectangle path.
@@ -365,7 +379,7 @@ impl Shape {
         // authored" (ADR 0014). Its per-path styles are built during
         // expansion; this shared one is only the fallback for a path the file
         // gave no paint at all, so white is as good an answer as any.
-        let fill = if self.kind == "svg" && self.color.is_empty() {
+        let fill = if matches!(self.kind.as_str(), "svg" | "character") && self.color.is_empty() {
             Color::WHITE
         } else {
             parse_color(&self.color)?

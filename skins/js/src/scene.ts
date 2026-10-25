@@ -38,6 +38,12 @@ export class Group extends GroupSurface {
     return this.keep(call(op, data));
   }
 
+  protected _buildCharacter(op: string, data: object): Character {
+    const shape = call(op, data) as ShapeData;
+    this.keep(shape);
+    return new Character(this.scene.shapes, shape.item, this.scene.marks);
+  }
+
   /** @internal Keep a marker (one shape and its stroke) or a highlight (band
    * and words, and their marks) the Core drew. */
   protected _keepMarked(answer: any): any {
@@ -99,8 +105,8 @@ export class Scene extends SceneSurface(Group) {
 
 /** What a shape call gives back: the chained way to say more about a shape. */
 export class Handle extends HandleSurface {
-  private readonly shapes: Map<string, ShapeData>;
-  private readonly marks: Map<string, any>;
+  protected readonly shapes: Map<string, ShapeData>;
+  protected readonly marks: Map<string, any>;
   readonly name: string;
 
   constructor(shapes: Map<string, ShapeData>, name: string, marks: Map<string, any> = new Map()) {
@@ -134,3 +140,78 @@ export class Handle extends HandleSurface {
     for (const [name, value] of Object.entries(answer.marks)) this.marks.set(name, value);
   }
 }
+
+/** A connected, SVG-backed figure whose pose belongs to one Scene. */
+export class Character extends Handle {
+  /** Select a joint by the `id` of its marked SVG group. */
+  part(name: string): CharacterPart {
+    if (!name) throw new Error("a character part needs a non-empty SVG group id");
+    return new CharacterPart(this.shapes, this.name, name);
+  }
+
+  /** Choose a named SVG expression variant for this Scene. */
+  expression(name: string, options: { transition?: "crossfade" | "cut" } = {}): this {
+    if (!name) throw new Error("a character expression needs a non-empty name");
+    const transition = options.transition ?? "crossfade";
+    if (transition !== "crossfade" && transition !== "cut") {
+      throw new Error("expression transition must be 'crossfade' or 'cut'");
+    }
+    const pose = this.readPose();
+    pose.expression = name;
+    if (transition === "cut") pose.expression_transition = "cut";
+    else delete pose.expression_transition;
+    this.writePose(pose);
+    return this;
+  }
+
+  private readPose(): CharacterPose {
+    const encoded = this._shape().pose;
+    if (typeof encoded !== "string" || encoded === "") return { expression: null, joints: {} };
+    return JSON.parse(encoded) as CharacterPose;
+  }
+
+  private writePose(pose: CharacterPose): void {
+    const joints = Object.fromEntries(Object.entries(pose.joints).sort(([a], [b]) => a.localeCompare(b)));
+    this._shape().pose = JSON.stringify({
+      expression: pose.expression,
+      expression_transition: pose.expression_transition,
+      joints,
+    });
+  }
+}
+
+/** A joint handle. Its descendants follow when its angle changes. */
+export class CharacterPart {
+  private readonly shapes: Map<string, ShapeData>;
+  private readonly item: string;
+  private readonly partName: string;
+
+  constructor(shapes: Map<string, ShapeData>, item: string, partName: string) {
+    this.shapes = shapes;
+    this.item = item;
+    this.partName = partName;
+  }
+
+  /** Set this joint's angle in degrees for the current Scene. */
+  turn(degrees: number): this {
+    if (!Number.isFinite(degrees)) throw new Error("a character joint angle must be finite");
+    const shape = this.shapes.get(this.item)!;
+    const encoded = typeof shape.pose === "string" && shape.pose !== ""
+      ? JSON.parse(shape.pose) as CharacterPose
+      : { expression: null, joints: {} };
+    encoded.joints[this.partName] = degrees;
+    const joints = Object.fromEntries(Object.entries(encoded.joints).sort(([a], [b]) => a.localeCompare(b)));
+    shape.pose = JSON.stringify({
+      expression: encoded.expression,
+      expression_transition: encoded.expression_transition,
+      joints,
+    });
+    return this;
+  }
+}
+
+type CharacterPose = {
+  expression: string | null;
+  expression_transition?: "crossfade" | "cut";
+  joints: Record<string, number>;
+};

@@ -21,11 +21,12 @@ encoding — happens in Rust (ADR 0008).
 ## What a moment looks like
 
 - `Scene` — one picture: `rect`, `circle`, `arc`, `polygon`, `curve`, `arrow`,
-  `text`, `line`, `formula`, `svg`, `image`
+  `text`, `line`, `formula`, `svg`, `image`, or a poseable `character`
 - `ngon`, `star` — corners for a polygon, so you do not compute them
 - `Group` — several shapes that move together
 - `Handle` — what a shape call returns: `.fill()`, `.round()`, `.turn()`,
   `.grow()`, `.on()`, `.write()`, chained
+- `Character` — a connected SVG figure with per-Scene joints and expressions
 - `TextPreset`, `TextPresetStyle` — reusable word and letter entrances
 
 ## Where things sit
@@ -53,7 +54,7 @@ encoding — happens in Rust (ADR 0008).
 
 from __future__ import annotations
 
-from . import science, text
+from . import characters, science, text
 from .explain import Explanation, Rule, Timing, ease, explain
 from .layout import (
     Axes,
@@ -72,7 +73,7 @@ from .layout import (
     star,
     width,
 )
-from .scene import Group, Handle, Scene
+from .scene import Character, CharacterPart, Group, Handle, Scene
 from .text import TextPreset, TextPresetStyle
 from .trace import Event, Frame, Item, Trace, items, trace
 
@@ -88,6 +89,9 @@ __all__ = [
     "Scene",
     "Group",
     "Handle",
+    "Character",
+    "CharacterPart",
+    "characters",
     "TextPreset",
     "TextPresetStyle",
     "text",

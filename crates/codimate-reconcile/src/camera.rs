@@ -34,6 +34,12 @@ pub(crate) fn bounds(shape: &Shape) -> (f32, f32, f32, f32) {
                 (art.size.0 * s, art.size.1 * s)
             })
             .unwrap_or((0.0, 0.0)),
+        "character" => character_art(&shape.text)
+            .map(|art| {
+                let s = fit_scale(art.size, (shape.w, shape.h));
+                (art.size.0 * s, art.size.1 * s)
+            })
+            .unwrap_or((0.0, 0.0)),
         // A Catmull-Rom curve can bulge a little past its samples between
         // them, but never far, and framing by the samples is what an author
         // means by "frame this curve".

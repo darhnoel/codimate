@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from ._waist import _as_points, _as_size, _at, _bool, _canvas, _film_font, _group, _int, _items, _key, _keys, _number, _pair, _paired, _point, _points, _radius, _slot, _string, _style, _text, call
 
 if TYPE_CHECKING:
-    from .scene import Group, Handle
+    from .scene import Character, Group, Handle
 
 
 class _GroupSurface:
@@ -175,6 +175,24 @@ class _GroupSurface:
         renderer cannot turn glyphs.
         """
         return self._build("svg", {"group": self._frame(), "key": _key(key), "file": _text(file), "size": _radius(size), "at": _at(at)})
+
+    def character(self, key, file, *, size=None, at=None) -> "Character":
+        """A poseable figure from a rigged SVG.
+
+            guide = scene.character("guide", cm.characters.codimate, size=360,
+                                     at=(640, 360))
+            guide.part("right-arm").turn(-25)
+            guide.expression("thinking")
+
+        Use `cm.characters.codimate` for the bundled mascot, or give the path to
+        your own SVG. Mark joint groups with an `id` and `data-pivot="x y"`; the
+        pivot is measured in the root SVG's `viewBox`. Nested joints carry their
+        children. Put named facial variants in groups with
+        `data-expression="name"`, and optionally set
+        `data-default-expression="name"` on the rig root. Set the pose in each
+        Scene; Codimate animates between them.
+        """
+        return self._build_character("character", {"group": self._frame(), "key": _key(key), "file": _text(file), "size": _radius(size), "at": _at(at)})
 
     def marker(self, key, *, w, h, at=None) -> "Handle":
         """A highlighter stroke over any box on screen.

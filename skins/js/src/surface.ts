@@ -5,11 +5,12 @@
 
 import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";
 import { call, height, paired, width } from "./waist.ts";
-import type { Group, Handle } from "./scene.ts";
+import type { Character, Group, Handle } from "./scene.ts";
 
 export abstract class GroupSurface {
   protected abstract _frame(): Frame;
   protected abstract _build(op: string, data: object): Handle;
+  protected abstract _buildCharacter(op: string, data: object): Character;
   protected abstract _nest(frame: Frame): Group;
   protected abstract _keepMarked(answer: any): any;
 
@@ -196,6 +197,26 @@ export abstract class GroupSurface {
    */
   svg(key: Key, file: unknown, options?: { size?: number | Point; at?: At }): Handle {
     return this._build("svg", { group: this._frame(), key: to.key(key), file: to.text(file), size: to.radius((options?.size ?? 120.0)), at: to.at(options?.at) });
+  }
+
+  /**
+   * A poseable figure from a rigged SVG.
+   *
+   *     guide = scene.character("guide", cm.characters.codimate, size=360,
+   *                              at=(640, 360))
+   *     guide.part("right-arm").turn(-25)
+   *     guide.expression("thinking")
+   *
+   * Use `cm.characters.codimate` for the bundled mascot, or give the path to
+   * your own SVG. Mark joint groups with an `id` and `data-pivot="x y"`; the
+   * pivot is measured in the root SVG's `viewBox`. Nested joints carry their
+   * children. Put named facial variants in groups with
+   * `data-expression="name"`, and optionally set
+   * `data-default-expression="name"` on the rig root. Set the pose in each
+   * Scene; Codimate animates between them.
+   */
+  character(key: Key, file: unknown, options?: { size?: number | Point; at?: At }): Character {
+    return this._buildCharacter("character", { group: this._frame(), key: to.key(key), file: to.text(file), size: to.radius(options?.size), at: to.at(options?.at) });
   }
 
   /**

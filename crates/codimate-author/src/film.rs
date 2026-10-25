@@ -78,7 +78,9 @@ pub fn chapters(f: Film) -> Result<Vec<(f64, String)>, Refusal> {
 /// none (a browser) says nothing rather than guess.
 fn bounds(s: &Shape, film_font: &str) -> Option<[f64; 4]> {
     match s.kind.as_str() {
-        "rect" | "image" | "svg" => Some([s.x - s.w / 2.0, s.y - s.h / 2.0, s.w, s.h]),
+        "rect" | "image" | "svg" | "character" => {
+            Some([s.x - s.w / 2.0, s.y - s.h / 2.0, s.w, s.h])
+        }
         "circle" | "arc" => Some([s.x - s.r, s.y - s.r, s.r * 2.0, s.r * 2.0]),
         "line" => Some([
             s.x.min(s.x2),

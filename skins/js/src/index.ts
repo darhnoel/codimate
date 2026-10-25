@@ -15,6 +15,7 @@ export { Axes, Rule, axes, column, ease, measure, ngon, row, star } from "./surf
 export {
   TextPreset, TextPresetStyle, lettersDown, lettersUp, wordsDown, wordsLeft, wordsRight, wordsUp, wordsUpBlur,
 } from "./surface.ts";
-export { Group, Handle, Scene } from "./scene.ts";
+export { Character, CharacterPart, Group, Handle, Scene } from "./scene.ts";
+export const characters = Object.freeze({ codimate: "codimate:codimate-mascot" });
 export { Frame, Item, items, trace, type Emit, type Event, type Trace } from "./trace.ts";
 export { Explanation, Timing, explain, type View } from "./explain.ts";

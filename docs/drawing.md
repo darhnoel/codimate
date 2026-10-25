@@ -17,6 +17,7 @@ The snippets are drawing fragments: use them inside your `view(frame)` function.
 | An arc or sector | `scene.arc` | Supply a radius and a pair of angles. |
 | A formula | `scene.formula` | Supply a LaTeX string; requires Typst. |
 | Vector artwork | `scene.svg` | Supply an SVG file. |
+| A poseable character | `scene.character` | Supply a rigged SVG or use the Codimate mascot. |
 | A photograph or bitmap | `scene.image` | Supply a PNG or JPEG file. |
 | A highlighter stroke | `scene.marker` | `scene.marker("note", w=260, h=70, at=(640, 300))` |
 | Highlighted words | `scene.highlight` | `band, words = scene.highlight("key", "pure in t", size=32)` |
@@ -104,6 +105,36 @@ fonts. `cm.measure` and `scene.highlight` take the same `font=`, so boxes and
 markers fit the words. A font that will not load is a `ValueError` that names
 it.
 Text glyphs stay upright when a text handle is turned.
+
+## Pose a character
+
+Use `scene.svg` for a picture that moves as one piece. Use `scene.character` for
+an SVG with joints you want to pose between scenes:
+
+```python
+scene.rect("paper", w=1280, h=720, at=(640, 360)).fill("white").on(layer=-1)
+guide = scene.character("guide", cm.characters.codimate,
+                         size=320, at=(640, 360))
+guide.part("right-arm").turn(-25)
+guide.expression("thinking")
+```
+
+The bundled mascot is `cm.characters.codimate`. For your own character, pass an
+SVG file path instead. Its root must have one
+`<g id="..." data-codimate-rig="1">`. Add
+`data-pivot="x y"` to a joint group that also has an `id`; the pivot uses the
+SVG root's `viewBox` coordinates. Nest joint groups so a parent's turn carries
+its children. Put alternate faces in groups marked
+`data-expression="name"`; optionally choose the starting face with
+`data-default-expression="name"` on the rig root. Convert SVG text to paths.
+
+Set the pose again in each Scene. Joint angles are degrees from the neutral
+pose, and Codimate moves between them. Keep the character's shape name the same
+in each Scene so Codimate can match it.
+
+Expressions crossfade by default. For speech or other fast shape changes, use
+`guide.expression("mouth-open", transition="cut")` to switch instantly at the
+midpoint of the Scene transition.
 
 ## Put related shapes in a group
 

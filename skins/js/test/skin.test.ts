@@ -70,6 +70,33 @@ test("options are camelCase and reach the Core under its names", () => {
   assert.equal(shape.color, "red");
 });
 
+test("a character keeps its connected joint pose and expression in one Scene Item", () => {
+  const scene = new cm.Scene();
+  const guide = scene.character("guide", cm.characters.codimate, { size: 360, at: [640, 360] });
+  guide.part("right-arm").turn(-25);
+  guide.expression("thinking");
+  const [shape] = scene._payload();
+  assert.equal(shape.kind, "character");
+  assert.equal(shape.text, "codimate:codimate-mascot");
+  assert.deepEqual(JSON.parse(String(shape.pose)), {
+    expression: "thinking",
+    joints: { "right-arm": -25 },
+  });
+});
+
+test("a character can cut between expressions without fading its mouth", () => {
+  const scene = new cm.Scene();
+  const guide = scene.character("guide", cm.characters.codimate, { at: [640, 360] });
+  guide.expression("talk-open", { transition: "cut" });
+  guide.part("right-hand").turn(28);
+  const [shape] = scene._payload();
+  assert.deepEqual(JSON.parse(String(shape.pose)), {
+    expression: "talk-open",
+    expression_transition: "cut",
+    joints: { "right-hand": 28 },
+  });
+});
+
 test("a film opens and closes on held moments", () => {
   const film = cm.explain({
     trace: cm.trace((s: { x: number }, emit) => emit("move"), { x: 0 }),

@@ -22,6 +22,9 @@ pub struct Shape {
     pub text: String,
     pub size: f64,
     pub font: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    /// Per-Scene joint angles and expression for a character Item.
+    pub pose: String,
     pub layer: i64,
     pub opacity: f64,
     pub scale_x: f64,
@@ -49,6 +52,7 @@ impl Default for Shape {
             text: String::new(),
             size: 16.0,
             font: String::new(),
+            pose: String::new(),
             layer: 0,
             opacity: 1.0,
             scale_x: 1.0,

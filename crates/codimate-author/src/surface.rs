@@ -844,6 +844,12 @@ pub struct Write {
 /// is already the box it fits inside (ADR 0008's reuse of fields, visible).
 pub fn write(a: Write) -> Result<Shape, Refusal> {
     let mut shape = a.shape;
+    if shape.kind == "character" {
+        return Err(Refusal(
+            "a Character is posed through its joints; `.write()` is for formulas and SVG outlines"
+                .into(),
+        ));
+    }
     if shape.kind == "svg" {
         shape.size = a.pen;
     } else {
@@ -932,6 +938,29 @@ pub fn svg(a: Svg) -> Result<Shape, Refusal> {
         r: 1.0,
         size: 0.0,
         ..placed(&a.group, &a.key, "svg", at)
+    })
+}
+
+#[derive(Deserialize)]
+pub struct Character {
+    group: Frame,
+    key: Vec<String>,
+    file: String,
+    size: Option<Radius>,
+    at: Option<Value>,
+}
+
+/// A rigged SVG character, whose pose is selected on its Python/JS handle.
+pub fn character(a: Character) -> Result<Shape, Refusal> {
+    let (w, h) = fit_box(&a.size);
+    let at = centre(&a.group, a.at.as_ref(), 0.0)?;
+    Ok(Shape {
+        text: a.file,
+        w,
+        h,
+        color: String::new(),
+        r: 1.0,
+        ..placed(&a.group, &a.key, "character", at)
     })
 }
 

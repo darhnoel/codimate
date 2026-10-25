@@ -10,6 +10,8 @@ codimate-animation = { path = "../codimate-animation" }
 codimate-math = { path = "../codimate-math" }
 codimate-render = { path = "../codimate-render" }
 codimate-fonts = { path = "../codimate-fonts" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 # Decoding an imported picture (ADR 0013). `png` is already in the workspace;
 # `jpeg-decoder` is the one dependency added purely for a feature, because

@@ -234,6 +234,8 @@ dependencies = [
  "codimate-render",
  "jpeg-decoder",
  "png",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

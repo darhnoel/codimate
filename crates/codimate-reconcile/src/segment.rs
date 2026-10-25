@@ -1,6 +1,8 @@
 //! The diff — motion is implied by identity.
 
 use crate::*;
+use serde::Deserialize;
+use std::collections::HashMap;
 
 /// How much of a many-outlined Item is showing, and whether a pen is drawing
 /// it.
@@ -255,6 +257,10 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
         return Ok(out);
     }
 
+    if before.kind == "character" {
+        return character_primitives(before, after, path, style, opacity, scale, spin, pivot);
+    }
+
     Ok(vec![Primitive::new(before.geometry(after))
         .pos(path)
         .scale_xy(scale)
@@ -262,6 +268,228 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
         .pivot(pivot)
         .style(style)
         .opacity(opacity)])
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(default)]
+struct CharacterPose {
+    expression: Option<String>,
+    expression_transition: Option<String>,
+    joints: HashMap<String, f32>,
+}
+
+fn character_pose(shape: &Shape) -> Result<CharacterPose> {
+    if shape.pose.is_empty() {
+        return Ok(CharacterPose::default());
+    }
+    serde_json::from_str(&shape.pose).map_err(|e| {
+        Error(format!(
+            "item {:?} has an invalid character pose: {e}",
+            shape.item
+        ))
+    })
+}
+
+fn character_expression(
+    pose: &CharacterPose,
+    art: &CharacterArt,
+    item: &str,
+) -> Result<Option<String>> {
+    let selected = pose
+        .expression
+        .clone()
+        .or_else(|| art.default_expression.clone());
+    if let Some(name) = &selected {
+        if !art.expressions.contains(name) {
+            let choices = if art.expressions.is_empty() {
+                "none".to_owned()
+            } else {
+                art.expressions.join(", ")
+            };
+            return Err(Error(format!(
+                "item {item:?} asks for unknown character expression {name:?}; this SVG defines: {choices}"
+            )));
+        }
+    }
+    Ok(selected)
+}
+
+fn character_primitives(
+    before: &Shape,
+    after: &Shape,
+    position: Animated<Vec2>,
+    style: Animated<Style>,
+    opacity: Animated<f32>,
+    shape_scale: Animated<Vec2>,
+    spin: Animated<f32>,
+    pivot: AnchorKind,
+) -> Result<Vec<Primitive>> {
+    let art = character_art(&before.text)?;
+    let (from_pose, to_pose) = (character_pose(before)?, character_pose(after)?);
+    let (from_expression, to_expression) = (
+        character_expression(&from_pose, &art, &before.item)?,
+        character_expression(&to_pose, &art, &after.item)?,
+    );
+    let cut_expression = match to_pose.expression_transition.as_deref() {
+        None | Some("crossfade") => false,
+        Some("cut") => true,
+        Some(other) => {
+            return Err(Error(format!(
+                "item {:?} asks for unknown character expression transition {other:?}; use \"crossfade\" or \"cut\"",
+                after.item
+            )))
+        }
+    };
+
+    for pose in [&from_pose, &to_pose] {
+        for name in pose.joints.keys() {
+            if !art.joints.contains(name) {
+                return Err(Error(format!(
+                    "item {:?} asks for unknown character part {name:?}",
+                    after.item
+                )));
+            }
+        }
+    }
+
+    let from_fit = fit_scale(art.size, (before.w, before.h));
+    let to_fit = fit_scale(art.size, (after.w, after.h));
+    let art_size = art.size;
+    let authored = before.color.is_empty() && after.color.is_empty();
+    let mut out = Vec::with_capacity(art.paths.len());
+
+    for outline in &art.paths {
+        let path = outline.path.clone();
+        let joints = outline.joints.clone();
+        let from_pose = from_pose.clone();
+        let to_pose = to_pose.clone();
+        let scale = shape_scale.clone();
+        let rotation = spin.clone();
+        let geometry = Animated::new(move |t| {
+            let fit = from_fit + (to_fit - from_fit) * t;
+            let scale = scale.resolve(t);
+            map_path(&path, |point| {
+                character_point(
+                    point,
+                    &joints,
+                    &from_pose,
+                    &to_pose,
+                    t,
+                    fit,
+                    scale,
+                    rotation.resolve(t),
+                    art_size,
+                    pivot,
+                )
+            })
+        });
+
+        let expression_fade = match &outline.expression {
+            None => (1.0, 1.0),
+            Some(name) => (
+                if from_expression.as_deref() == Some(name.as_str()) {
+                    1.0
+                } else {
+                    0.0
+                },
+                if to_expression.as_deref() == Some(name.as_str()) {
+                    1.0
+                } else {
+                    0.0
+                },
+            ),
+        };
+        let fade = opacity.clone();
+        let expression_opacity = Animated::new(move |t| {
+            let expression = if cut_expression {
+                if t < 0.5 {
+                    expression_fade.0
+                } else {
+                    expression_fade.1
+                }
+            } else {
+                expression_fade.0 + (expression_fade.1 - expression_fade.0) * t
+            };
+            fade.resolve(t) * expression
+        });
+        let look = match (authored, outline.fill) {
+            (true, Some(color)) => Style::new().fill(color).into_animated(),
+            _ => style.clone(),
+        };
+        out.push(
+            Primitive::new(Geometry::path(geometry))
+                .pos(position.clone())
+                .style(look)
+                .opacity(expression_opacity),
+        );
+    }
+    Ok(out)
+}
+
+fn character_point(
+    point: Vec2,
+    joints: &[(String, Vec2)],
+    from: &CharacterPose,
+    to: &CharacterPose,
+    t: f32,
+    fit: f32,
+    scale: Vec2,
+    rotation: f32,
+    art_size: (f32, f32),
+    pivot: AnchorKind,
+) -> Vec2 {
+    let point = rotate_through_joints(point, joints, from, to, t);
+    let point = Vec2::new(point.x * fit * scale.x, point.y * fit * scale.y);
+    rotate_around(
+        point,
+        character_pivot(art_size, fit, scale, pivot),
+        rotation,
+    )
+}
+
+fn character_pivot(size: (f32, f32), fit: f32, scale: Vec2, pivot: AnchorKind) -> Vec2 {
+    let (w, h) = (size.0 * fit * scale.x, size.1 * fit * scale.y);
+    match pivot {
+        AnchorKind::Center => Vec2::new(0.0, 0.0),
+        AnchorKind::Top => Vec2::new(0.0, -h / 2.0),
+        AnchorKind::Bottom => Vec2::new(0.0, h / 2.0),
+        AnchorKind::Left => Vec2::new(-w / 2.0, 0.0),
+        AnchorKind::Right => Vec2::new(w / 2.0, 0.0),
+    }
+}
+
+fn rotate_through_joints(
+    point: Vec2,
+    joints: &[(String, Vec2)],
+    from: &CharacterPose,
+    to: &CharacterPose,
+    t: f32,
+) -> Vec2 {
+    fn apply_prefix(
+        mut point: Vec2,
+        joints: &[(String, Vec2)],
+        count: usize,
+        from: &CharacterPose,
+        to: &CharacterPose,
+        t: f32,
+    ) -> Vec2 {
+        for index in 0..count {
+            let (name, pivot) = &joints[index];
+            let pivot = apply_prefix(*pivot, joints, index, from, to, t);
+            let a = from.joints.get(name).copied().unwrap_or(0.0);
+            let b = to.joints.get(name).copied().unwrap_or(0.0);
+            point = rotate_around(point, pivot, a + (b - a) * t);
+        }
+        point
+    }
+    apply_prefix(point, joints, joints.len(), from, to, t)
+}
+
+fn rotate_around(point: Vec2, pivot: Vec2, degrees: f32) -> Vec2 {
+    let angle = degrees.to_radians();
+    let (sin, cos) = angle.sin_cos();
+    let (x, y) = (point.x - pivot.x, point.y - pivot.y);
+    Vec2::new(pivot.x + x * cos - y * sin, pivot.y + x * sin + y * cos)
 }
 
 /// One segment's Scene: every Item that exists in `before` or `after`, tweened.
@@ -321,4 +549,58 @@ pub fn build_segment(before: &[Shape], after: &[Shape], rules: &[Rule]) -> Resul
     }
 
     Ok(scene)
+}
+
+#[cfg(test)]
+mod character_tests {
+    use super::*;
+
+    #[test]
+    fn parent_joint_rotation_carries_a_child_before_its_own_turn() {
+        let joints = [
+            ("body".into(), Vec2::new(0.0, 0.0)),
+            ("arm".into(), Vec2::new(2.0, 0.0)),
+        ];
+        let from = CharacterPose::default();
+        let to = CharacterPose {
+            expression: None,
+            expression_transition: None,
+            joints: [("body".into(), 90.0), ("arm".into(), 90.0)]
+                .into_iter()
+                .collect(),
+        };
+        let point = rotate_through_joints(Vec2::new(3.0, 0.0), &joints, &from, &to, 1.0);
+        assert!((point.x + 1.0).abs() < 1e-5, "{point:?}");
+        assert!((point.y - 2.0).abs() < 1e-5, "{point:?}");
+    }
+
+    #[test]
+    fn root_scaling_preserves_offsets_between_character_parts() {
+        let pose = CharacterPose::default();
+        let left = character_point(
+            Vec2::new(-0.4, 0.2),
+            &[],
+            &pose,
+            &pose,
+            0.0,
+            100.0,
+            Vec2::new(1.0, 1.0),
+            0.0,
+            (1.0, 1.0),
+            AnchorKind::Center,
+        );
+        let right = character_point(
+            Vec2::new(0.4, 0.2),
+            &[],
+            &pose,
+            &pose,
+            0.0,
+            100.0,
+            Vec2::new(1.0, 1.0),
+            0.0,
+            (1.0, 1.0),
+            AnchorKind::Center,
+        );
+        assert!((right.x - left.x - 80.0).abs() < 1e-5);
+    }
 }

@@ -161,6 +161,7 @@ scene.polygon(name, points, *, closed=True)      -> Handle
 scene.curve(name, points, *, w=2.0, closed=False) -> Handle
 scene.arc(name, *, r, sweep, at=None)            -> Handle
 scene.svg(name, file, *, size=120.0, at=None)    -> Handle
+scene.character(name, file, *, size=None, at=None) -> Character
 scene.image(name, file, *, size=None, at=None)   -> Handle
 scene.line(name, *, start, end, w=2.0)           -> Handle
 scene.arrow(name, *, start, end, w=4.0, head=16.0) -> Handle
@@ -172,6 +173,26 @@ scene.overlay() -> Group                        # what the camera does not move
 Each shape takes the few things that decide **what it is** — a radius, a
 height, some words. Everything else is said afterwards, on the Handle it hands
 back. Set position with `at` and appearance with the returned Handle.
+
+`scene.svg` moves an illustration as one piece. `scene.character` loads a
+rigged SVG whose nested joint groups move together. Use the bundled mascot or
+pass your SVG path:
+
+```python
+scene.rect("paper", w=1280, h=720, at=(640, 360)).fill("white").on(layer=-1)
+guide = scene.character("guide", cm.characters.codimate,
+                         size=320, at=(640, 360))
+guide.part("right-arm").turn(-25)
+guide.expression("thinking")
+```
+
+Each joint is an SVG `<g>` with a unique `id` and
+`data-pivot="x y"`; coordinates are in the root `viewBox`. Expressions are
+groups marked `data-expression="name"`, and the rig root can name its default
+with `data-default-expression="name"`. Set the pose in each Scene; Codimate
+tweens joint angles and crossfades expressions between them. For fast changes
+such as speaking mouths, pass `transition="cut"` to `expression()` to switch
+at the transition's midpoint. Convert text to paths before importing.
 
 ### Animate text by word or letter
 

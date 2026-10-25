@@ -131,13 +131,27 @@ Names are given explicitly, never inferred from an object. Reading an `.id`
 off a passed object can be added later; a convention, once shipped, can never
 be removed.
 
-**Group**: A named place to draw a thing made of several shapes. A Group has
-its own origin and its own name; children are named beneath it (`3/bar`,
-`3/label`), so **everything on a Group moves as one thing** and a motion rule
-cannot pull a thing's parts apart. Groups nest. Inside a Group, `0` is that
-Group's anchor point — nothing is inherited from the parent and nothing is
-decided implicitly, which is what keeps nesting free of rules to learn. A
-Scene is the root Group.
+**Group**: A named drawing place with its own origin. Shapes drawn there are
+positioned relative to that origin and named beneath it (`3/bar`, `3/label`);
+Groups nest, and a Scene is the root Group. A Group is not an animated joint:
+its children do not inherit a parent transform.
+
+**Character**: A figure used in an explanation, built from connected named
+parts that can be posed while remaining one figure. A Character's parent part
+carries its child parts when it moves, and the author can select a named facial
+Expression for each Scene.
+
+**Joint**: The connection point where one Character part moves relative to its
+parent.
+
+**Rig**: The hierarchy of a Character's parts and Joints that defines how the
+figure moves. A Rig is distinct from a drawing Group.
+
+**Expression**: A named facial appearance of a Character, such as happy,
+curious, or surprised, selected for a Scene.
+
+**Pose**: A Character's joint angles and selected Expression at one moment in a
+Scene.
 
 **State**: The concept's data at a meaningful point in the explanation. State is
 domain data, not visual data and not renderer state.

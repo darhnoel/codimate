@@ -223,6 +223,103 @@ pub(crate) struct SvgLabel {
     pub(crate) from_right: bool,
 }
 
+/// An articulated vector character, normalised to the same local space as an
+/// imported SVG while retaining its joint tree and expression groups.
+pub(crate) struct CharacterArt {
+    pub(crate) paths: Vec<CharacterPath>,
+    pub(crate) size: (f32, f32),
+    pub(crate) default_expression: Option<String>,
+    pub(crate) expressions: Vec<String>,
+    pub(crate) joints: Vec<String>,
+}
+
+pub(crate) struct CharacterPath {
+    pub(crate) path: Path,
+    pub(crate) fill: Option<Color>,
+    pub(crate) joints: Vec<(String, Vec2)>,
+    pub(crate) expression: Option<String>,
+}
+
+/// Read and normalise a marked character SVG once per source. The bundled
+/// mascot is embedded in the Engine; custom assets use the same path rules as
+/// `scene.svg(...)`.
+pub(crate) fn character_art(source: &str) -> Result<Arc<CharacterArt>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, Arc<CharacterArt>>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(hit) = cache.lock().unwrap().get(source) {
+        return Ok(hit.clone());
+    }
+
+    const MASCOT: &str = include_str!("../assets/codimate-mascot.svg");
+    let svg = if source == "codimate:codimate-mascot" {
+        MASCOT.to_owned()
+    } else {
+        std::fs::read_to_string(source)
+            .map_err(|e| Error(format!("could not read the character SVG {source:?}: {e}")))?
+    };
+    let rig = codimate_math::import_svg_rig(&svg).map_err(|e| match e {
+        codimate_math::FormulaError::Svg(message) => {
+            Error(format!("character SVG {source:?}: {message}"))
+        }
+        other => Error(format!(
+            "could not read character SVG {source:?}: {other:?}"
+        )),
+    })?;
+
+    let (mut min_x, mut min_y) = (f32::MAX, f32::MAX);
+    let (mut max_x, mut max_y) = (f32::MIN, f32::MIN);
+    let mut joint_ids = std::collections::BTreeSet::new();
+    for item in &rig.paths {
+        if let Some((x0, y0, x1, y1)) = item.path.bounding_box() {
+            min_x = min_x.min(x0);
+            min_y = min_y.min(y0);
+            max_x = max_x.max(x1);
+            max_y = max_y.max(y1);
+        }
+        joint_ids.extend(item.joints.iter().map(|joint| joint.id.clone()));
+    }
+    if min_x > max_x {
+        return Err(Error(format!(
+            "character SVG {source:?} has no visible paths"
+        )));
+    }
+    let center = Vec2::new((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+    let longest = (max_x - min_x).max(max_y - min_y).max(1e-6);
+    let paths = rig
+        .paths
+        .into_iter()
+        .map(|item| CharacterPath {
+            path: map_path(&item.path, |p| {
+                Vec2::new((p.x - center.x) / longest, (p.y - center.y) / longest)
+            }),
+            fill: item.fill,
+            joints: item
+                .joints
+                .into_iter()
+                .map(|joint| {
+                    (
+                        joint.id,
+                        Vec2::new(
+                            (joint.pivot.x - center.x) / longest,
+                            (joint.pivot.y - center.y) / longest,
+                        ),
+                    )
+                })
+                .collect(),
+            expression: item.expression,
+        })
+        .collect();
+    let art = Arc::new(CharacterArt {
+        paths,
+        size: ((max_x - min_x) / longest, (max_y - min_y) / longest),
+        default_expression: rig.default_expression,
+        expressions: rig.expressions,
+        joints: joint_ids.into_iter().collect(),
+    });
+    cache.lock().unwrap().insert(source.to_owned(), art.clone());
+    Ok(art)
+}
+
 /// How much to scale normalised artwork so it fits inside `box`.
 ///
 /// Aspect is always preserved: the drawing fits inside the box the author

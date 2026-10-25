@@ -207,7 +207,9 @@ def python(ops: list[dict]) -> str:
         data += [f'"{a["name"]}": _{a["type"]}({a["name"]})' for a in op["args"]]
         returns = op.get("returns") or ("Handle" if op["on"] == "Group" else "self")
         crossing = f'call("{op["name"]}", {{{", ".join(data)}}})'
-        body = (f'        return self._nest({crossing})'
+        body = (f'        return self._build_character("{op["name"]}", {{{", ".join(data)}}})'
+                if op.get("returns") == "character" else
+                f'        return self._nest({crossing})'
                 if op.get("returns") == "Group" else
                 f'        self._aim({crossing})'
                 if op.get("returns") == "aim" else
@@ -220,6 +222,7 @@ def python(ops: list[dict]) -> str:
                 f'        self._change("{op["name"]}", {{{", ".join(data)}}})\n'
                 f'        return self')
         annotation = {"self": op["on"], "aim": "None", "overlay": "Group", "marked": "Handle",
+                      "character": "Character",
                       "highlight": "tuple[Handle, Handle]"}.get(returns, returns)
         classes.setdefault(op["on"], []).append(
             f'    def {op["name"]}({", ".join(params)}) -> "{annotation}":\n'
@@ -256,7 +259,7 @@ def python(ops: list[dict]) -> str:
                | {f"_{a['type']}" for op in ops for a in op["args"]
                   if a["type"] not in ("options", "function")
                   and op["kind"] != "shortcut"})) + "\n",
-           "if TYPE_CHECKING:\n    from .scene import Group, Handle\n"]
+           "if TYPE_CHECKING:\n    from .scene import Character, Group, Handle\n"]
     for owner, methods in classes.items():
         out.append(f"\nclass _{owner}Surface:\n" + "\n".join(methods))
     out += ["\n" + f for f in functions]
@@ -339,6 +342,9 @@ def typescript(ops: list[dict]) -> str:
         elif op.get("returns") in ("marked", "highlight"):
             body = f"    return this._keepMarked(call({call}));"
             returns = "Handle" if op["returns"] == "marked" else "[Handle, Handle]"
+        elif op.get("returns") == "character":
+            body = f"    return this._buildCharacter({call});"
+            returns = "Character"
         elif op.get("returns") == "overlay":
             body = f"    return this._openOverlay(call({call}));"
             returns = "Group"
@@ -358,7 +364,7 @@ def typescript(ops: list[dict]) -> str:
            "// its arguments across the Waist and keeps what comes back.\n",
            'import { filmFont, to, type At, type Frame, type Key, type Point, type ShapeData, type Slot } from "./waist.ts";\n'
            'import { call, height, paired, width } from "./waist.ts";\n'
-           'import type { Group, Handle } from "./scene.ts";\n']
+           'import type { Character, Group, Handle } from "./scene.ts";\n']
     for owner, methods in classes.items():
         if owner == "Scene":
             # A Scene is a Group: its methods arrive as a mixin over Group.
@@ -377,6 +383,7 @@ def typescript(ops: list[dict]) -> str:
             continue
         hooks = ("  protected abstract _frame(): Frame;\n"
                  "  protected abstract _build(op: string, data: object): Handle;\n"
+                 "  protected abstract _buildCharacter(op: string, data: object): Character;\n"
                  "  protected abstract _nest(frame: Frame): Group;\n"
                  "  protected abstract _keepMarked(answer: any): any;\n"
                  if owner == "Group" else

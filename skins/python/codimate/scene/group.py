@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from .._surface import _GroupSurface
 from .._waist import _own, call
+from .character import Character
 from .handle import Handle
 from .shape import _key, _shape_of
 
@@ -17,8 +18,9 @@ if TYPE_CHECKING:
 class Group(_GroupSurface):
     """Somewhere to draw, with its own origin and its own name.
 
-    Everything drawn on a Group moves as one thing, because the Engine sees
-    each child's name as part of the group's name.
+    A Group supplies a shared origin and puts its name before each child's
+    name. It does not add an inherited transform; use a Character for
+    connected, poseable parts.
 
     **Inside a Group, ``0`` is the Group's anchor point.** ``bottom=0`` stands
     a shape on it; ``top=20`` puts one 20 below it.
@@ -36,14 +38,19 @@ class Group(_GroupSurface):
         Built once: a Group never moves after it is made."""
         frame = self.__dict__.get("_frame_data")
         if frame is None:
-            frame = self._frame_data = {"path": [_key(p) for p in self._path],
-                                        "ox": self._ox, "oy": self._oy, "w": self._w}
+            frame = self._frame_data = {
+                "path": [_key(p) for p in self._path],
+                "ox": self._ox,
+                "oy": self._oy,
+                "w": self._w,
+            }
         return frame
 
     def _nest(self, frame: dict) -> "Group":
         """A Group at the frame the Authoring Core worked out."""
-        group = Group(self._scene, tuple(frame["path"]), frame["ox"], frame["oy"],
-                      frame["w"])
+        group = Group(
+            self._scene, tuple(frame["path"]), frame["ox"], frame["oy"], frame["w"]
+        )
         group._frame_data = frame
         return group
 
@@ -73,6 +80,11 @@ class Group(_GroupSurface):
     def _build(self, op: str, data: dict) -> "Handle":
         """Draw with the Authoring Core: it places the shape, this keeps it."""
         return self._keep(_shape_of(call(op, data)))
+
+    def _build_character(self, op: str, data: dict) -> Character:
+        """Draw one character Item and return its pose handle."""
+        handle = self._keep(_shape_of(call(op, data)))
+        return Character(self._scene._shapes, handle._name, self._scene._markers)
 
     # -- shapes ---------------------------------------------------------------
     #

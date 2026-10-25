@@ -30,6 +30,7 @@ class _Shape:
     text: str = ""
     size: float = 16.0
     font: str = ""
+    pose: str = ""
     layer: int = 0
     opacity: float = 1.0
     scale_x: float = 1.0
@@ -41,6 +42,7 @@ class _Shape:
 def _shape_of(fields: dict) -> _Shape:
     """A shape from the Authoring Core's answer. Its points arrive as a list
     and are kept as a tuple, as everywhere else, so two shapes compare alike."""
+    fields.setdefault("pose", "")
     if fields["points"]:
         fields["points"] = tuple(fields["points"])
     else:

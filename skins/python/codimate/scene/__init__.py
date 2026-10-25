@@ -11,9 +11,21 @@ A package of small parts behind this one front door:
 """
 
 from .coverage import box, covered
+from .character import Character, CharacterPart
 from .group import Group
 from .handle import Handle
 from .root import Scene
 from .shape import PIVOTS, _key, _Shape
 
-__all__ = ["Group", "Handle", "PIVOTS", "Scene", "_Shape", "_key", "box", "covered"]
+__all__ = [
+    "Character",
+    "CharacterPart",
+    "Group",
+    "Handle",
+    "PIVOTS",
+    "Scene",
+    "_Shape",
+    "_key",
+    "box",
+    "covered",
+]
