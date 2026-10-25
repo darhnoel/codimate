@@ -275,6 +275,7 @@ pub(crate) fn primitives(before: &Shape, after: &Shape, rules: &[Rule]) -> Resul
 struct CharacterPose {
     expression: Option<String>,
     expression_transition: Option<String>,
+    theme: Option<String>,
     joints: HashMap<String, f32>,
 }
 
@@ -342,6 +343,14 @@ fn character_primitives(
     };
 
     for pose in [&from_pose, &to_pose] {
+        if let Some(theme) = &pose.theme {
+            if theme != "light" && theme != "dark" {
+                return Err(Error(format!(
+                    "item {:?} asks for unknown character theme {theme:?}; use \"light\" or \"dark\"",
+                    after.item
+                )));
+            }
+        }
         for name in pose.joints.keys() {
             if !art.joints.contains(name) {
                 return Err(Error(format!(
@@ -361,6 +370,8 @@ fn character_primitives(
     for outline in &art.paths {
         let path = outline.path.clone();
         let joints = outline.joints.clone();
+        let from_fill = character_fill(&from_pose, outline);
+        let to_fill = character_fill(&to_pose, outline);
         let from_pose = from_pose.clone();
         let to_pose = to_pose.clone();
         let scale = shape_scale.clone();
@@ -412,8 +423,8 @@ fn character_primitives(
             };
             fade.resolve(t) * expression
         });
-        let look = match (authored, outline.fill) {
-            (true, Some(color)) => Style::new().fill(color).into_animated(),
+        let look = match (authored, from_fill, to_fill) {
+            (true, Some(from), Some(to)) => tween(Style::new().fill(from), Style::new().fill(to)),
             _ => style.clone(),
         };
         out.push(
@@ -424,6 +435,14 @@ fn character_primitives(
         );
     }
     Ok(out)
+}
+
+fn character_fill(pose: &CharacterPose, path: &CharacterPath) -> Option<Color> {
+    if pose.theme.as_deref() == Some("dark") {
+        path.dark_fill.or(path.fill)
+    } else {
+        path.fill
+    }
 }
 
 fn character_point(
@@ -565,6 +584,7 @@ mod character_tests {
         let to = CharacterPose {
             expression: None,
             expression_transition: None,
+            theme: None,
             joints: [("body".into(), 90.0), ("arm".into(), 90.0)]
                 .into_iter()
                 .collect(),

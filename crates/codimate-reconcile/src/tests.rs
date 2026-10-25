@@ -269,45 +269,89 @@ fn bundled_codimate_character_has_connected_joints_and_expression_choices() {
 }
 
 #[test]
-fn bundled_character_keeps_navy_arms_and_visible_hands() {
+fn bundled_character_keeps_navy_limbs_and_glove_borders() {
     let art = character_art("codimate:codimate-mascot").expect("bundled mascot rig");
-    let luminance = |r: f32, g: f32, b: f32| {
-        let linear = |value: f32| {
-            if value <= 0.04045 {
-                value / 12.92
-            } else {
-                ((value + 0.055) / 1.055).powf(2.4)
-            }
-        };
-        0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
-    };
-    let background = luminance(18.0 / 255.0, 22.0 / 255.0, 31.0 / 255.0);
-
+    let navy = |color: Color| color.r < 0.1 && color.g < 0.2 && color.b < 0.4;
     let limb_paint = |joint: &str| {
         art.paths
             .iter()
-            .find(|path| path.joints.iter().any(|(id, _)| id == joint))
+            .find(|path| {
+                path.joints.iter().any(|(id, _)| id == joint) && path.fill.is_some_and(navy)
+            })
             .and_then(|path| path.fill)
             .unwrap_or_else(|| panic!("{joint} needs an authored fill"))
     };
 
-    for joint in ["left-arm", "right-arm"] {
-        let color = limb_paint(joint);
-        assert!(
-            color.r < 0.1 && color.g < 0.2 && color.b < 0.4,
-            "{joint} should retain its original navy paint"
-        );
+    for (arm, leg) in [("left-arm", "left-leg"), ("right-arm", "right-leg")] {
+        assert_eq!(limb_paint(arm), limb_paint(leg), "{arm} must match {leg}");
     }
 
-    for joint in ["left-hand", "right-hand"] {
-        let color = limb_paint(joint);
-        let foreground = luminance(color.r, color.g, color.b);
-        let contrast = (foreground.max(background) + 0.05) / (foreground.min(background) + 0.05);
+    for (hand, leg) in [("left-hand", "left-leg"), ("right-hand", "right-leg")] {
+        let outline = art
+            .paths
+            .iter()
+            .find(|path| {
+                path.joints.iter().any(|(id, _)| id == hand) && path.fill.is_some_and(navy)
+            })
+            .expect("glove outline");
         assert!(
-            contrast >= 3.0,
-            "{joint} paint has only {contrast:.2}:1 contrast against the dark canvas"
+            outline.fill == Some(limb_paint(leg)) && outline.dark_fill == Some(limb_paint(leg)),
+            "{hand} border must match {leg} in both themes"
         );
     }
+}
+
+#[test]
+fn bundled_character_keeps_gloves_white_in_both_themes() {
+    let art = character_art("codimate:codimate-mascot").expect("bundled mascot rig");
+    let white = parse_color("#FFFFFF").expect("white glove fill");
+
+    for joint in ["left-hand", "right-hand"] {
+        assert!(
+            art.paths.iter().any(|path| {
+                path.joints.iter().any(|(id, _)| id == joint)
+                    && path.fill == Some(white)
+                    && path.dark_fill == Some(white)
+            }),
+            "{joint} needs a solid white inset in both themes"
+        );
+    }
+}
+
+#[test]
+fn character_dark_theme_tweens_group_paint_between_scenes() {
+    let file = svg_on_disk(
+        "character-theme",
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <g id="rig" data-codimate-rig="1">
+            <g id="glove" data-pivot="50 50" data-dark-fill="#0071E3">
+              <path d="M20 20h60v60H20z" fill="#102A50"/>
+            </g>
+          </g>
+        </svg>"##,
+    );
+    let before = Shape {
+        item: "guide".into(),
+        kind: "character".into(),
+        text: file,
+        w: 100.0,
+        h: 100.0,
+        opacity: 1.0,
+        ..Default::default()
+    };
+    let after = Shape {
+        pose: r##"{"theme":"dark"}"##.into(),
+        ..before.clone()
+    };
+    let mut paths = primitives(&before, &after, &[]).expect("themed character");
+    assert_eq!(paths.len(), 1);
+    let glove = paths.remove(0);
+    let light = glove.resolve(0.0).style.fill;
+    let middle = glove.resolve(0.5).style.fill;
+    let dark = glove.resolve(1.0).style.fill;
+    assert!(light.r < 0.1 && light.g < 0.2 && light.b < 0.4, "{light:?}");
+    assert!(middle.b > light.b && middle.b < dark.b, "{middle:?}");
+    assert!(dark.b > 0.8 && dark.r < 0.1, "{dark:?}");
 }
 
 #[test]

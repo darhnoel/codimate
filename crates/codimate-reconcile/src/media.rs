@@ -236,6 +236,7 @@ pub(crate) struct CharacterArt {
 pub(crate) struct CharacterPath {
     pub(crate) path: Path,
     pub(crate) fill: Option<Color>,
+    pub(crate) dark_fill: Option<Color>,
     pub(crate) joints: Vec<(String, Vec2)>,
     pub(crate) expression: Option<String>,
 }
@@ -293,6 +294,7 @@ pub(crate) fn character_art(source: &str) -> Result<Arc<CharacterArt>> {
                 Vec2::new((p.x - center.x) / longest, (p.y - center.y) / longest)
             }),
             fill: item.fill,
+            dark_fill: item.dark_fill,
             joints: item
                 .joints
                 .into_iter()

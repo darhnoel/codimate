@@ -155,6 +155,8 @@ pub struct SvgJoint {
 pub struct SvgRigPath {
     pub path: codimate_core::Path,
     pub fill: Option<Color>,
+    /// Optional replacement paint when the character uses its dark palette.
+    pub dark_fill: Option<Color>,
     pub joints: Vec<SvgJoint>,
     pub expression: Option<String>,
 }
@@ -170,6 +172,7 @@ pub struct SvgRig {
 struct RigGroupMetadata {
     joint: Option<(String, f32, f32)>,
     expression: Option<String>,
+    dark_fill: Option<Color>,
 }
 
 /// Read a rigged SVG. Only content beneath `<g data-codimate-rig="1">` is
@@ -203,6 +206,10 @@ pub fn import_svg_rig(svg: &str) -> Result<SvgRig, FormulaError> {
         let id = node.attribute("id").filter(|id| !id.is_empty());
         let pivot = node.attribute("data-pivot");
         let expression = node.attribute("data-expression").filter(|s| !s.is_empty());
+        let dark_fill = node
+            .attribute("data-dark-fill")
+            .map(parse_hex_color)
+            .transpose()?;
         if pivot.is_some() && id.is_none() {
             return Err(FormulaError::Svg(
                 "every joint needs an id as well as data-pivot".into(),
@@ -242,6 +249,7 @@ pub fn import_svg_rig(svg: &str) -> Result<SvgRig, FormulaError> {
                     RigGroupMetadata {
                         joint,
                         expression: expression.map(str::to_owned),
+                        dark_fill,
                     },
                 )
                 .is_some()
@@ -291,6 +299,7 @@ pub fn import_svg_rig(svg: &str) -> Result<SvgRig, FormulaError> {
         view_box_transform,
         &mut Vec::new(),
         None,
+        None,
         &mut paths,
     )?;
     if paths.is_empty() {
@@ -326,10 +335,12 @@ fn collect_rig_paths(
     view_box_transform: usvg::Transform,
     joints: &mut Vec<SvgJoint>,
     expression: Option<String>,
+    dark_fill: Option<Color>,
     out: &mut Vec<SvgRigPath>,
 ) -> Result<(), FormulaError> {
     let mut joints = joints.clone();
     let mut expression = expression;
+    let mut dark_fill = dark_fill;
     if let Some(metadata) = metadata.get(group.id()) {
         let group_expression = &metadata.expression;
         if let Some((id, x, y)) = &metadata.joint {
@@ -348,6 +359,9 @@ fn collect_rig_paths(
             }
             expression = Some(name.clone());
         }
+        if metadata.dark_fill.is_some() {
+            dark_fill = metadata.dark_fill;
+        }
     }
 
     for node in group.children() {
@@ -361,6 +375,7 @@ fn collect_rig_paths(
                             closed: false,
                         },
                         fill: authored_colour(path),
+                        dark_fill,
                         joints: joints.clone(),
                         expression: expression.clone(),
                     });
@@ -372,12 +387,32 @@ fn collect_rig_paths(
                 view_box_transform,
                 &mut joints,
                 expression.clone(),
+                dark_fill,
                 out,
             )?,
             _ => {}
         }
     }
     Ok(())
+}
+
+/// Theme paints use a deliberately small, deterministic SVG extension:
+/// six-digit hexadecimal RGB colors in `data-dark-fill`.
+fn parse_hex_color(value: &str) -> Result<Color, FormulaError> {
+    let digits = value.strip_prefix('#').filter(|digits| digits.len() == 6);
+    let Some(digits) = digits else {
+        return Err(FormulaError::Svg(format!(
+            "data-dark-fill must be a six-digit hex color, got {value:?}"
+        )));
+    };
+    let rgb = u32::from_str_radix(digits, 16)
+        .map_err(|_| FormulaError::Svg(format!("invalid data-dark-fill color {value:?}")))?;
+    Ok(Color {
+        r: ((rgb >> 16) & 0xff) as f32 / 255.0,
+        g: ((rgb >> 8) & 0xff) as f32 / 255.0,
+        b: (rgb & 0xff) as f32 / 255.0,
+        a: 1.0,
+    })
 }
 
 /// Read an SVG's geometry, keeping each path's own colour (ADR 0014).
@@ -806,7 +841,7 @@ mod svg_import_tests {
           <g id="guide" data-codimate-rig="1" data-default-expression="smile">
             <g id="body" data-pivot="50 50">
               <path d="M40 40h20v20H40z" fill="#ff0000"/>
-              <g id="arm" data-pivot="75,50">
+              <g id="arm" data-pivot="75,50" data-dark-fill="#44aaee">
                 <path d="M70 45h20v10H70z" fill="#0000ff"/>
               </g>
               <g id="smile-face" data-expression="smile">
@@ -826,6 +861,8 @@ mod svg_import_tests {
             .iter()
             .find(|path| path.fill.is_some_and(|c| c.b > 0.9))
             .expect("blue arm outline");
+        let dark_arm = arm.dark_fill.expect("dark-theme arm paint");
+        assert!(dark_arm.r < 0.3 && dark_arm.g > 0.6 && dark_arm.b > 0.8);
         assert_eq!(
             arm.joints
                 .iter()
@@ -854,5 +891,20 @@ mod svg_import_tests {
                 .collect::<Vec<_>>(),
             ["body"]
         );
+    }
+
+    #[test]
+    fn a_rig_rejects_invalid_dark_palette_colors() {
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+          <g id="guide" data-codimate-rig="1">
+            <g id="hand" data-pivot="5 5" data-dark-fill="blue">
+              <path d="M1 1h8v8H1z" fill="#102A50"/>
+            </g>
+          </g>
+        </svg>"##;
+        assert!(matches!(
+            import_svg_rig(svg),
+            Err(FormulaError::Svg(message)) if message.contains("data-dark-fill")
+        ));
     }
 }

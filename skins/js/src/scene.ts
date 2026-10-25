@@ -143,6 +143,17 @@ export class Handle extends HandleSurface {
 
 /** A connected, SVG-backed figure whose pose belongs to one Scene. */
 export class Character extends Handle {
+  /** Choose the SVG's light or dark palette for this Scene. */
+  theme(name: string): this {
+    if (name !== "light" && name !== "dark") {
+      throw new Error("character theme must be 'light' or 'dark'");
+    }
+    const pose = this.readPose();
+    pose.theme = name;
+    this.writePose(pose);
+    return this;
+  }
+
   /** Select a joint by the `id` of its marked SVG group. */
   part(name: string): CharacterPart {
     if (!name) throw new Error("a character part needs a non-empty SVG group id");
@@ -175,6 +186,7 @@ export class Character extends Handle {
     this._shape().pose = JSON.stringify({
       expression: pose.expression,
       expression_transition: pose.expression_transition,
+      theme: pose.theme,
       joints,
     });
   }
@@ -204,6 +216,7 @@ export class CharacterPart {
     shape.pose = JSON.stringify({
       expression: encoded.expression,
       expression_transition: encoded.expression_transition,
+      theme: encoded.theme,
       joints,
     });
     return this;
@@ -213,5 +226,6 @@ export class CharacterPart {
 type CharacterPose = {
   expression: string | null;
   expression_transition?: "crossfade" | "cut";
+  theme?: "light" | "dark";
   joints: Record<string, number>;
 };

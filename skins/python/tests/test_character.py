@@ -12,6 +12,7 @@ def test_character_records_connected_pose_on_its_scene_item():
     guide = scene.character("guide", cm.characters.codimate, size=360, at=(640, 360))
     guide.part("right-arm").turn(-25)
     guide.expression("thinking")
+    guide.theme("dark")
 
     [shape] = scene._payload()
     assert shape["item"] == "guide"
@@ -20,6 +21,7 @@ def test_character_records_connected_pose_on_its_scene_item():
     assert json.loads(shape["pose"]) == {
         "expression": "thinking",
         "joints": {"right-arm": -25.0},
+        "theme": "dark",
     }
 
 
@@ -46,3 +48,9 @@ def test_character_rejects_unknown_expression_transition():
     guide = cm.Scene().character("guide", cm.characters.codimate, at=(640, 360))
     with pytest.raises(ValueError, match="crossfade.*cut"):
         guide.expression("smile", transition="bounce")
+
+
+def test_character_rejects_unknown_theme():
+    guide = cm.Scene().character("guide", cm.characters.codimate, at=(640, 360))
+    with pytest.raises(ValueError, match="theme must be 'light' or 'dark'"):
+        guide.theme("sepia")

@@ -75,12 +75,14 @@ test("a character keeps its connected joint pose and expression in one Scene Ite
   const guide = scene.character("guide", cm.characters.codimate, { size: 360, at: [640, 360] });
   guide.part("right-arm").turn(-25);
   guide.expression("thinking");
+  guide.theme("dark");
   const [shape] = scene._payload();
   assert.equal(shape.kind, "character");
   assert.equal(shape.text, "codimate:codimate-mascot");
   assert.deepEqual(JSON.parse(String(shape.pose)), {
     expression: "thinking",
     joints: { "right-arm": -25 },
+    theme: "dark",
   });
 });
 
@@ -89,12 +91,19 @@ test("a character can cut between expressions without fading its mouth", () => {
   const guide = scene.character("guide", cm.characters.codimate, { at: [640, 360] });
   guide.expression("talk-open", { transition: "cut" });
   guide.part("right-hand").turn(28);
+  guide.theme("dark");
   const [shape] = scene._payload();
   assert.deepEqual(JSON.parse(String(shape.pose)), {
     expression: "talk-open",
     expression_transition: "cut",
+    theme: "dark",
     joints: { "right-hand": 28 },
   });
+});
+
+test("a character rejects an unknown color theme", () => {
+  const guide = new cm.Scene().character("guide", cm.characters.codimate, { at: [640, 360] });
+  assert.throws(() => guide.theme("sepia"), /theme must be 'light' or 'dark'/);
 });
 
 test("a film opens and closes on held moments", () => {

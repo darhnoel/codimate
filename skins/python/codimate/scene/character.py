@@ -12,15 +12,22 @@ from .handle import Handle
 class Character(Handle):
     """A connected figure whose pose belongs to this Scene."""
 
+    def theme(self, name: str) -> "Character":
+        """Choose the SVG's light or dark palette for this Scene."""
+        if name not in {"light", "dark"}:
+            raise ValueError("character theme must be 'light' or 'dark'")
+        pose = self._pose()
+        pose["theme"] = name
+        self._store_pose(pose)
+        return self
+
     def part(self, name: str) -> "CharacterPart":
         """Select a joint by the `id` of its marked SVG group."""
         if not name:
             raise ValueError("a character part needs a non-empty SVG group id")
         return CharacterPart(self._shapes, self._name, name)
 
-    def expression(
-        self, name: str, *, transition: str = "crossfade"
-    ) -> "Character":
+    def expression(self, name: str, *, transition: str = "crossfade") -> "Character":
         """Choose an expression, crossfading or cutting to it between Scenes."""
         if not name:
             raise ValueError("a character expression needs a non-empty name")

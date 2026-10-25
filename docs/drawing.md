@@ -117,6 +117,7 @@ guide = scene.character("guide", cm.characters.codimate,
                          size=320, at=(640, 360))
 guide.part("right-arm").turn(-25)
 guide.expression("thinking")
+guide.theme("light")  # use "dark" when the scene background is dark
 ```
 
 The bundled mascot is `cm.characters.codimate`. For your own character, pass an
@@ -127,6 +128,9 @@ SVG root's `viewBox` coordinates. Nest joint groups so a parent's turn carries
 its children. Put alternate faces in groups marked
 `data-expression="name"`; optionally choose the starting face with
 `data-default-expression="name"` on the rig root. Convert SVG text to paths.
+Use `guide.theme("dark")` for a dark scene and `guide.theme("light")` for a
+light scene. A joint group can set `data-dark-fill="#rrggbb"` to change only
+its paint in dark scenes; the ordinary SVG fill is used in light scenes.
 
 Set the pose again in each Scene. Joint angles are degrees from the neutral
 pose, and Codimate moves between them. Keep the character's shape name the same
