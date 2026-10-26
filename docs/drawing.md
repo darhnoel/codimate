@@ -25,6 +25,26 @@ The snippets are drawing fragments: use them inside your `view(frame)` function.
 All drawing methods are available on groups as well as scenes.
 For argument details, see [Reference: Drawing](reference.md#drawing).
 
+## Add a dot-grid background
+
+Use the reusable background helper when you want a quiet dotted canvas. It
+draws the same named dots in every Scene, below the default drawing layer:
+
+```python
+cm.backgrounds.dot_grid(
+    scene, spacing=64, color="#8492a6", background="#0b0f16",
+)
+```
+
+Call it before drawing the scene's foreground. Leave out `background` to keep
+the canvas color you already use. `spacing` and `color` let you tune the
+pattern without changing Codimate's drawing primitives. To move the dots,
+change `offset` in later Scenes; Codimate animates the same dots between them:
+
+```python
+cm.backgrounds.dot_grid(scene, offset=(frame.state.drift, 0))
+```
+
 ## Place a shape
 
 The default canvas is **1280 × 720**. Coordinates start at the top-left:

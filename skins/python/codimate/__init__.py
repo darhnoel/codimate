@@ -54,7 +54,7 @@ encoding — happens in Rust (ADR 0008).
 
 from __future__ import annotations
 
-from . import characters, science, text
+from . import backgrounds, characters, science, text
 from .explain import Explanation, Rule, Timing, ease, explain
 from .layout import (
     Axes,
@@ -91,6 +91,7 @@ __all__ = [
     "Handle",
     "Character",
     "CharacterPart",
+    "backgrounds",
     "characters",
     "TextPreset",
     "TextPresetStyle",

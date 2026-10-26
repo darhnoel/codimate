@@ -194,6 +194,24 @@ tweens joint angles and crossfades expressions between them. For fast changes
 such as speaking mouths, pass `transition="cut"` to `expression()` to switch
 at the transition's midpoint. Convert text to paths before importing.
 
+### Decorative backgrounds
+
+`cm.backgrounds.dot_grid` draws a named dot pattern below the scene's default
+drawing layer. Call it in each view, before drawing foreground shapes. Change
+`offset` between Scenes to move the grid:
+
+```python
+cm.backgrounds.dot_grid(
+    scene, spacing=64, color="#8492a6", background="#0b0f16",
+    offset=(frame.state.drift, 0),
+)
+```
+
+```text
+dot_grid(scene, *, spacing=64.0, color="#718096", background=None,
+         offset=(0.0, 0.0)) -> None
+```
+
 ### Animate text by word or letter
 
 `TextPreset` splits a line into moving words or Unicode letter clusters. Keep one
