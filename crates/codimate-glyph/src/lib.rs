@@ -3,6 +3,7 @@ use codimate_fonts::{FontId, FontRegistry};
 
 /// Why [`shape()`] could not produce a [`GlyphBlock`].
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum GlyphError {
     /// No font data for the given `FontId`.
     NoFont(FontId),

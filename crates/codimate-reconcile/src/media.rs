@@ -41,6 +41,8 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
             // Only an imported file can raise these; typst's own output is
             // never read from disk and never contains text elements.
             codimate_math::FormulaError::SvgRead(m) | codimate_math::FormulaError::SvgText(m) => m,
+            // A variant added to the math crate later gets this plain message until it has its own.
+            _ => format!("could not typeset {latex:?}"),
         })
     })?;
 

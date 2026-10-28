@@ -64,6 +64,7 @@ pub struct ExportFrame {
 
 /// Errors from the export pipeline.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ExportError {
     Io(io::Error),
     EncoderNotFound,

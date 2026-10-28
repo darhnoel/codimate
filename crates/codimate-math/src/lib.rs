@@ -20,6 +20,7 @@ use codimate_core::{Color, GlyphBlock, PathNode, Segment, Vec2};
 
 /// Why a [`formula()`] could not be produced.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum FormulaError {
     /// `mitex` could not translate the LaTeX into Typst markup.
     Mitex(String),

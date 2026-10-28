@@ -26,6 +26,7 @@ use codimate_core::{
 /// motion path that does not exist, LaTeX that will not typeset. The frontend
 /// decides how to present it; this crate only says what went wrong.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Error(pub String);
 
 impl fmt::Display for Error {
