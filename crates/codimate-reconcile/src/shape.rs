@@ -223,6 +223,15 @@ pub(crate) fn curve_path(s: &Shape) -> Path {
 /// the cubic approximation is good to a few thousandths of a radius.
 pub(crate) const ARC_SPANS: usize = 8;
 
+/// Whether an arc is an open curve or a pie slice closed back to its centre.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Outline {
+    /// An open curve.
+    Arc,
+    /// A pie slice, closed back to the centre.
+    Sector,
+}
+
 /// An arc or a sector in local space.
 ///
 /// `w`/`h` are the bounding box, so an ellipse costs nothing extra; `x2`/`y2`
@@ -238,7 +247,8 @@ pub(crate) const ARC_SPANS: usize = 8;
 /// arc and is wrong for a sector: halfway between a collapsed slice and a
 /// 300-degree one is not a 150-degree slice, it is a self-crossing shape that
 /// fills as a sliver and a half-disc. Caught by rendering one.
-pub(crate) fn arc_at(rx: f32, ry: f32, from_deg: f32, to_deg: f32, sector: bool) -> Path {
+pub(crate) fn arc_at(rx: f32, ry: f32, from_deg: f32, to_deg: f32, outline: Outline) -> Path {
+    let sector = outline == Outline::Sector;
     // Screen y grows downward, so subtracting a quarter turn puts zero at the
     // top and makes a rising angle read as clockwise.
     let at = |deg: f32| {
@@ -334,7 +344,11 @@ impl Shape {
                 let (rx1, ry1) = (other.w / 2.0, other.h / 2.0);
                 let (a0, b0) = (self.x2, self.y2);
                 let (a1, b1) = (other.x2, other.y2);
-                let sector = other.r > 0.0;
+                let outline = if other.r > 0.0 {
+                    Outline::Sector
+                } else {
+                    Outline::Arc
+                };
                 Geometry::path(Animated::new(move |t| {
                     let mix = |x: f32, y: f32| x + (y - x) * t;
                     arc_at(
@@ -342,7 +356,7 @@ impl Shape {
                         mix(ry0, ry1),
                         mix(a0, a1),
                         mix(b0, b1),
-                        sector,
+                        outline,
                     )
                 }))
             }

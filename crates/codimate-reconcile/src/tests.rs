@@ -101,7 +101,12 @@ fn glob_matches_the_patterns_authors_actually_write() {
 /// An SVG on disk, because `svg_art` reads a path rather than a string —
 /// the payload carries a file name, so the cache can key on it.
 fn arc_path(s: &Shape) -> Path {
-    arc_at(s.w / 2.0, s.h / 2.0, s.x2, s.y2, s.r > 0.0)
+    let outline = if s.r > 0.0 {
+        Outline::Sector
+    } else {
+        Outline::Arc
+    };
+    arc_at(s.w / 2.0, s.h / 2.0, s.x2, s.y2, outline)
 }
 
 fn arc_shape(r: f32, from: f32, to: f32, sector: bool) -> Shape {

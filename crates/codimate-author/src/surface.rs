@@ -886,7 +886,7 @@ pub fn formula(a: Formula) -> Result<Shape, Refusal> {
 }
 
 /// A box something fits inside: one number for a square, or (w, h).
-fn fit_box(size: &Option<Radius>) -> (f64, f64) {
+fn fit_box(size: Option<&Radius>) -> (f64, f64) {
     match size {
         None => (0.0, 0.0),
         Some(Radius::Round(s)) => (*s, *s),
@@ -906,7 +906,7 @@ pub struct Image {
 /// A picture, fitted inside `size` with its aspect kept; unsized, its own
 /// pixel size (0 × 0 tells the Engine so).
 pub fn image(a: Image) -> Result<Shape, Refusal> {
-    let (w, h) = fit_box(&a.size);
+    let (w, h) = fit_box(a.size.as_ref());
     let at = centre(&a.group, a.at.as_ref(), 0.0)?;
     Ok(Shape {
         text: a.file,
@@ -928,7 +928,7 @@ pub struct Svg {
 /// Vector art drawn as geometry, fitted inside `size`. Its own colours
 /// (`color` empty means as authored), fully written, no pen yet.
 pub fn svg(a: Svg) -> Result<Shape, Refusal> {
-    let (w, h) = fit_box(&Some(a.size));
+    let (w, h) = fit_box(Some(&a.size));
     let at = centre(&a.group, a.at.as_ref(), 0.0)?;
     Ok(Shape {
         text: a.file,
@@ -952,7 +952,7 @@ pub struct Character {
 
 /// A rigged SVG character, whose pose is selected on its Python/JS handle.
 pub fn character(a: Character) -> Result<Shape, Refusal> {
-    let (w, h) = fit_box(&a.size);
+    let (w, h) = fit_box(a.size.as_ref());
     let at = centre(&a.group, a.at.as_ref(), 0.0)?;
     Ok(Shape {
         text: a.file,

@@ -116,10 +116,19 @@ fn fold(values: &[f64], f: fn(f64, f64) -> f64) -> f64 {
     values[1..].iter().fold(values[0], |a, b| f(a, *b))
 }
 
+/// Whether a camera moves the world under the labels.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Framing {
+    /// Nothing moves, so every overlapping pair counts.
+    Fixed,
+    /// A camera moves the world, not the overlays, so labels on different overlays are not compared.
+    Moving,
+}
+
 /// Every label something is drawn on, as (above, below): nothing visible may
 /// be drawn above a text or a formula, and no two of them may overlap. A
 /// camera moves the world, not overlays, so with one the two are not compared.
-fn covered(scene: &[Shape], focused: bool, film_font: &str) -> Vec<(String, String)> {
+fn covered(scene: &[Shape], framing: Framing, film_font: &str) -> Vec<(String, String)> {
     let mut shapes: Vec<&Shape> = scene
         .iter()
         .filter(|s| s.opacity > 0.0 && (s.color != "none" || s.edge_w > 0.0))
@@ -136,7 +145,7 @@ fn covered(scene: &[Shape], focused: bool, film_font: &str) -> Vec<(String, Stri
         };
         for (j, other) in shapes.iter().enumerate().skip(i + 1) {
             let Some(outer) = boxes[j] else { continue };
-            if focused && overlay(label) != overlay(other) {
+            if framing == Framing::Moving && overlay(label) != overlay(other) {
                 continue;
             }
             if touches(other, outer, label_box) {
@@ -227,11 +236,12 @@ pub struct OneScene {
 
 /// The covered labels of one Scene.
 pub fn covered_scene(a: OneScene) -> Result<Vec<(String, String)>, Refusal> {
-    Ok(covered(
-        &a.scene,
-        a.camera.is_some_and(|c| !c.is_null()),
-        &a.film_font,
-    ))
+    let framing = if a.camera.is_some_and(|c| !c.is_null()) {
+        Framing::Moving
+    } else {
+        Framing::Fixed
+    };
+    Ok(covered(&a.scene, framing, &a.film_font))
 }
 
 /// Every label something was drawn on, (seconds, above, below), checked once
@@ -241,11 +251,16 @@ pub fn film_covered(f: Film) -> Result<Vec<(f64, String, String)>, Refusal> {
     let mut before: Vec<(String, String)> = Vec::new();
     for (i, (at, secs, _)) in beats(&f).into_iter().enumerate() {
         let k = (i + 1).min(f.scenes.len().saturating_sub(1));
-        let focused = f
+        let framing = if f
             .cameras
             .get(k)
-            .is_some_and(|c| c.as_ref().is_some_and(|c| !c.is_null()));
-        let now = covered(&f.scenes[k], focused, &f.film_font);
+            .is_some_and(|c| c.as_ref().is_some_and(|c| !c.is_null()))
+        {
+            Framing::Moving
+        } else {
+            Framing::Fixed
+        };
+        let now = covered(&f.scenes[k], framing, &f.film_font);
         // A collision that lasts is reported where it starts.
         for (above, below) in now.iter().filter(|pair| !before.contains(pair)) {
             found.push((py_round(at + secs, 2), above.clone(), below.clone()));
