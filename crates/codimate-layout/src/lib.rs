@@ -306,8 +306,16 @@ macro_rules! define_slots {
                 self.0.len()
             }
 
+            /// Takes the slot at `index` out of the list.
+            ///
+            /// # Panics
+            ///
+            /// Panics if `index` is not less than `len()`.
             pub fn remove(self, index: usize) -> Slot {
-                self.0.into_iter().nth(index).unwrap()
+                self.0
+                    .into_iter()
+                    .nth(index)
+                    .expect("index is less than len()")
             }
         }
 

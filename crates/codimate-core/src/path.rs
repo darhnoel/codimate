@@ -290,7 +290,10 @@ impl Path {
                 return Vec2::lerp(*p1, *p2, frac);
             }
         }
-        let last = self.segments.last().unwrap();
+        let last = self
+            .segments
+            .last()
+            .expect("a path with length has a segment");
         let (_, _, _, b) = last.to_cubic();
         b
     }

@@ -184,7 +184,9 @@ pub fn marker(a: MarkerArgs) -> Result<Marked, Refusal> {
         w: 1.0,
         layer: LAYER,
         opacity: OPACITY,
-        color: highlight_colour("yellow").unwrap().into(),
+        color: highlight_colour("yellow")
+            .expect("yellow is a built-in highlight")
+            .into(),
         ..Shape::default()
     };
     let mut mark = Mark::Stroke {

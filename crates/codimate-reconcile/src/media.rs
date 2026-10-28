@@ -18,7 +18,7 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
     static CACHE: OnceLock<Mutex<HashMap<String, Arc<Vec<Path>>>>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
-    if let Some(hit) = cache.lock().unwrap().get(latex) {
+    if let Some(hit) = cache.lock().expect("cache lock is not poisoned").get(latex) {
         return Ok(hit.clone());
     }
 
@@ -87,7 +87,7 @@ pub fn formula_glyphs(latex: &str) -> Result<Arc<Vec<Path>>> {
     let shared = Arc::new(centred);
     cache
         .lock()
-        .unwrap()
+        .expect("cache lock is not poisoned")
         .insert(latex.to_string(), shared.clone());
     Ok(shared)
 }
@@ -103,7 +103,7 @@ pub(crate) fn image_pixels(file: &str) -> Result<Arc<Pixels>> {
     static CACHE: OnceLock<Mutex<HashMap<String, Arc<Pixels>>>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
-    if let Some(hit) = cache.lock().unwrap().get(file) {
+    if let Some(hit) = cache.lock().expect("cache lock is not poisoned").get(file) {
         return Ok(hit.clone());
     }
 
@@ -126,7 +126,7 @@ pub(crate) fn image_pixels(file: &str) -> Result<Arc<Pixels>> {
     let shared = Arc::new(decoded);
     cache
         .lock()
-        .unwrap()
+        .expect("cache lock is not poisoned")
         .insert(file.to_string(), shared.clone());
     Ok(shared)
 }
@@ -250,7 +250,11 @@ pub(crate) struct CharacterPath {
 pub(crate) fn character_art(source: &str) -> Result<Arc<CharacterArt>> {
     static CACHE: OnceLock<Mutex<HashMap<String, Arc<CharacterArt>>>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Some(hit) = cache.lock().unwrap().get(source) {
+    if let Some(hit) = cache
+        .lock()
+        .expect("cache lock is not poisoned")
+        .get(source)
+    {
         return Ok(hit.clone());
     }
 
@@ -321,7 +325,10 @@ pub(crate) fn character_art(source: &str) -> Result<Arc<CharacterArt>> {
         expressions: rig.expressions,
         joints: joint_ids.into_iter().collect(),
     });
-    cache.lock().unwrap().insert(source.to_owned(), art.clone());
+    cache
+        .lock()
+        .expect("cache lock is not poisoned")
+        .insert(source.to_owned(), art.clone());
     Ok(art)
 }
 
@@ -373,7 +380,7 @@ pub(crate) fn svg_art(file: &str) -> Result<Arc<SvgArt>> {
     static CACHE: OnceLock<Mutex<HashMap<String, Arc<SvgArt>>>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
-    if let Some(hit) = cache.lock().unwrap().get(file) {
+    if let Some(hit) = cache.lock().expect("cache lock is not poisoned").get(file) {
         return Ok(hit.clone());
     }
 
@@ -452,7 +459,10 @@ pub(crate) fn svg_art(file: &str) -> Result<Arc<SvgArt>> {
         texts,
         size: ((max_x - min_x) / longest, (max_y - min_y) / longest),
     });
-    cache.lock().unwrap().insert(file.to_string(), art.clone());
+    cache
+        .lock()
+        .expect("cache lock is not poisoned")
+        .insert(file.to_string(), art.clone());
     Ok(art)
 }
 

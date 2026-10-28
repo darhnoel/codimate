@@ -271,10 +271,9 @@ fn clusters(text: &str) -> Vec<String> {
                 || (0x1F3FB..=0x1F3FF).contains(&code)
                 || join_next
                 || (regional && regional_count % 2 == 1));
-        if attaches {
-            out.last_mut().unwrap().push(c);
-        } else {
-            out.push(c.to_string());
+        match out.last_mut().filter(|_| attaches) {
+            Some(last) => last.push(c),
+            None => out.push(c.to_string()),
         }
         join_next = c == '\u{200d}' || c == '\u{17d2}';
         regional_count = if regional { regional_count + 1 } else { 0 };

@@ -109,7 +109,12 @@ impl FontRegistry {
     /// [`char_font`]: Self::char_font
     pub fn load(&self, spec: &str) -> Result<FontId, String> {
         let embedded = generated::entries().len();
-        if let Some(i) = loaded().read().unwrap().iter().position(|f| f.spec == spec) {
+        if let Some(i) = loaded()
+            .read()
+            .expect("font registry lock is not poisoned")
+            .iter()
+            .position(|f| f.spec == spec)
+        {
             return Ok(FontId((embedded + i) as u16));
         }
         let (bytes, index) = if is_path(spec) {
@@ -130,7 +135,12 @@ impl FontRegistry {
     /// [`load`]: Self::load
     pub fn provide(&self, spec: &str, bytes: Vec<u8>) -> Result<FontId, String> {
         let embedded = generated::entries().len();
-        if let Some(i) = loaded().read().unwrap().iter().position(|f| f.spec == spec) {
+        if let Some(i) = loaded()
+            .read()
+            .expect("font registry lock is not poisoned")
+            .iter()
+            .position(|f| f.spec == spec)
+        {
             return Ok(FontId((embedded + i) as u16));
         }
         self.register(spec, bytes, 0)
@@ -150,7 +160,9 @@ impl FontRegistry {
                 .unwrap_or(spec),
             false => spec,
         };
-        let mut fonts = loaded().write().unwrap();
+        let mut fonts = loaded()
+            .write()
+            .expect("font registry lock is not poisoned");
         // Another thread may have loaded it while this one read the file.
         if let Some(i) = fonts.iter().position(|f| f.spec == spec) {
             return Ok(FontId((embedded + i) as u16));
@@ -168,7 +180,11 @@ impl FontRegistry {
     /// The loaded font for `id`, or `None` when `id` is an embedded one.
     fn with_loaded<T>(&self, id: FontId, f: impl FnOnce(&Loaded) -> T) -> Option<T> {
         let i = (id.0 as usize).checked_sub(generated::entries().len())?;
-        loaded().read().unwrap().get(i).map(f)
+        loaded()
+            .read()
+            .expect("font registry lock is not poisoned")
+            .get(i)
+            .map(f)
     }
 
     /// Raw bytes for the font identified by `id`.

@@ -138,7 +138,9 @@ pub(crate) fn order(members: &mut [&Shape], how: &str) -> Result<()> {
         "" | "screen" | "reverse" => {
             members.sort_by(|a, b| {
                 let (p, q) = (at(a), at(b));
-                (p.x.round(), p.y).partial_cmp(&(q.x.round(), q.y)).unwrap()
+                (p.x.round(), p.y)
+                    .partial_cmp(&(q.x.round(), q.y))
+                    .expect("positions are never NaN")
             });
             if how == "reverse" {
                 members.reverse();
@@ -155,7 +157,11 @@ pub(crate) fn order(members: &mut [&Shape], how: &str) -> Result<()> {
                 let p = at(s);
                 (p.x - cx).hypot(p.y - cy)
             };
-            members.sort_by(|a, b| away(a).partial_cmp(&away(b)).unwrap());
+            members.sort_by(|a, b| {
+                away(a)
+                    .partial_cmp(&away(b))
+                    .expect("distances are never NaN")
+            });
         }
         other => {
             return Err(Error(format!(

@@ -434,14 +434,11 @@ fn shaped_runs(
             registry.char_font_in(primary, ch)
         };
 
-        if current_font.is_some_and(|active| active != font) && !current_text.is_empty() {
-            push_shaped_run(
-                &mut runs,
-                &current_text,
-                current_font.unwrap(),
-                font_size,
-                fill,
-            )?;
+        if let Some(active) = current_font
+            .filter(|&active| active != font)
+            .filter(|_| !current_text.is_empty())
+        {
+            push_shaped_run(&mut runs, &current_text, active, font_size, fill)?;
             current_text.clear();
         }
 

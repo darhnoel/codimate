@@ -425,11 +425,13 @@ pub fn encode_png(bitmap: &Bitmap) -> Vec<u8> {
     let mut encoder = png::Encoder::new(&mut bytes, bitmap.width, bitmap.height);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().expect("valid PNG header");
+    let mut writer = encoder
+        .write_header()
+        .expect("writing to a Vec does not fail");
     writer
         .write_image_data(&bitmap.rgba)
         .expect("rgba matches width*height*4");
-    writer.finish().expect("flush PNG");
+    writer.finish().expect("writing to a Vec does not fail");
     bytes
 }
 
