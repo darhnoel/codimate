@@ -1,5 +1,4 @@
 use std::io;
-use std::io::Write;
 
 /// Errors from the export pipeline.
 #[derive(Debug)]

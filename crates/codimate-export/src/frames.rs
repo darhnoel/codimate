@@ -2,7 +2,6 @@ use crate::ExportConfig;
 use codimate_animation::Playable;
 use codimate_layout::layout_scene;
 use codimate_render::{render_frame, RenderFrame};
-use rayon::prelude::*;
 
 /// A render-ready frame with its sequence index.
 #[derive(Clone, Debug, PartialEq)]

@@ -4,7 +4,6 @@ use crate::ExportError;
 use codimate_animation::Playable;
 use codimate_layout::{layout_scene, Viewport};
 use codimate_render::{rasterize, render_frame};
-use rayon::prelude::*;
 use std::io;
 use std::path::Path;
 
