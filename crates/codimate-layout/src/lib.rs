@@ -22,6 +22,7 @@ pub struct Slot {
 
 impl Slot {
     /// A static slot at a fixed position.
+    #[must_use]
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
         Slot {
             origin: Vec2::new(x, y).into_animated(),
@@ -31,11 +32,13 @@ impl Slot {
     }
 
     /// The top-left corner (the slot's origin).
+    #[must_use]
     pub fn top_left(&self) -> Animated<Vec2> {
         self.origin.clone()
     }
 
     /// The slot's center point.
+    #[must_use]
     pub fn center(&self) -> Animated<Vec2> {
         let origin = self.origin.clone();
         let hw = self.w / 2.0;
@@ -47,6 +50,7 @@ impl Slot {
     }
 
     /// Center of the top edge.
+    #[must_use]
     pub fn top(&self) -> Animated<Vec2> {
         let origin = self.origin.clone();
         let hw = self.w / 2.0;
@@ -57,6 +61,7 @@ impl Slot {
     }
 
     /// Center of the bottom edge.
+    #[must_use]
     pub fn bottom(&self) -> Animated<Vec2> {
         let origin = self.origin.clone();
         let hw = self.w / 2.0;
@@ -68,6 +73,7 @@ impl Slot {
     }
 
     /// Center of the left edge.
+    #[must_use]
     pub fn left(&self) -> Animated<Vec2> {
         let origin = self.origin.clone();
         let hh = self.h / 2.0;
@@ -78,6 +84,7 @@ impl Slot {
     }
 
     /// Center of the right edge.
+    #[must_use]
     pub fn right(&self) -> Animated<Vec2> {
         let origin = self.origin.clone();
         let hh = self.h / 2.0;
@@ -89,6 +96,7 @@ impl Slot {
     }
 
     /// A named anchor point derived from the slot bounds.
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
         match kind {
             AnchorKind::Center => self.center(),
@@ -100,6 +108,7 @@ impl Slot {
     }
 
     /// A child slot centered within this one.
+    #[must_use]
     pub fn centered_child(&self, size: Vec2) -> Self {
         let origin = self.origin.clone();
         let pw = self.w;
@@ -115,6 +124,7 @@ impl Slot {
     }
 
     /// Divide this slot into a row of `count` children, left-aligned inside the parent.
+    #[must_use]
     pub fn row(&self, size: Vec2, gap: f32, count: usize) -> Vec<Self> {
         (0..count)
             .map(|i| {
@@ -133,6 +143,7 @@ impl Slot {
     }
 
     /// Divide this slot into a column of `count` children, top-aligned inside the parent.
+    #[must_use]
     pub fn column(&self, size: Vec2, gap: f32, count: usize) -> Vec<Self> {
         (0..count)
             .map(|i| {
@@ -151,6 +162,7 @@ impl Slot {
     }
 
     /// A new slot of the given size placed below this one with `gap`, centered horizontally.
+    #[must_use]
     pub fn below(&self, size: Vec2, gap: f32) -> Self {
         let origin = self.origin.clone();
         let pw = self.w;
@@ -166,6 +178,7 @@ impl Slot {
     }
 
     /// A new slot of the given size placed above this one with `gap`, centered horizontally.
+    #[must_use]
     pub fn above(&self, size: Vec2, gap: f32) -> Self {
         let origin = self.origin.clone();
         let pw = self.w;
@@ -180,6 +193,7 @@ impl Slot {
     }
 
     /// A new slot of the given size placed to the left with `gap`, centered vertically.
+    #[must_use]
     pub fn left_of(&self, size: Vec2, gap: f32) -> Self {
         let origin = self.origin.clone();
         let ph = self.h;
@@ -194,6 +208,7 @@ impl Slot {
     }
 
     /// A new slot of the given size placed to the right with `gap`, centered vertically.
+    #[must_use]
     pub fn right_of(&self, size: Vec2, gap: f32) -> Self {
         let origin = self.origin.clone();
         let pw = self.w;
@@ -214,11 +229,13 @@ impl Slot {
 // ---------------------------------------------------------------------------
 
 /// Build a row of slots.
+#[must_use]
 pub fn row() -> RowBuilder {
     RowBuilder::new()
 }
 
 /// Build a column of slots.
+#[must_use]
 pub fn column() -> ColumnBuilder {
     ColumnBuilder::new()
 }
@@ -269,16 +286,19 @@ macro_rules! define_builder {
                 }
             }
 
+            #[must_use]
             pub fn origin(mut self, origin: impl IntoAnimated<Vec2>) -> Self {
                 self.origin = Some(origin.into_animated());
                 self
             }
 
+            #[must_use]
             pub fn cell_size(mut self, size: Vec2) -> Self {
                 self.cell_size = Some(size);
                 self
             }
 
+            #[must_use]
             pub fn gap(mut self, gap: f32) -> Self {
                 self.gap = gap;
                 self
@@ -350,6 +370,7 @@ pub struct BoxBuilder {
 }
 
 /// Construct a `BoxBuilder` from a Slot (uses the slot's full bounds).
+#[must_use]
 pub fn box_in(slot: &Slot) -> BoxBuilder {
     box_at(slot.center(), Vec2::new(slot.w, slot.h))
 }
@@ -367,11 +388,13 @@ pub fn box_at(center: impl IntoAnimated<Vec2>, size: Vec2) -> BoxBuilder {
 }
 
 impl BoxBuilder {
+    #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    #[must_use]
     pub fn style(mut self, s: impl IntoAnimated<Style>) -> Self {
         let s = s.into_animated();
         let fill = s.clone();
@@ -382,11 +405,13 @@ impl BoxBuilder {
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    #[must_use]
     pub fn stroke(
         mut self,
         width: impl IntoAnimated<f32>,
@@ -398,6 +423,7 @@ impl BoxBuilder {
     }
 
     /// Build the final `PathNode`.
+    #[must_use]
     pub fn into_node(self) -> PathNode {
         let center = self.center;
         let w = self.size.x;
@@ -516,11 +542,13 @@ pub struct Viewport {
 }
 
 impl Viewport {
+    #[must_use]
     pub fn new(width: f32, height: f32) -> Self {
         Self { width, height }
     }
 
     /// The viewport itself as a Slot (full screen).
+    #[must_use]
     pub fn slot(&self) -> Slot {
         Slot::new(0.0, 0.0, self.width, self.height)
     }
@@ -534,6 +562,7 @@ pub struct LayoutFrame {
 }
 
 /// Pure layout boundary: no rendering, no I/O.
+#[must_use]
 pub fn layout_scene(scene: codimate_core::ConcreteScene, viewport: Viewport) -> LayoutFrame {
     LayoutFrame { viewport, scene }
 }

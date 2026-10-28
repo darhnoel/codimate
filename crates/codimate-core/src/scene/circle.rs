@@ -37,6 +37,7 @@ pub struct ConcreteCircle {
 }
 
 impl ConcreteCircle {
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         match kind {
             AnchorKind::Center => Vec2::new(self.x, self.y),
@@ -50,6 +51,7 @@ impl ConcreteCircle {
 
 impl Circle {
     /// Defaults: `x = y = radius = 0.0`, `fill = opaque white`.
+    #[must_use]
     pub fn new() -> Self {
         Circle {
             x: 0.0.into_animated(),
@@ -59,21 +61,25 @@ impl Circle {
         }
     }
 
+    #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
@@ -123,6 +129,7 @@ impl Circle {
     /// assert_eq!(top.resolve(0.0), codimate_core::Vec2::new(0.0, 150.0));
     /// assert_eq!(top.resolve(1.0), codimate_core::Vec2::new(100.0, 150.0));
     /// ```
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
         let x = self.x.clone();
         let y = self.y.clone();
@@ -145,6 +152,7 @@ impl Circle {
     }
 
     /// `f(t) → Concrete` — resolves every `Animated` field at the same `t`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteCircle {
         ConcreteCircle {
             x: self.x.resolve(t),
@@ -170,6 +178,7 @@ impl Node for Circle {
 }
 
 /// Lowercase free constructor so scenes read like English: `circle().radius(..)`.
+#[must_use]
 pub fn circle() -> Circle {
     Circle::new()
 }

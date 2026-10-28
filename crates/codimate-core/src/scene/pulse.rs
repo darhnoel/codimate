@@ -39,11 +39,13 @@ impl Pulse {
         }
     }
 
+    #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
@@ -89,6 +91,7 @@ impl Pulse {
     /// Resolve the underlying Connection, find the point at `progress` along
     /// its main line (excluding arrowhead geometry) by arc length, and return
     /// a concrete circle at that position.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteCircle {
         let line = self.source.resolve_line(t);
         let progress = self.progress.resolve(t);

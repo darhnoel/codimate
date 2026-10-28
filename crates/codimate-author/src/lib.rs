@@ -32,6 +32,7 @@ impl<E: std::fmt::Display> From<E> for Refusal {
 }
 
 /// Run one authoring operation: `op` with `data` (JSON), answered as JSON.
+#[must_use]
 pub fn call(op: &str, data: &str) -> String {
     match generated::dispatch(op, data) {
         Ok(answer) => format!(r#"{{"ok":{answer}}}"#),

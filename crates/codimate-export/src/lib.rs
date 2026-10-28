@@ -29,6 +29,7 @@ pub struct ExportConfig {
 }
 
 impl ExportConfig {
+    #[must_use]
     pub fn new(fps: f32, viewport: Viewport) -> Self {
         Self {
             fps,
@@ -39,16 +40,19 @@ impl ExportConfig {
         }
     }
 
+    #[must_use]
     pub fn output_viewport(mut self, viewport: Viewport) -> Self {
         self.output_viewport = Some(viewport);
         self
     }
 
+    #[must_use]
     pub fn crf(mut self, crf: u32) -> Self {
         self.crf = crf;
         self
     }
 
+    #[must_use]
     pub fn pixel_scale(mut self, scale: f32) -> Self {
         self.pixel_scale = scale;
         self
@@ -165,6 +169,7 @@ pub struct FrameTimes {
 }
 
 impl FrameTimes {
+    #[must_use]
     pub fn new(duration: f32, fps: f32) -> Self {
         Self {
             duration,
@@ -421,6 +426,7 @@ fn even_dimension(value: f32) -> u32 {
 use codimate_render::Bitmap;
 
 /// Pure: encode a `Bitmap` to PNG bytes. No I/O, deterministic.
+#[must_use]
 pub fn encode_png(bitmap: &Bitmap) -> Vec<u8> {
     let mut bytes = Vec::new();
     let mut encoder = png::Encoder::new(&mut bytes, bitmap.width, bitmap.height);
@@ -461,7 +467,7 @@ pub fn encode_jpeg(bitmap: &Bitmap, quality: u8) -> Result<Vec<u8>, ExportError>
             bitmap.height as u16,
             jpeg_encoder::ColorType::Rgb,
         )
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
     Ok(bytes)
 }
 

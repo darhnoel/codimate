@@ -32,6 +32,7 @@ pub struct ConcretePath {
 }
 
 impl ConcretePath {
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         let Some((xmin, ymin, xmax, ymax)) = self.path.bounding_box() else {
             return Vec2::new(0.0, 0.0);
@@ -49,6 +50,7 @@ impl ConcretePath {
 }
 
 impl PathNode {
+    #[must_use]
     pub fn new() -> Self {
         PathNode {
             path: Path {
@@ -62,16 +64,19 @@ impl PathNode {
         }
     }
 
+    #[must_use]
     pub fn path(mut self, path: impl IntoAnimated<Path>) -> Self {
         self.path = path.into_animated();
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    #[must_use]
     pub fn stroke(
         mut self,
         width: impl IntoAnimated<f32>,
@@ -150,6 +155,7 @@ impl PathNode {
     ///     .style(tween(rest, active));
     /// assert_eq!(node.resolve(0.5).stroke_width, 2.5);
     /// ```
+    #[must_use]
     pub fn style(mut self, style: impl IntoAnimated<Style>) -> Self {
         let style = style.into_animated();
         let fill = style.clone();
@@ -171,6 +177,7 @@ impl PathNode {
     /// let bottom = p.anchor(AnchorKind::Bottom);
     /// assert_eq!(bottom.resolve(0.0), codimate_core::Vec2::new(50.0, 50.0));
     /// ```
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
         let path_anim = self.path.clone();
         match kind {
@@ -202,6 +209,7 @@ impl PathNode {
         }
     }
 
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcretePath {
         ConcretePath {
             path: self.path.resolve(t),
@@ -218,6 +226,7 @@ impl Default for PathNode {
     }
 }
 
+#[must_use]
 pub fn path_node() -> PathNode {
     PathNode::new()
 }

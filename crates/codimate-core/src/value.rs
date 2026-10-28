@@ -17,6 +17,7 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
+    #[must_use]
     pub fn new(x: f32, y: f32) -> Self {
         Vec2 { x, y }
     }
@@ -95,6 +96,7 @@ pub struct Style {
 
 impl Style {
     /// Defaults match `PathNode`: white fill, no visible stroke.
+    #[must_use]
     pub fn new() -> Self {
         Style {
             fill: Color::WHITE,
@@ -103,11 +105,13 @@ impl Style {
         }
     }
 
+    #[must_use]
     pub fn fill(mut self, fill: Color) -> Self {
         self.fill = fill;
         self
     }
 
+    #[must_use]
     pub fn stroke(mut self, width: f32, color: Color) -> Self {
         self.stroke_width = width;
         self.stroke_color = color;
@@ -151,6 +155,7 @@ impl<T> Animated<T> {
     }
 
     /// `f(t)` for a single value — the Layer 1 analogue of `f(t) → Scene`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> T {
         (self.0)(t)
     }
@@ -168,6 +173,7 @@ impl<T> Animated<T> {
     /// let r = tween(0.0, 100.0).ease(ease_in);
     /// assert_eq!(r.resolve(0.5), 25.0);   // eased: a quarter of the way, not half
     /// ```
+    #[must_use]
     pub fn ease(self, curve: impl Fn(f32) -> f32 + Send + Sync + 'static) -> Animated<T>
     where
         T: 'static,

@@ -40,6 +40,7 @@ pub struct ConcreteRect {
 }
 
 impl ConcreteRect {
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         match kind {
             AnchorKind::Center => Vec2::new(self.x + self.width / 2.0, self.y + self.height / 2.0),
@@ -53,6 +54,7 @@ impl ConcreteRect {
 
 impl Rect {
     /// Defaults: `x = y = width = height = 0.0`, `fill = opaque white`.
+    #[must_use]
     pub fn new() -> Self {
         Rect {
             x: 0.0.into_animated(),
@@ -63,26 +65,31 @@ impl Rect {
         }
     }
 
+    #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    #[must_use]
     pub fn width(mut self, width: impl IntoAnimated<f32>) -> Self {
         self.width = width.into_animated();
         self
     }
 
+    #[must_use]
     pub fn height(mut self, height: impl IntoAnimated<f32>) -> Self {
         self.height = height.into_animated();
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
@@ -133,6 +140,7 @@ impl Rect {
     /// assert_eq!(right.resolve(0.0), codimate_core::Vec2::new(80.0, 70.0));
     /// assert_eq!(right.resolve(1.0), codimate_core::Vec2::new(180.0, 70.0));
     /// ```
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
         let x = self.x.clone();
         let y = self.y.clone();
@@ -178,6 +186,7 @@ impl Rect {
     /// let k = attn.anchor_port(AnchorKind::Bottom, 1, 3); // the middle of three
     /// assert_eq!(k.resolve(0.0), Vec2::new(60.0, 40.0));
     /// ```
+    #[must_use]
     pub fn anchor_port(&self, kind: AnchorKind, index: usize, count: usize) -> Animated<Vec2> {
         let x = self.x.clone();
         let y = self.y.clone();
@@ -207,6 +216,7 @@ impl Rect {
     }
 
     /// `f(t) → Concrete` — resolves every `Animated` field at the same `t`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteRect {
         ConcreteRect {
             x: self.x.resolve(t),
@@ -233,6 +243,7 @@ impl Node for Rect {
 }
 
 /// Lowercase free constructor so scenes read like English: `rect().width(..)`.
+#[must_use]
 pub fn rect() -> Rect {
     Rect::new()
 }

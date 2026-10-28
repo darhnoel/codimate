@@ -48,6 +48,7 @@ pub struct ConcreteText {
 }
 
 impl Text {
+    #[must_use]
     pub fn new() -> Self {
         Text {
             x: 0.0.into_animated(),
@@ -59,31 +60,37 @@ impl Text {
         }
     }
 
+    #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    #[must_use]
     pub fn text(mut self, text: impl IntoAnimated<String>) -> Self {
         self.text = text.into_animated();
         self
     }
 
+    #[must_use]
     pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
         self.font_size = size.into_animated();
         self
     }
 
+    #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    #[must_use]
     pub fn align(mut self, align: TextAlign) -> Self {
         self.align = align;
         self
@@ -135,6 +142,7 @@ impl Text {
         }
     }
 
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteText {
         ConcreteText {
             x: self.x.resolve(t),
@@ -162,6 +170,7 @@ impl Node for Text {
 }
 
 /// Lowercase free constructor so scenes read like English: `text().font_size(..)`.
+#[must_use]
 pub fn text() -> Text {
     Text::new()
 }

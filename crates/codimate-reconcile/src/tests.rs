@@ -30,7 +30,8 @@ fn rounding_the_corners_keeps_the_path_structure() {
     let pill = round_rect_path(&square);
     assert_eq!(pill.segments.len(), flat);
     for seg in &pill.segments {
-        for v in [seg_start(seg)] {
+        {
+            let v = seg_start(seg);
             assert!(
                 v.x.abs() <= 50.001 && v.y.abs() <= 30.001,
                 "{v:?} escaped the box"

@@ -127,6 +127,7 @@ impl Geometry {
     /// The local-space point named by `kind`, from this geometry's own bounds at
     /// `t`. Parametric shapes are center-origin; a `Path` uses its bounding box;
     /// `Text` falls back to the origin (it cannot be measured without a renderer).
+    #[must_use]
     pub fn local_anchor(&self, kind: AnchorKind, t: f32) -> Vec2 {
         match self {
             Geometry::Circle { radius } => {
@@ -154,6 +155,7 @@ impl Geometry {
         }
     }
 
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteGeometry {
         match self {
             Geometry::Circle { radius } => ConcreteGeometry::Circle {
@@ -348,6 +350,7 @@ pub struct ConcretePrimitive {
 }
 
 impl Primitive {
+    #[must_use]
     pub fn new(geometry: Geometry) -> Self {
         Primitive {
             transform: Transform::new(),
@@ -372,12 +375,14 @@ impl Primitive {
         Self::new(Geometry::text(text))
     }
 
+    #[must_use]
     pub fn geometry(&self) -> &Geometry {
         &self.geometry
     }
 
     /// `f(t) → ConcretePrimitive`. Resolves the pivot point from the geometry's
     /// own bounds, then the transform, style, and geometry — all at the same `t`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcretePrimitive {
         let pivot_local = self.geometry.local_anchor(self.transform.pivot_kind(), t);
         ConcretePrimitive {
@@ -391,6 +396,7 @@ impl Primitive {
     ///
     /// The pivot stays fixed under scale/rotation; `pos` is added on top, so at
     /// the identity transform the anchor equals the local anchor.
+    #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Animated<Vec2> {
         let geometry = self.geometry.clone();
         let transform = self.transform.clone();
@@ -413,6 +419,7 @@ impl Primitive {
     // --- geometry mutators (apply only to the matching geometry kind) ---
 
     /// Set a circle's radius.
+    #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         if let Geometry::Circle { radius } = &mut self.geometry {
             *radius = r.into_animated();
@@ -421,6 +428,7 @@ impl Primitive {
     }
 
     /// Set a rect's width.
+    #[must_use]
     pub fn width(mut self, w: impl IntoAnimated<f32>) -> Self {
         if let Geometry::Rect { width, .. } = &mut self.geometry {
             *width = w.into_animated();
@@ -429,6 +437,7 @@ impl Primitive {
     }
 
     /// Set a rect's height.
+    #[must_use]
     pub fn height(mut self, h: impl IntoAnimated<f32>) -> Self {
         if let Geometry::Rect { height, .. } = &mut self.geometry {
             *height = h.into_animated();
@@ -437,6 +446,7 @@ impl Primitive {
     }
 
     /// Set a path's geometry.
+    #[must_use]
     pub fn path_data(mut self, p: impl IntoAnimated<Path>) -> Self {
         if let Geometry::Path { path } = &mut self.geometry {
             *path = p.into_animated();
@@ -445,6 +455,7 @@ impl Primitive {
     }
 
     /// Set a text's content.
+    #[must_use]
     pub fn content(mut self, s: impl IntoAnimated<String>) -> Self {
         if let Geometry::Text { text, .. } = &mut self.geometry {
             *text = s.into_animated();
@@ -453,6 +464,7 @@ impl Primitive {
     }
 
     /// Set a text's font size.
+    #[must_use]
     pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
         if let Geometry::Text { font_size, .. } = &mut self.geometry {
             *font_size = size.into_animated();
@@ -461,6 +473,7 @@ impl Primitive {
     }
 
     /// Set a text's font: a `.ttf`/`.otf` path or an installed family name.
+    #[must_use]
     pub fn font(mut self, name: impl Into<String>) -> Self {
         if let Geometry::Text { font, .. } = &mut self.geometry {
             *font = name.into();
@@ -469,6 +482,7 @@ impl Primitive {
     }
 
     /// Set a text's alignment.
+    #[must_use]
     pub fn align(mut self, a: TextAlign) -> Self {
         if let Geometry::Text { align, .. } = &mut self.geometry {
             *align = a;
@@ -481,6 +495,7 @@ impl Primitive {
     /// The same primitive on its own clock: `curve` remaps `t` for its
     /// transform, style and geometry together, so a shape can start late,
     /// finish early or ease without each value being rebuilt.
+    #[must_use]
     pub fn ease(self, curve: super::TimeCurve) -> Self {
         Primitive {
             transform: self.transform.ease(curve.clone()),
@@ -551,48 +566,56 @@ pub trait Transformable: Sized {
     fn transform_mut(&mut self) -> &mut Transform;
     fn style_mut(&mut self) -> &mut Animated<Style>;
 
+    #[must_use]
     fn pos(mut self, pos: impl IntoAnimated<Vec2>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.pos(pos);
         self
     }
 
+    #[must_use]
     fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.x(x);
         self
     }
 
+    #[must_use]
     fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.y(y);
         self
     }
 
+    #[must_use]
     fn scale(mut self, s: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.scale(s);
         self
     }
 
+    #[must_use]
     fn scale_xy(mut self, s: impl IntoAnimated<Vec2>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.scale_xy(s);
         self
     }
 
+    #[must_use]
     fn rotate(mut self, deg: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.rotate(deg);
         self
     }
 
+    #[must_use]
     fn opacity(mut self, opacity: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.opacity(opacity);
         self
     }
 
+    #[must_use]
     fn pivot(mut self, pivot: AnchorKind) -> Self {
         let t = std::mem::take(self.transform_mut());
         *self.transform_mut() = t.pivot(pivot);
@@ -600,12 +623,14 @@ pub trait Transformable: Sized {
     }
 
     /// Replace the whole style.
+    #[must_use]
     fn style(mut self, style: impl IntoAnimated<Style>) -> Self {
         *self.style_mut() = style.into_animated();
         self
     }
 
     /// Set just the fill, keeping the rest of the style.
+    #[must_use]
     fn fill(mut self, fill: impl IntoAnimated<Color>) -> Self {
         let style = std::mem::replace(self.style_mut(), Style::new().into_animated());
         let fill = fill.into_animated();
@@ -618,6 +643,7 @@ pub trait Transformable: Sized {
     }
 
     /// Set just the stroke (width + color), keeping the fill.
+    #[must_use]
     fn stroke(mut self, width: impl IntoAnimated<f32>, color: impl IntoAnimated<Color>) -> Self {
         let style = std::mem::replace(self.style_mut(), Style::new().into_animated());
         let width = width.into_animated();

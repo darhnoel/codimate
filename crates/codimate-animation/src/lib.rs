@@ -55,10 +55,12 @@ pub fn animation(name: impl Into<String>, duration: f32, scene: Scene) -> Animat
 }
 
 impl Animation {
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    #[must_use]
     pub fn duration(&self) -> f32 {
         self.duration
     }
@@ -67,6 +69,7 @@ impl Animation {
     ///
     /// Duration is stored for Layer 3 composition; `resolve` remains pure and
     /// does not read clocks or elapsed wall time.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         self.scene.resolve(t)
     }
@@ -123,6 +126,7 @@ pub fn sequence(
 }
 
 impl Sequence {
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -135,6 +139,7 @@ impl Sequence {
     ///
     /// Child boundaries are hard cuts. Each child receives its own local
     /// normalized `t`, so child Animations remain independently authored.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         let total_duration = self.duration();
         let elapsed = t * total_duration;
@@ -209,6 +214,7 @@ pub fn parallel(
 }
 
 impl Parallel {
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -224,6 +230,7 @@ impl Parallel {
     ///
     /// Shorter children hold their final state once their local normalized time
     /// reaches `1.0`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         let total_duration = self.duration();
         let elapsed = t * total_duration;
@@ -298,6 +305,7 @@ pub fn stagger(
 }
 
 impl Stagger {
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -314,6 +322,7 @@ impl Stagger {
     ///
     /// Not-yet-started children are absent. Finished children hold their final
     /// state once their local normalized time reaches `1.0`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         let total_duration = self.duration();
         let elapsed = t * total_duration;

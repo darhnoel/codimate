@@ -95,6 +95,7 @@ pub struct FontEntry {
 pub struct FontRegistry;
 
 impl FontRegistry {
+    #[must_use]
     pub fn global() -> &'static Self {
         &FontRegistry
     }
@@ -188,6 +189,7 @@ impl FontRegistry {
     }
 
     /// Raw bytes for the font identified by `id`.
+    #[must_use]
     pub fn data(&self, id: FontId) -> &'static [u8] {
         if let Some(data) = self.with_loaded(id, |f| f.data) {
             return data;
@@ -201,11 +203,13 @@ impl FontRegistry {
 
     /// Which face in [`data`](Self::data) to use — non-zero only for an
     /// installed font that lives in a collection (`.ttc`).
+    #[must_use]
     pub fn index(&self, id: FontId) -> u32 {
         self.with_loaded(id, |f| f.index).unwrap_or(0)
     }
 
     /// Name of the font (file stem, e.g. "DejaVuSansMono").
+    #[must_use]
     pub fn name(&self, id: FontId) -> &'static str {
         if let Some(name) = self.with_loaded(id, |f| f.name) {
             return name;
@@ -218,11 +222,13 @@ impl FontRegistry {
     }
 
     /// Number of embedded fonts.
+    #[must_use]
     pub fn len(&self) -> usize {
         generated::entries().len()
     }
 
     /// Whether no font is embedded — never, in a working build.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -233,6 +239,7 @@ impl FontRegistry {
     }
 
     /// `primary` if it has `ch`, else the embedded font that does.
+    #[must_use]
     pub fn char_font_in(&self, primary: Option<FontId>, ch: char) -> FontId {
         match primary {
             Some(id) if self.font_has(id, ch) => id,
@@ -244,6 +251,7 @@ impl FontRegistry {
     ///
     /// Returns the first registered font whose Unicode ranges include `ch`.
     /// Whitespace always matches the first font.
+    #[must_use]
     pub fn char_font(&self, ch: char) -> FontId {
         let cp = ch as u32;
         for entry in generated::entries() {
@@ -258,6 +266,7 @@ impl FontRegistry {
     }
 
     /// Whether the font with `id` covers `ch`.
+    #[must_use]
     pub fn font_has(&self, id: FontId, ch: char) -> bool {
         if let Some(has) = self.with_loaded(id, |f| f.face.glyph_index(ch).is_some()) {
             return ch.is_whitespace() || has;
@@ -277,7 +286,7 @@ mod tests {
 
     #[test]
     fn registry_has_fonts() {
-        assert!(FontRegistry::global().len() > 0);
+        assert!(!FontRegistry::global().is_empty());
     }
 
     #[test]

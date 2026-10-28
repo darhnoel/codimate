@@ -60,6 +60,7 @@ pub enum RenderCommand {
 }
 
 /// Convert a laid-out frame into renderer-neutral commands.
+#[must_use]
 pub fn render_commands(frame: &LayoutFrame) -> Vec<RenderCommand> {
     frame
         .scene

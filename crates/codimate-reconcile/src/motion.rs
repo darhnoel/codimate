@@ -202,6 +202,7 @@ pub(crate) fn glob_match(pattern: &str, s: &str) -> bool {
     pi == p.len()
 }
 
+#[must_use]
 pub fn ease_in_out(t: f32) -> f32 {
     if t < 0.5 {
         2.0 * t * t
@@ -288,6 +289,7 @@ pub fn motion_path(a: Vec2, b: Vec2, rules: &[Rule], item: &str) -> Result<Anima
 }
 
 /// The easing applied between two moments.
+#[must_use]
 pub fn ease(t: f32) -> f32 {
     ease_in_out(t.clamp(0.0, 1.0))
 }

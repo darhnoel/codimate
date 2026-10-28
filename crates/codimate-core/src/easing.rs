@@ -4,16 +4,19 @@
 //! and `curve(1) = 1`. Apply with [`Animated::ease`](crate::Animated::ease).
 
 /// Starts slow, accelerates. `t * t`.
+#[must_use]
 pub fn ease_in(t: f32) -> f32 {
     t * t
 }
 
 /// Starts fast, decelerates. `1 - (1 - t)^2`.
+#[must_use]
 pub fn ease_out(t: f32) -> f32 {
     1.0 - (1.0 - t) * (1.0 - t)
 }
 
 /// Slow at both ends — quadratic in/out.
+#[must_use]
 pub fn ease_in_out(t: f32) -> f32 {
     if t < 0.5 {
         2.0 * t * t
@@ -25,6 +28,7 @@ pub fn ease_in_out(t: f32) -> f32 {
 
 /// Overshoots past the target near the end, then settles. Relies on `tween`'s
 /// deliberate extrapolation (no clamping) for the overshoot.
+#[must_use]
 pub fn back(t: f32) -> f32 {
     const C1: f32 = 1.701_58;
     const C3: f32 = C1 + 1.0;

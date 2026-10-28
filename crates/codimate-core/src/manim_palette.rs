@@ -32,6 +32,7 @@ pub const RED: Color = rgb(0xFC, 0x62, 0x55);
 pub const RED_E: Color = rgb(0xCF, 0x50, 0x44);
 pub const TEAL: Color = rgb(0x5C, 0xD0, 0xB3);
 
+#[must_use]
 pub const fn with_alpha(color: Color, alpha: f32) -> Color {
     Color { a: alpha, ..color }
 }

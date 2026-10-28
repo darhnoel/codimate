@@ -30,6 +30,7 @@ pub struct ExplanationBuilder<S, A, M, T = ()> {
 
 impl<S, A, M, T: Default> ExplanationBuilder<S, A, M, T> {
     /// All optional fields start as `None`; timing uses `Default`.
+    #[must_use]
     pub fn new(name: &'static str) -> Self {
         Self {
             name,
@@ -40,21 +41,25 @@ impl<S, A, M, T: Default> ExplanationBuilder<S, A, M, T> {
         }
     }
 
+    #[must_use]
     pub fn state(mut self, state: S) -> Self {
         self.state = Some(state);
         self
     }
 
+    #[must_use]
     pub fn algorithm(mut self, algorithm: A) -> Self {
         self.algorithm = Some(algorithm);
         self
     }
 
+    #[must_use]
     pub fn motion(mut self, motion: M) -> Self {
         self.motion = Some(motion);
         self
     }
 
+    #[must_use]
     pub fn timing(mut self, timing: T) -> Self {
         self.timing = timing;
         self
@@ -62,6 +67,7 @@ impl<S, A, M, T: Default> ExplanationBuilder<S, A, M, T> {
 
     /// No-op — kept for backward compatibility.
     /// View code is typically called from other build helpers.
+    #[must_use]
     pub fn view<V>(self, _view: fn() -> V) -> Self {
         self
     }

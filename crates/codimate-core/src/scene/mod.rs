@@ -269,22 +269,26 @@ pub struct ConcreteScene {
 }
 
 impl Scene {
+    #[must_use]
     pub fn new() -> Self {
         Scene {
             children: Vec::new(),
         }
     }
 
+    #[must_use]
     pub fn node(mut self, node: impl Into<SceneNode>) -> Self {
         self.children.push(node.into());
         self
     }
 
     /// Alias for [`node`](Self::node), for builder chains that read `scene().add(...)`.
+    #[must_use]
     pub fn add(self, node: impl Into<SceneNode>) -> Self {
         self.node(node)
     }
 
+    #[must_use]
     pub fn with_opacity(self, multiplier: impl IntoAnimated<f32>) -> Self {
         let multiplier = multiplier.into_animated();
         Scene {
@@ -296,6 +300,7 @@ impl Scene {
         }
     }
 
+    #[must_use]
     pub fn ease(self, curve: impl Fn(f32) -> f32 + Send + Sync + 'static) -> Self {
         let curve = Arc::new(curve);
         Scene {
@@ -307,6 +312,7 @@ impl Scene {
         }
     }
 
+    #[must_use]
     pub fn reveal(self, progress: impl IntoAnimated<f32>) -> Self {
         let progress = progress.into_animated();
         Scene {
@@ -338,6 +344,7 @@ impl Scene {
     }
 
     /// `f(t) → ConcreteScene` — resolves every child Node at the same `t`.
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteScene {
         ConcreteScene {
             children: self.children.iter().map(|node| node.resolve(t)).collect(),
@@ -360,6 +367,7 @@ impl Node for Scene {
 }
 
 /// Lowercase free constructor so scene roots read like English.
+#[must_use]
 pub fn scene() -> Scene {
     Scene::new()
 }

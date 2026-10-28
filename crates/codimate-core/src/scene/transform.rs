@@ -42,6 +42,7 @@ pub struct ConcreteTransform {
 impl Transform {
     /// The identity transform: `pos (0,0)`, `scale (1,1)`, `rotation 0`,
     /// `opacity 1`, `pivot Center`.
+    #[must_use]
     pub fn new() -> Self {
         Transform {
             pos: Vec2::new(0.0, 0.0).into_animated(),
@@ -53,12 +54,14 @@ impl Transform {
     }
 
     /// Set translation. Accepts `(f32, f32)`, `Vec2`, or an `Animated<Vec2>`.
+    #[must_use]
     pub fn pos(mut self, pos: impl IntoAnimated<Vec2>) -> Self {
         self.pos = pos.into_animated();
         self
     }
 
     /// Set the x component of translation, holding y at resolve time.
+    #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         let x = x.into_animated();
         let pos = self.pos;
@@ -67,6 +70,7 @@ impl Transform {
     }
 
     /// Set the y component of translation, holding x at resolve time.
+    #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         let y = y.into_animated();
         let pos = self.pos;
@@ -75,6 +79,7 @@ impl Transform {
     }
 
     /// Uniform scale on both axes.
+    #[must_use]
     pub fn scale(mut self, s: impl IntoAnimated<f32>) -> Self {
         let s = s.into_animated();
         self.scale = Animated::new(move |t| {
@@ -85,24 +90,28 @@ impl Transform {
     }
 
     /// Non-uniform scale (squash / stretch).
+    #[must_use]
     pub fn scale_xy(mut self, scale: impl IntoAnimated<Vec2>) -> Self {
         self.scale = scale.into_animated();
         self
     }
 
     /// Rotation in **degrees**.
+    #[must_use]
     pub fn rotate(mut self, deg: impl IntoAnimated<f32>) -> Self {
         self.rotation = deg.into_animated();
         self
     }
 
     /// Opacity in `0..1`.
+    #[must_use]
     pub fn opacity(mut self, opacity: impl IntoAnimated<f32>) -> Self {
         self.opacity = opacity.into_animated();
         self
     }
 
     /// The point scale & rotation pivot around (default `Center`).
+    #[must_use]
     pub fn pivot(mut self, pivot: AnchorKind) -> Self {
         self.pivot = pivot;
         self
@@ -110,6 +119,7 @@ impl Transform {
 
     /// Which named pivot this transform uses — the owning `Primitive` maps it to
     /// a local point via its geometry bounds.
+    #[must_use]
     pub fn pivot_kind(&self) -> AnchorKind {
         self.pivot
     }
@@ -159,6 +169,7 @@ impl Transform {
     /// `f(t) → ConcreteTransform`. The caller supplies `pivot_point`, the
     /// local-space point named by [`pivot_kind`](Self::pivot_kind), resolved from
     /// the owning geometry's bounds.
+    #[must_use]
     pub fn resolve(&self, t: f32, pivot_point: Vec2) -> ConcreteTransform {
         ConcreteTransform {
             pos: self.pos.resolve(t),

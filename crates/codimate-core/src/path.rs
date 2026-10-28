@@ -20,6 +20,7 @@ pub enum Segment {
 }
 
 impl Segment {
+    #[must_use]
     pub fn to_cubic(self) -> (Vec2, Vec2, Vec2, Vec2) {
         match self {
             Segment::MoveTo(p) => (p, p, p, p),
@@ -43,11 +44,13 @@ impl Segment {
         }
     }
 
+    #[must_use]
     pub fn from_cubic(from: Vec2, c1: Vec2, c2: Vec2, to: Vec2) -> Self {
         Segment::Cubic(from, c1, c2, to)
     }
 
     /// All defining points for this segment (start, controls, end).
+    #[must_use]
     pub fn points(&self) -> Vec<Vec2> {
         match self {
             Segment::MoveTo(p) => vec![*p],
@@ -59,6 +62,7 @@ impl Segment {
     }
 
     /// Offset every point in this segment by `(dx, dy)`.
+    #[must_use]
     pub fn translate(self, dx: f32, dy: f32) -> Self {
         let t = |v: Vec2| Vec2::new(v.x + dx, v.y + dy);
         match self {
@@ -96,6 +100,7 @@ impl Path {
     ///
     /// Each returned `Path` starts with its own `MoveTo` and has `closed: false`.
     /// This is useful for animations that need per-contour control (e.g. `prefix`).
+    #[must_use]
     pub fn split_contours(&self) -> Vec<Path> {
         let mut contours: Vec<Vec<Segment>> = Vec::new();
         let mut current: Vec<Segment> = Vec::new();
@@ -122,6 +127,7 @@ impl Path {
     ///
     /// Panics (via `debug_assert`) if the path contains multiple contours.
     /// Returns an empty path for `t ≤ 0.0` and a full clone for `t ≥ 1.0`.
+    #[must_use]
     pub fn prefix(&self, t: f32) -> Self {
         let t = t.clamp(0.0, 1.0);
         if self.segments.is_empty() || t <= 0.0 {
@@ -204,6 +210,7 @@ impl Path {
     }
 
     /// Offset every point in the path's segments by `(dx, dy)`.
+    #[must_use]
     pub fn translate(self, dx: f32, dy: f32) -> Self {
         Path {
             segments: self
@@ -216,6 +223,7 @@ impl Path {
     }
 
     /// Axis-aligned bounding box. Returns `None` for an empty path.
+    #[must_use]
     pub fn bounding_box(&self) -> Option<(f32, f32, f32, f32)> {
         let points: Vec<Vec2> = self.segments.iter().flat_map(|s| s.points()).collect();
         let first = *points.first()?;
@@ -255,6 +263,7 @@ impl Path {
     /// assert!((mid.x - 50.0).abs() < 0.1);
     /// assert!((mid.y - 0.0).abs() < 0.1);
     /// ```
+    #[must_use]
     pub fn point_at(&self, t: f32) -> Vec2 {
         let t = t.clamp(0.0, 1.0);
         if self.segments.is_empty() {
@@ -368,6 +377,7 @@ impl Lerp for Path {
 
 /// Cubic-Bézier approximation of a circle centred at `(cx, cy)` with radius `r`.
 /// Uses the standard 4-cubic-segment approximation (k = 0.55228).
+#[must_use]
 pub fn circle_path(cx: f32, cy: f32, r: f32) -> Path {
     let k = r * 0.552_284_9;
     Path {
@@ -402,6 +412,7 @@ pub fn circle_path(cx: f32, cy: f32, r: f32) -> Path {
 }
 
 /// Path for an axis-aligned rectangle at `(x, y)` with given `width` and `height`.
+#[must_use]
 pub fn rect_path(x: f32, y: f32, w: f32, h: f32) -> Path {
     Path {
         segments: vec![
@@ -415,6 +426,7 @@ pub fn rect_path(x: f32, y: f32, w: f32, h: f32) -> Path {
 }
 
 /// Closed polygon from a sequence of vertices.
+#[must_use]
 pub fn polygon_path(vertices: &[Vec2]) -> Path {
     let mut segments: Vec<Segment> = Vec::with_capacity(vertices.len());
     if vertices.len() < 2 {
@@ -435,6 +447,7 @@ pub fn polygon_path(vertices: &[Vec2]) -> Path {
 
 /// Regular polygon inscribed in a circle at `(cx, cy)` with radius `r` and `n` sides.
 /// The first vertex starts at the top (12 o'clock).
+#[must_use]
 pub fn regular_polygon_path(cx: f32, cy: f32, r: f32, n: u32) -> Path {
     let n = n.max(3);
     let mut vertices = Vec::with_capacity(n as usize);
@@ -446,11 +459,13 @@ pub fn regular_polygon_path(cx: f32, cy: f32, r: f32, n: u32) -> Path {
 }
 
 /// Equilateral triangle inscribed in a circle at `(cx, cy)` with circumradius `r`.
+#[must_use]
 pub fn triangle_path(cx: f32, cy: f32, r: f32) -> Path {
     regular_polygon_path(cx, cy, r, 3)
 }
 
 /// Ellipse at `(cx, cy)` with semi-axes `rx` and `ry`, approximated by four cubic Béziers.
+#[must_use]
 pub fn ellipse_path(cx: f32, cy: f32, rx: f32, ry: f32) -> Path {
     let kx = rx * 0.552_284_9;
     let ky = ry * 0.552_284_9;

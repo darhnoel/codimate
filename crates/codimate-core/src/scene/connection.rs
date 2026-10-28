@@ -49,6 +49,7 @@ impl Connection {
         }
     }
 
+    #[must_use]
     pub fn stroke(
         mut self,
         width: impl IntoAnimated<f32>,
@@ -126,6 +127,7 @@ impl Connection {
         }
     }
 
+    #[must_use]
     pub fn arrow(mut self, size: impl IntoAnimated<f32>) -> Self {
         self.arrow_size = size.into_animated();
         self
@@ -133,6 +135,7 @@ impl Connection {
 
     /// Add intermediate waypoints the line passes through before reaching the
     /// end anchor. Each waypoint is a bend in the polyline.
+    #[must_use]
     pub fn via(mut self, points: impl IntoIterator<Item = impl IntoAnimated<Vec2>>) -> Self {
         self.waypoints = points.into_iter().map(|p| p.into_animated()).collect();
         self
@@ -174,6 +177,7 @@ impl Connection {
     /// Resolve both anchors and build a path at this moment in time.
     /// Produces a ConcretePath that the renderer draws as a stroked line
     /// (plus optional arrowhead).
+    #[must_use]
     pub fn resolve(&self, t: f32) -> ConcretePath {
         let (mut segments, back, ux, uy) = self.resolve_main(t);
         let sw = self.stroke_width.resolve(t);
@@ -209,6 +213,7 @@ impl Connection {
 
     /// Resolve just the main line, excluding arrowhead geometry.
     /// Used by Pulse for clean arc-length traversal.
+    #[must_use]
     pub fn resolve_line(&self, t: f32) -> ConcretePath {
         let (segments, _, _, _) = self.resolve_main(t);
         let sw = self.stroke_width.resolve(t);

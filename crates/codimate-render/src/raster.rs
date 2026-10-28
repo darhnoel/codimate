@@ -21,6 +21,7 @@ pub struct Bitmap {
 
 impl Bitmap {
     /// The `(r, g, b, a)` bytes at a pixel. Panics if out of bounds.
+    #[must_use]
     pub fn pixel(&self, x: u32, y: u32) -> (u8, u8, u8, u8) {
         let i = ((y * self.width + x) * 4) as usize;
         (
@@ -51,6 +52,7 @@ impl Bitmap {
 /// let img = rasterize(&frame);
 /// assert_eq!(img.pixel(32, 32), (255, 0, 0, 255)); // center of the circle is red
 /// ```
+#[must_use]
 pub fn rasterize(frame: &RenderFrame) -> Bitmap {
     rasterize_commands(frame.viewport, &frame.commands, 1.0)
 }
@@ -58,6 +60,7 @@ pub fn rasterize(frame: &RenderFrame) -> Bitmap {
 /// Rasterize at `pixel_scale` times the viewport resolution.
 /// All scene coordinates remain unchanged; the scale transform makes them
 /// occupy proportionally more pixels, producing a crisper high-DPI output.
+#[must_use]
 pub fn rasterize_scaled(frame: &RenderFrame, pixel_scale: f32) -> Bitmap {
     rasterize_commands(frame.viewport, &frame.commands, pixel_scale.max(1.0))
 }
@@ -530,6 +533,7 @@ pub struct RasterRenderer {
 }
 
 impl RasterRenderer {
+    #[must_use]
     pub fn last(&self) -> Option<&Bitmap> {
         self.last.as_ref()
     }
@@ -546,6 +550,55 @@ impl Renderer for RasterRenderer {
         ));
         Ok(())
     }
+}
+
+/// How wide and tall `text` will be when drawn at `font_size`.
+///
+/// Exists so an author can size a box around text instead of guessing at it.
+/// Codimate is code-authored with no canvas to interrogate, so before this the
+/// only way to learn a string's width was to render a frame and measure the
+/// picture — every "box around this label" in the examples was a hardcoded
+/// number with a comment apologising for it.
+///
+/// Mirrors [`render_text`] exactly, shaped path first and the `ab_glyph`
+/// fallback second, so the answer matches what actually gets drawn — including
+/// font fallback, which is why `len(text) * k` is wrong for anything but
+/// ASCII.
+///
+/// The height is the **line height** (ascent to descent), not the tight ink
+/// box: it is the same for "cat" and "Qgy", so boxes in a row line up.
+///
+/// `font` is a `.ttf`/`.otf` path or an installed family name, or empty for the
+/// built-in font; the line height is that font's.
+pub fn measure_text(text: &str, font_size: f32, font: &str) -> (f32, f32) {
+    use ab_glyph::{Font, PxScale, ScaleFont};
+
+    let registry = FontRegistry::global();
+    let asked = asked_for(font);
+    let lead = lead_font(asked);
+    let height = match font_ref(lead) {
+        Some(font) => {
+            let scaled = font.as_scaled(PxScale::from(font_size));
+            scaled.ascent() - scaled.descent()
+        }
+        None => font_size,
+    };
+
+    if let Some(runs) = shaped_runs(text, font_size, Color::WHITE, asked) {
+        if !runs.is_empty() {
+            return (runs.iter().map(|r| r.block.width).sum(), height);
+        }
+    }
+
+    let Some(primary) = font_ref(lead) else {
+        return (0.0, height);
+    };
+    let fallback = registry.ids().filter(|id| *id != lead).find_map(font_ref);
+
+    (
+        text_width(&primary, fallback.as_ref(), PxScale::from(font_size), text),
+        height,
+    )
 }
 
 #[cfg(test)]
@@ -622,53 +675,4 @@ mod scale_tests {
         let (x2, y2) = ink_centre(&rasterize_scaled(&f, 3.0));
         assert!((x1 - x2).abs() < 0.01 && (y1 - y2).abs() < 0.01);
     }
-}
-
-/// How wide and tall `text` will be when drawn at `font_size`.
-///
-/// Exists so an author can size a box around text instead of guessing at it.
-/// Codimate is code-authored with no canvas to interrogate, so before this the
-/// only way to learn a string's width was to render a frame and measure the
-/// picture — every "box around this label" in the examples was a hardcoded
-/// number with a comment apologising for it.
-///
-/// Mirrors [`render_text`] exactly, shaped path first and the `ab_glyph`
-/// fallback second, so the answer matches what actually gets drawn — including
-/// font fallback, which is why `len(text) * k` is wrong for anything but
-/// ASCII.
-///
-/// The height is the **line height** (ascent to descent), not the tight ink
-/// box: it is the same for "cat" and "Qgy", so boxes in a row line up.
-///
-/// `font` is a `.ttf`/`.otf` path or an installed family name, or empty for the
-/// built-in font; the line height is that font's.
-pub fn measure_text(text: &str, font_size: f32, font: &str) -> (f32, f32) {
-    use ab_glyph::{Font, PxScale, ScaleFont};
-
-    let registry = FontRegistry::global();
-    let asked = asked_for(font);
-    let lead = lead_font(asked);
-    let height = match font_ref(lead) {
-        Some(font) => {
-            let scaled = font.as_scaled(PxScale::from(font_size));
-            scaled.ascent() - scaled.descent()
-        }
-        None => font_size,
-    };
-
-    if let Some(runs) = shaped_runs(text, font_size, Color::WHITE, asked) {
-        if !runs.is_empty() {
-            return (runs.iter().map(|r| r.block.width).sum(), height);
-        }
-    }
-
-    let Some(primary) = font_ref(lead) else {
-        return (0.0, height);
-    };
-    let fallback = registry.ids().filter(|id| *id != lead).find_map(font_ref);
-
-    (
-        text_width(&primary, fallback.as_ref(), PxScale::from(font_size), text),
-        height,
-    )
 }
