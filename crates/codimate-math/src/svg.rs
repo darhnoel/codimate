@@ -38,7 +38,7 @@ pub(crate) fn parse_hex_color(value: &str) -> Result<Color, FormulaError> {
 ///
 /// Geometry only. `usvg` is built without its `text` feature and drops
 /// `<text>` while parsing, so labels are read separately by
-/// [`import_svg_text`].
+/// [`crate::import_svg_text`].
 pub fn import_svg(svg: &str) -> Result<Vec<SvgPath>, FormulaError> {
     let opts = usvg::Options::default();
     let tree = usvg::Tree::from_str(svg, &opts).map_err(|e| FormulaError::Svg(e.to_string()))?;

@@ -37,11 +37,13 @@ pub fn parallel(
 }
 
 impl Parallel {
+    /// The name the group was given.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// How long the group lasts, in seconds.
     pub fn duration(&self) -> f32 {
         self.animations
             .iter()

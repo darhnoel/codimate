@@ -40,6 +40,7 @@ pub struct ConcreteRect {
 }
 
 impl ConcreteRect {
+    /// The point named by `kind`: the centre, or the middle of an edge.
     #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         match kind {
@@ -65,30 +66,35 @@ impl Rect {
         }
     }
 
+    /// Sets the x position of the left edge: a number, or an animated value.
     #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    /// Sets the y position of the top edge: a number, or an animated value.
     #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    /// Sets the width: a number, or an animated value.
     #[must_use]
     pub fn width(mut self, width: impl IntoAnimated<f32>) -> Self {
         self.width = width.into_animated();
         self
     }
 
+    /// Sets the height: a number, or an animated value.
     #[must_use]
     pub fn height(mut self, height: impl IntoAnimated<f32>) -> Self {
         self.height = height.into_animated();
         self
     }
 
+    /// Sets the fill colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();

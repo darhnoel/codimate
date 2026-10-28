@@ -4,6 +4,7 @@ use crate::{
     build_segment, framed, ConcreteScene, Error, Focus, Playable, Result, Rule, Scene, Shape, KINDS,
 };
 
+/// A film: scenes placed at their start times, with the total length in seconds.
 pub struct Explanation {
     /// `(start_seconds, duration, scene)` — scenes hold their own local `t`.
     pub segments: Vec<(f32, f32, Scene)>,

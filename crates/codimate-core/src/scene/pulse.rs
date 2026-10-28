@@ -30,6 +30,7 @@ pub struct Pulse {
 }
 
 impl Pulse {
+    /// A pulse travelling along `source`, at `progress` from 0 at the start to 1 at the end.
     pub fn new(source: Connection, progress: impl IntoAnimated<f32>) -> Self {
         Pulse {
             source,
@@ -39,12 +40,14 @@ impl Pulse {
         }
     }
 
+    /// Sets the pulse's radius: a number, or an animated value.
     #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    /// Sets the pulse's colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();

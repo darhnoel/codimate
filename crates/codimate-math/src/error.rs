@@ -1,4 +1,4 @@
-/// Why a [`formula()`] could not be produced.
+/// Why a [`crate::formula`] could not be produced.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum FormulaError {

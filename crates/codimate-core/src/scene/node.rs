@@ -7,8 +7,10 @@ use crate::{SceneTransformError, TimeCurve};
 
 /// Shared Layer 2 interface: pure Node data resolves into concrete data at `t`.
 pub trait Node {
+    /// The plain data this node becomes at a given time.
     type Concrete;
 
+    /// The node's plain data at time `t`.
     fn resolve(&self, t: f32) -> Self::Concrete;
 }
 

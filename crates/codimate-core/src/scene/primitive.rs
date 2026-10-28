@@ -96,12 +96,14 @@ pub enum ConcreteGeometry {
 }
 
 impl Geometry {
+    /// A circle of the given radius, a number or an animated value.
     pub fn circle(radius: impl IntoAnimated<f32>) -> Self {
         Geometry::Circle {
             radius: radius.into_animated(),
         }
     }
 
+    /// A rectangle of the given width and height.
     pub fn rect(width: impl IntoAnimated<f32>, height: impl IntoAnimated<f32>) -> Self {
         Geometry::Rect {
             width: width.into_animated(),
@@ -109,12 +111,14 @@ impl Geometry {
         }
     }
 
+    /// An arbitrary path.
     pub fn path(path: impl IntoAnimated<Path>) -> Self {
         Geometry::Path {
             path: path.into_animated(),
         }
     }
 
+    /// A text label.
     pub fn text(text: impl IntoAnimated<String>) -> Self {
         Geometry::Text {
             text: text.into_animated(),
@@ -155,6 +159,7 @@ impl Geometry {
         }
     }
 
+    /// The geometry's plain data at time `t`.
     #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteGeometry {
         match self {
@@ -350,6 +355,7 @@ pub struct ConcretePrimitive {
 }
 
 impl Primitive {
+    /// A primitive with this geometry, placed at the origin with the default style.
     #[must_use]
     pub fn new(geometry: Geometry) -> Self {
         Primitive {
@@ -359,22 +365,27 @@ impl Primitive {
         }
     }
 
+    /// A circle primitive with the given radius.
     pub fn circle(radius: impl IntoAnimated<f32>) -> Self {
         Self::new(Geometry::circle(radius))
     }
 
+    /// A rectangle primitive with the given width and height.
     pub fn rect(width: impl IntoAnimated<f32>, height: impl IntoAnimated<f32>) -> Self {
         Self::new(Geometry::rect(width, height))
     }
 
+    /// A path primitive.
     pub fn path(path: impl IntoAnimated<Path>) -> Self {
         Self::new(Geometry::path(path))
     }
 
+    /// A text primitive.
     pub fn text(text: impl IntoAnimated<String>) -> Self {
         Self::new(Geometry::text(text))
     }
 
+    /// The shape this primitive is drawn with.
     #[must_use]
     pub fn geometry(&self) -> &Geometry {
         &self.geometry
@@ -546,14 +557,17 @@ pub fn primitive_circle(radius: impl IntoAnimated<f32>) -> Primitive {
     Primitive::circle(radius)
 }
 
+/// A rectangle primitive. The same as `Primitive::rect`.
 pub fn primitive_rect(width: impl IntoAnimated<f32>, height: impl IntoAnimated<f32>) -> Primitive {
     Primitive::rect(width, height)
 }
 
+/// A path primitive. The same as `Primitive::path`.
 pub fn primitive_path(path: impl IntoAnimated<Path>) -> Primitive {
     Primitive::path(path)
 }
 
+/// A text primitive. The same as `Primitive::text`.
 pub fn primitive_text(text: impl IntoAnimated<String>) -> Primitive {
     Primitive::text(text)
 }
@@ -563,9 +577,12 @@ pub fn primitive_text(text: impl IntoAnimated<String>) -> Primitive {
 /// Implementors expose mutable access to their `transform` and `style`; the
 /// builder setters are default methods, so they are defined once. No macro.
 pub trait Transformable: Sized {
+    /// Mutable access to this shape's placement.
     fn transform_mut(&mut self) -> &mut Transform;
+    /// Mutable access to this shape's appearance.
     fn style_mut(&mut self) -> &mut Animated<Style>;
 
+    /// Sets the position: a point, or an animated point.
     #[must_use]
     fn pos(mut self, pos: impl IntoAnimated<Vec2>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -573,6 +590,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the x position: a number, or an animated value.
     #[must_use]
     fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -580,6 +598,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the y position: a number, or an animated value.
     #[must_use]
     fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -587,6 +606,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the uniform scale: a number, or an animated value.
     #[must_use]
     fn scale(mut self, s: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -594,6 +614,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets a separate x and y scale: a point, or an animated point.
     #[must_use]
     fn scale_xy(mut self, s: impl IntoAnimated<Vec2>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -601,6 +622,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the rotation in degrees: a number, or an animated value.
     #[must_use]
     fn rotate(mut self, deg: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -608,6 +630,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the opacity: 0 is invisible, 1 is solid.
     #[must_use]
     fn opacity(mut self, opacity: impl IntoAnimated<f32>) -> Self {
         let t = std::mem::take(self.transform_mut());
@@ -615,6 +638,7 @@ pub trait Transformable: Sized {
         self
     }
 
+    /// Sets the anchor the shape rotates and scales around.
     #[must_use]
     fn pivot(mut self, pivot: AnchorKind) -> Self {
         let t = std::mem::take(self.transform_mut());

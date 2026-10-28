@@ -18,6 +18,7 @@ pub struct Viewport {
 }
 
 impl Viewport {
+    /// A viewport of `width` by `height` pixels.
     #[must_use]
     pub fn new(width: f32, height: f32) -> Self {
         Self { width, height }

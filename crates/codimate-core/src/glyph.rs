@@ -4,8 +4,8 @@ use crate::PathNode;
 
 /// A block of shaped glyph paths.
 ///
-/// Produced by both [`codimate_math::formula()`] (LaTeX → paths) and
-/// [`codimate_glyph::shape()`] (text → paths). Each glyph is a first-class
+/// Produced by both `codimate_math::formula()` (LaTeX → paths) and
+/// `codimate_glyph::shape()` (text → paths). Each glyph is a first-class
 /// [`PathNode`] so it can be tweened, styled, or transformed independently.
 ///
 /// `width`/`height` describe the overall bounding box. Glyph paths are stored

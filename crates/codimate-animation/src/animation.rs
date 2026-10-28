@@ -28,11 +28,13 @@ pub fn animation(name: impl Into<String>, duration: f32, scene: Scene) -> Animat
 }
 
 impl Animation {
+    /// The name the animation was given.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// How long the animation lasts, in seconds.
     #[must_use]
     pub fn duration(&self) -> f32 {
         self.duration

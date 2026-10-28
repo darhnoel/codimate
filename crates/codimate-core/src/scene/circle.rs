@@ -37,6 +37,7 @@ pub struct ConcreteCircle {
 }
 
 impl ConcreteCircle {
+    /// The point named by `kind`: the centre, or the middle of an edge.
     #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         match kind {
@@ -61,24 +62,28 @@ impl Circle {
         }
     }
 
+    /// Sets the x position: a number, or an animated value.
     #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    /// Sets the y position: a number, or an animated value.
     #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    /// Sets the radius: a number, or an animated value.
     #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    /// Sets the fill colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();

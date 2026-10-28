@@ -30,6 +30,7 @@ pub struct ConcreteScene {
 }
 
 impl Scene {
+    /// An empty scene, with no nodes yet.
     #[must_use]
     pub fn new() -> Self {
         Scene {
@@ -37,6 +38,7 @@ impl Scene {
         }
     }
 
+    /// Adds a node to the scene, drawn after the nodes already in it.
     #[must_use]
     pub fn node(mut self, node: impl Into<SceneNode>) -> Self {
         self.children.push(node.into());
@@ -49,6 +51,7 @@ impl Scene {
         self.node(node)
     }
 
+    /// Multiplies the opacity of every node by `multiplier`, a number or an animated value.
     #[must_use]
     pub fn with_opacity(self, multiplier: impl IntoAnimated<f32>) -> Self {
         let multiplier = multiplier.into_animated();
@@ -61,6 +64,7 @@ impl Scene {
         }
     }
 
+    /// Applies an easing curve to every node's timing.
     #[must_use]
     pub fn ease(self, curve: impl Fn(f32) -> f32 + Send + Sync + 'static) -> Self {
         let curve = Arc::new(curve);
@@ -73,6 +77,7 @@ impl Scene {
         }
     }
 
+    /// Sets how much of every node is shown: 0 is none, 1 is all.
     #[must_use]
     pub fn reveal(self, progress: impl IntoAnimated<f32>) -> Self {
         let progress = progress.into_animated();
@@ -85,6 +90,7 @@ impl Scene {
         }
     }
 
+    /// Blends this scene into `to`, node by node. Fails if the two scenes do not have the same shape.
     pub fn try_lerp_to(&self, to: &Self) -> Result<Self, SceneTransformError> {
         if self.children.len() != to.children.len() {
             return Err(SceneTransformError::ChildCountMismatch {

@@ -533,6 +533,7 @@ pub struct RasterRenderer {
 }
 
 impl RasterRenderer {
+    /// The most recent bitmap rendered, if any.
     #[must_use]
     pub fn last(&self) -> Option<&Bitmap> {
         self.last.as_ref()
@@ -560,7 +561,7 @@ impl Renderer for RasterRenderer {
 /// picture — every "box around this label" in the examples was a hardcoded
 /// number with a comment apologising for it.
 ///
-/// Mirrors [`render_text`] exactly, shaped path first and the `ab_glyph`
+/// Mirrors `render_text` exactly, shaped path first and the `ab_glyph`
 /// fallback second, so the answer matches what actually gets drawn — including
 /// font fallback, which is why `len(text) * k` is wrong for anything but
 /// ASCII.

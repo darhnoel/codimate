@@ -2,14 +2,14 @@
 //!
 //! Eliminates 16 copies of `Option`-field + `expect()` boilerplate in examples.
 //! Each example wraps this as a thin newtype that adds domain-specific
-//! [`build`] and [`render`] methods.
+//! `build` and `render` methods.
 
 /// A generic builder for the standard explanation pattern:
 /// `(name, state, algorithm, motion, timing) → Playable`.
 ///
 /// All fields are optional setters except `name`. Call [`take`](Self::take)
 /// at the end to retrieve the values (as a `Result`), or use this inside a
-/// newtype wrapper that provides a typed [`build`] method.
+/// newtype wrapper that provides a typed `build` method.
 ///
 /// The type parameter `A` is either a function pointer
 /// `fn(State) -> Trace` (deferred — call in `build`) or the trace type
@@ -41,24 +41,28 @@ impl<S, A, M, T: Default> ExplanationBuilder<S, A, M, T> {
         }
     }
 
+    /// The state the explanation is built from.
     #[must_use]
     pub fn state(mut self, state: S) -> Self {
         self.state = Some(state);
         self
     }
 
+    /// The algorithm that produces the trace, either as a function of the state or as a trace already computed.
     #[must_use]
     pub fn algorithm(mut self, algorithm: A) -> Self {
         self.algorithm = Some(algorithm);
         self
     }
 
+    /// How the trace becomes motion.
     #[must_use]
     pub fn motion(mut self, motion: M) -> Self {
         self.motion = Some(motion);
         self
     }
 
+    /// The timing of the motion. Defaults to `T::default()`.
     #[must_use]
     pub fn timing(mut self, timing: T) -> Self {
         self.timing = timing;

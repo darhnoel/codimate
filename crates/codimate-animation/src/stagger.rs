@@ -40,11 +40,13 @@ pub fn stagger(
 }
 
 impl Stagger {
+    /// The name the stagger was given.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// How long the stagger lasts, in seconds.
     pub fn duration(&self) -> f32 {
         self.animations
             .iter()

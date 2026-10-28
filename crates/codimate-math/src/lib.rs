@@ -1,6 +1,6 @@
 //! `codimate-math` — typeset LaTeX math into `codimate-core` `Path` nodes.
 //!
-//! A [`Formula`] is a group of glyph outlines (animatable Béziers), produced by
+//! A formula is a group of glyph outlines (animatable Béziers), produced by
 //! shelling out to Typst once at Scene-build time. See `docs/adr/0005`.
 //!
 //! Pipeline:

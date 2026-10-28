@@ -44,12 +44,14 @@ pub fn box_at(center: impl IntoAnimated<Vec2>, size: Vec2) -> BoxBuilder {
 }
 
 impl BoxBuilder {
+    /// Sets the corner radius: a number, or an animated value.
     #[must_use]
     pub fn radius(mut self, r: impl IntoAnimated<f32>) -> Self {
         self.radius = r.into_animated();
         self
     }
 
+    /// Sets the whole style at once, instead of the fill and stroke separately.
     #[must_use]
     pub fn style(mut self, s: impl IntoAnimated<Style>) -> Self {
         let s = s.into_animated();
@@ -61,12 +63,14 @@ impl BoxBuilder {
         self
     }
 
+    /// Sets the fill colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    /// Sets the stroke width and colour. Either can be a plain value or animated.
     #[must_use]
     pub fn stroke(
         mut self,

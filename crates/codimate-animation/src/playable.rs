@@ -5,8 +5,11 @@ use codimate_core::ConcreteScene;
 /// A `Playable` has an authored name, a duration in seconds, and resolves from
 /// normalized `t` into a concrete Scene.
 pub trait Playable {
+    /// The name this playable was given.
     fn name(&self) -> &str;
+    /// How long it lasts, in seconds.
     fn duration(&self) -> f32;
+    /// The scene at normalized time `t`, from 0 at the start to 1 at the end.
     fn resolve(&self, t: f32) -> ConcreteScene;
 
     /// Resolve by elapsed seconds, clamped into this Playable's duration.

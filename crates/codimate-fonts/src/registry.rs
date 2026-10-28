@@ -79,6 +79,7 @@ fn installed(name: &str) -> Result<(Vec<u8>, u32), String> {
 pub struct FontRegistry;
 
 impl FontRegistry {
+    /// The one registry the process shares, so every render sees the same fonts.
     #[must_use]
     pub fn global() -> &'static Self {
         &FontRegistry

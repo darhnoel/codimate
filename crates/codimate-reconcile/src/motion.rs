@@ -202,6 +202,7 @@ pub(crate) fn glob_match(pattern: &str, s: &str) -> bool {
     pi == p.len()
 }
 
+/// An ease that starts and ends slowly, cubic in and out, from 0 at `t = 0` to 1 at `t = 1`.
 #[must_use]
 pub fn ease_in_out(t: f32) -> f32 {
     if t < 0.5 {

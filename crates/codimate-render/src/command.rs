@@ -296,8 +296,10 @@ pub fn inject_debug_metadata(frame: &mut RenderFrame) {
 /// Backend trait implemented by concrete renderers — the seam where a CPU,
 /// GPU, or Skia adapter plugs in (ADR 0001).
 pub trait Renderer {
+    /// What rendering can fail with.
     type Error;
 
+    /// Renders `frame` into the renderer's output.
     fn render(&mut self, frame: &LayoutFrame) -> Result<(), Self::Error>;
 }
 

@@ -18,6 +18,7 @@ pub struct ExportConfig {
 }
 
 impl ExportConfig {
+    /// Export settings for `fps` frames per second, drawn at `viewport`.
     #[must_use]
     pub fn new(fps: f32, viewport: Viewport) -> Self {
         Self {
@@ -29,18 +30,21 @@ impl ExportConfig {
         }
     }
 
+    /// Sets the size of the output, when it differs from the viewport drawn.
     #[must_use]
     pub fn output_viewport(mut self, viewport: Viewport) -> Self {
         self.output_viewport = Some(viewport);
         self
     }
 
+    /// Sets the video quality: a lower value is larger and better.
     #[must_use]
     pub fn crf(mut self, crf: u32) -> Self {
         self.crf = crf;
         self
     }
 
+    /// Renders at `scale` times the viewport's pixel size.
     #[must_use]
     pub fn pixel_scale(mut self, scale: f32) -> Self {
         self.pixel_scale = scale;

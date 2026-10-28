@@ -54,6 +54,7 @@ fn build_slots(
 
 macro_rules! define_builder {
     ($name:ident, $slots:ident, $is_col:expr) => {
+        /// Builds a stack of equal slots: set the origin, the cell size and the gap, then `count`.
         pub struct $name {
             origin: Option<Animated<Vec2>>,
             cell_size: Option<Vec2>,
@@ -69,24 +70,28 @@ macro_rules! define_builder {
                 }
             }
 
+            /// Sets where the first slot starts: a point, or an animated point.
             #[must_use]
             pub fn origin(mut self, origin: impl IntoAnimated<Vec2>) -> Self {
                 self.origin = Some(origin.into_animated());
                 self
             }
 
+            /// Sets the size of each slot.
             #[must_use]
             pub fn cell_size(mut self, size: Vec2) -> Self {
                 self.cell_size = Some(size);
                 self
             }
 
+            /// Sets the space between neighbouring slots.
             #[must_use]
             pub fn gap(mut self, gap: f32) -> Self {
                 self.gap = gap;
                 self
             }
 
+            /// Builds `count` slots in a row.
             pub fn count(self, count: usize) -> $slots {
                 $slots(build_slots(
                     self.origin,
@@ -102,9 +107,11 @@ macro_rules! define_builder {
 
 macro_rules! define_slots {
     ($name:ident) => {
+        /// The slots a builder produced.
         pub struct $name(Vec<Slot>);
 
         impl $name {
+            /// How many slots there are.
             pub fn len(&self) -> usize {
                 self.0.len()
             }

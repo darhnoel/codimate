@@ -38,11 +38,13 @@ pub fn sequence(
 }
 
 impl Sequence {
+    /// The name the sequence was given.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// How long the sequence lasts, in seconds.
     pub fn duration(&self) -> f32 {
         self.animations.iter().map(Animation::duration).sum::<f32>()
     }

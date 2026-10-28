@@ -3,6 +3,7 @@
 use super::{Node, TimeCurve};
 use crate::value::{tween, Animated, Color, IntoAnimated};
 
+/// How a text label lines up around its position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextAlign {
     Left,
@@ -48,6 +49,7 @@ pub struct ConcreteText {
 }
 
 impl Text {
+    /// A text label with no text yet.
     #[must_use]
     pub fn new() -> Self {
         Text {
@@ -60,36 +62,42 @@ impl Text {
         }
     }
 
+    /// Sets the x position: a number, or an animated value.
     #[must_use]
     pub fn x(mut self, x: impl IntoAnimated<f32>) -> Self {
         self.x = x.into_animated();
         self
     }
 
+    /// Sets the y position: a number, or an animated value.
     #[must_use]
     pub fn y(mut self, y: impl IntoAnimated<f32>) -> Self {
         self.y = y.into_animated();
         self
     }
 
+    /// Sets the text: a string, or an animated one.
     #[must_use]
     pub fn text(mut self, text: impl IntoAnimated<String>) -> Self {
         self.text = text.into_animated();
         self
     }
 
+    /// Sets the font size: a number, or an animated value.
     #[must_use]
     pub fn font_size(mut self, size: impl IntoAnimated<f32>) -> Self {
         self.font_size = size.into_animated();
         self
     }
 
+    /// Sets the text colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    /// Sets how the text lines up.
     #[must_use]
     pub fn align(mut self, align: TextAlign) -> Self {
         self.align = align;
@@ -142,6 +150,7 @@ impl Text {
         }
     }
 
+    /// The label's plain data at time `t`.
     #[must_use]
     pub fn resolve(&self, t: f32) -> ConcreteText {
         ConcreteText {

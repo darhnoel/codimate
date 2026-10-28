@@ -37,6 +37,7 @@ pub struct Connection {
 }
 
 impl Connection {
+    /// A connection from `start` to `end`. Each end is a point, or an animated point.
     pub fn new(start: impl IntoAnimated<Vec2>, end: impl IntoAnimated<Vec2>) -> Self {
         Connection {
             start: start.into_animated(),
@@ -49,6 +50,7 @@ impl Connection {
         }
     }
 
+    /// Sets the stroke width and colour. Either can be a plain value or animated.
     #[must_use]
     pub fn stroke(
         mut self,
@@ -127,6 +129,7 @@ impl Connection {
         }
     }
 
+    /// Sets the arrowhead size. Zero, the default, draws the line with no arrowhead.
     #[must_use]
     pub fn arrow(mut self, size: impl IntoAnimated<f32>) -> Self {
         self.arrow_size = size.into_animated();

@@ -20,6 +20,7 @@ pub enum Segment {
 }
 
 impl Segment {
+    /// This segment as a cubic Bézier: start, two controls, end. A line becomes a cubic whose controls sit a third and two thirds of the way along it.
     #[must_use]
     pub fn to_cubic(self) -> (Vec2, Vec2, Vec2, Vec2) {
         match self {
@@ -44,6 +45,7 @@ impl Segment {
         }
     }
 
+    /// A cubic Bézier segment from four points.
     #[must_use]
     pub fn from_cubic(from: Vec2, c1: Vec2, c2: Vec2, to: Vec2) -> Self {
         Segment::Cubic(from, c1, c2, to)

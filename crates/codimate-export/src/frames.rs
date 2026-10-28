@@ -71,6 +71,7 @@ pub struct FrameTimes {
 }
 
 impl FrameTimes {
+    /// The times of every frame in a clip `duration` seconds long, at `fps` frames per second.
     #[must_use]
     pub fn new(duration: f32, fps: f32) -> Self {
         Self {
@@ -122,7 +123,7 @@ pub(crate) fn sample_render_frame(
 /// Pure export frame planner. Collects every frame into memory.
 ///
 /// For streaming (zero heap allocation per frame), use [`playable_frames`]
-/// directly with [`write_raw_frames`].
+/// directly with [`crate::write_raw_frames`].
 pub fn export_frames(playable: &impl Playable, config: ExportConfig) -> Vec<ExportFrame> {
     playable_frames(playable, config)
         .enumerate()

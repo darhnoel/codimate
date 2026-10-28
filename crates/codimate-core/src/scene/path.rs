@@ -32,6 +32,7 @@ pub struct ConcretePath {
 }
 
 impl ConcretePath {
+    /// The point named by `kind` on the path's bounding box. The origin for an empty path.
     #[must_use]
     pub fn anchor(&self, kind: AnchorKind) -> Vec2 {
         let Some((xmin, ymin, xmax, ymax)) = self.path.bounding_box() else {
@@ -50,6 +51,7 @@ impl ConcretePath {
 }
 
 impl PathNode {
+    /// An empty path node, with no geometry yet.
     #[must_use]
     pub fn new() -> Self {
         PathNode {
@@ -64,18 +66,21 @@ impl PathNode {
         }
     }
 
+    /// Sets the path: a path, or an animated one.
     #[must_use]
     pub fn path(mut self, path: impl IntoAnimated<Path>) -> Self {
         self.path = path.into_animated();
         self
     }
 
+    /// Sets the fill colour: a colour, or an animated colour.
     #[must_use]
     pub fn fill(mut self, c: impl IntoAnimated<Color>) -> Self {
         self.fill = c.into_animated();
         self
     }
 
+    /// Sets the stroke width and colour. Either can be a plain value or animated.
     #[must_use]
     pub fn stroke(
         mut self,
@@ -209,6 +214,7 @@ impl PathNode {
         }
     }
 
+    /// The path's plain data at time `t`.
     #[must_use]
     pub fn resolve(&self, t: f32) -> ConcretePath {
         ConcretePath {
@@ -226,6 +232,7 @@ impl Default for PathNode {
     }
 }
 
+/// An empty path node. The same as `PathNode::new()`.
 #[must_use]
 pub fn path_node() -> PathNode {
     PathNode::new()

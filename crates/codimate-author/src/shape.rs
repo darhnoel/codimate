@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+/// A shape as the authoring surface reads it, one per item in a Scene.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Shape {

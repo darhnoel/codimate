@@ -10,7 +10,7 @@
 //! - [`path`] — **Geometry**: `Segment`, `Path`, and shape constructors
 //!   (`rect_path`, `circle_path`, `polygon_path`, `ellipse_path`, …).
 //! - [`easing`] — **Easing curves**: `ease_in`, `ease_out`, `ease_in_out`, `back`.
-//! - [`scene`] — **Layer 2 (Scene)**: what exists at a moment in time. The
+//! - [`mod@scene`] — **Layer 2 (Scene)**: what exists at a moment in time. The
 //!   `Node` trait, the node types (`Circle`, `Rect`, `PathNode`, `Text`,
 //!   `Connection`, `Pulse`), anchors, and the `Scene` tree.
 //!
@@ -23,6 +23,7 @@
 
 pub mod builder;
 pub mod easing;
+/// Glyph outlines: text drawn as paths, from the font registry.
 pub mod glyph;
 pub mod manim_palette;
 pub mod path;

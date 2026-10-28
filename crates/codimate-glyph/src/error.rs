@@ -2,7 +2,7 @@
 
 use codimate_fonts::FontId;
 
-/// Why [`shape`] could not produce a [`GlyphBlock`].
+/// Why [`crate::shape`] could not produce a [`codimate_core::GlyphBlock`].
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum GlyphError {

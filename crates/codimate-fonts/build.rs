@@ -1,3 +1,5 @@
+//! Build script: embeds the fonts in `fonts/` into the crate, with their Unicode coverage.
+
 use std::io::Write;
 
 fn main() {

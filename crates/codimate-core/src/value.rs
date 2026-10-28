@@ -17,6 +17,7 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
+    /// A point or vector from its x and y coordinates.
     #[must_use]
     pub fn new(x: f32, y: f32) -> Self {
         Vec2 { x, y }
@@ -40,30 +41,35 @@ pub struct Color {
 }
 
 impl Color {
+    /// Pure red, #FF0000.
     pub const RED: Color = Color {
         r: 1.0,
         g: 0.0,
         b: 0.0,
         a: 1.0,
     };
+    /// White, #FFFFFF.
     pub const WHITE: Color = Color {
         r: 1.0,
         g: 1.0,
         b: 1.0,
         a: 1.0,
     };
+    /// Fully transparent black.
     pub const TRANSPARENT: Color = Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
         a: 0.0,
     };
+    /// Black, #000000.
     pub const BLACK: Color = Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
         a: 1.0,
     };
+    /// Cyan, #00FFFF.
     pub const CYAN: Color = Color {
         r: 0.0,
         g: 1.0,
@@ -105,12 +111,14 @@ impl Style {
         }
     }
 
+    /// Sets the fill colour, replacing any set before.
     #[must_use]
     pub fn fill(mut self, fill: Color) -> Self {
         self.fill = fill;
         self
     }
 
+    /// Sets the stroke width and colour, replacing any set before.
     #[must_use]
     pub fn stroke(mut self, width: f32, color: Color) -> Self {
         self.stroke_width = width;
@@ -163,7 +171,7 @@ impl<T> Animated<T> {
     /// Remap this value's time through an easing curve: `resolve(t)` becomes
     /// `self.resolve(curve(t))`. Pure and timeless.
     ///
-    /// The curve may push `t` outside `[0,1]` (overshoot, e.g. [`back`]); the
+    /// The curve may push `t` outside `[0,1]` (overshoot, e.g. [`crate::easing::back`]); the
     /// eased value still *receives* `t ∈ [0,1]` from its Animation context, so
     /// this is not an Invariant 2 violation.
     ///
@@ -238,6 +246,7 @@ impl From<&'static str> for Animated<String> {
 /// The conversion every public API accepts (Invariant 7): a plain leaf value
 /// or an already-`Animated` value can be passed without ceremony.
 pub trait IntoAnimated<T> {
+    /// Wraps this value as an animated one: a fixed value becomes a constant animation.
     fn into_animated(self) -> Animated<T>;
 }
 
