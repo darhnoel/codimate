@@ -1,6 +1,8 @@
 //! The entry point: every Scene in, one playable explanation out.
 
-use crate::*;
+use crate::{
+    build_segment, framed, ConcreteScene, Error, Focus, Playable, Result, Rule, Scene, Shape, KINDS,
+};
 
 pub struct Explanation {
     /// `(start_seconds, duration, scene)` — scenes hold their own local `t`.

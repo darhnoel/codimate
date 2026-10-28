@@ -1,7 +1,7 @@
 //! The `Text` Node: a label with animated position, font size, and fill.
 
 use super::{Node, TimeCurve};
-use crate::value::*;
+use crate::value::{tween, Animated, Color, IntoAnimated};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextAlign {

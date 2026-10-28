@@ -1,6 +1,6 @@
 //! Motion rules: which way a shape travels, its ease, and when it starts.
 
-use crate::*;
+use crate::{Animated, Arc, Error, HashMap, Result, Shape, TimeCurve, Vec2};
 
 /// A motion rule from Python: (pattern, path, numeric options, ease, order).
 ///

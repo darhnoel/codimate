@@ -1,6 +1,8 @@
 //! The camera: what to look at, aimed by name.
 
-use crate::*;
+use crate::{
+    character_art, fit_scale, fitted_box, formula_size, image_pixels, svg_art, Error, Result, Shape,
+};
 
 /// What to look at. Aimed by name, never by coordinate (ADR 0009).
 #[derive(Clone, Debug, Default)]

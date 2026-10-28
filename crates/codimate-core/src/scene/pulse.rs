@@ -1,7 +1,7 @@
 //! The `Pulse`: an overlay dot that travels along a Connection by arc length.
 
 use super::{ConcreteCircle, Connection, TimeCurve};
-use crate::value::*;
+use crate::value::{tween, Animated, Color, IntoAnimated};
 
 /// A marker (dot) that travels along a Connection's path as progress goes 0→1.
 ///

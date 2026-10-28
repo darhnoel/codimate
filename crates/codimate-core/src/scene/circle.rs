@@ -1,7 +1,7 @@
 //! The `Circle` Node: animated centre, radius, and fill.
 
 use super::{AnchorKind, Node, TimeCurve};
-use crate::value::*;
+use crate::value::{tween, Animated, Color, IntoAnimated, Vec2};
 
 /// A Node (Layer 2): pure data whose every property is an `Animated<T>`.
 /// Timeless — no duration. Nodes do not render themselves (Invariant 3).

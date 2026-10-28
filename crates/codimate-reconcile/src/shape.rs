@@ -1,6 +1,9 @@
 //! A shape as the frontend sends it, its outline, and its colour.
 
-use crate::*;
+use crate::{
+    tween, AnchorKind, Animated, Color, Error, Geometry, IntoAnimated, Path, Result, Segment,
+    Style, TextAlign, Vec2,
+};
 
 /// One shape from Python. A flat union: a text shape carries unused `w`/`h`.
 ///

@@ -1,6 +1,11 @@
 //! The diff — motion is implied by identity.
 
-use crate::*;
+use crate::{
+    character_art, clocks, ease_in_out, fit_scale, fitted_box, flatten, formula_glyphs,
+    image_pixels, map_path, motion_path, parse_color, pivot_of, svg_art, trim, tween, AnchorKind,
+    Animated, CharacterArt, CharacterPath, Color, Error, Geometry, IntoAnimated, Path, Primitive,
+    Result, Rule, Scene, Shape, Style, Transformable, Vec2, FILL_TAKEOVER, REVEAL_OVERLAP,
+};
 use serde::Deserialize;
 use std::collections::HashMap;
 

@@ -14,7 +14,7 @@
 
 use super::{AnchorKind, ConcreteTransform, TextAlign, Transform};
 use crate::path::Path;
-use crate::value::*;
+use crate::value::{Animated, Color, IntoAnimated, Style, Vec2};
 
 /// The pure shape of a primitive — local-space, no placement, no appearance.
 #[derive(Clone)]

@@ -1,6 +1,9 @@
 //! Formulas, pictures and SVG artwork, each loaded once per process.
 
-use crate::*;
+use crate::{
+    map_path, Arc, Color, Error, HashMap, Mutex, OnceLock, Path, Pixels, Result, TextAlign, Vec2,
+    FORMULA_EM,
+};
 
 /// Typeset one LaTeX string into glyph outlines, centred, in em units.
 ///

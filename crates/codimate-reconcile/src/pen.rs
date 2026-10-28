@@ -1,6 +1,6 @@
 //! Drawing on: an outline traced to a polyline and cut to a fraction of its length.
 
-use crate::*;
+use crate::{Path, Segment, Vec2};
 
 /// Typst's default text size in SVG pixels (11pt, at 4/3 px per pt).
 ///
