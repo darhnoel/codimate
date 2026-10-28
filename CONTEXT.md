@@ -440,6 +440,9 @@ Use standard `cargo fmt` output. The root `rustfmt.toml` only pins stable,
 project-wide defaults: Unix newlines, 100-column width, and 2021 style edition.
 Do not add nightly-only rustfmt options.
 
+Rust code follows the Google Rust Style Guide, with the named exceptions and the
+rules listed in ADR 0036 (`docs/adr/0036-rust-follows-the-google-rust-style-guide.md`).
+
 In docs and examples, use named multi-line builder chains when a value is reused
 or carries domain meaning:
 
