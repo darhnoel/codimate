@@ -6,36 +6,28 @@
 //! what a call needs (the Group it draws on, the shape it changes) comes with
 //! it, so any language can drive it and every call can be tested on its own.
 
+mod call;
+mod refusal;
+
+pub use call::*;
+pub use refusal::*;
+
 mod axes;
+
 mod film;
+
 mod generated;
+
 mod marker;
+
 mod place;
+
 mod preset;
+
 mod pyrandom;
+
 mod shape;
+
 mod surface;
 
 pub use shape::Shape;
-
-use serde_json::json;
-
-/// Why an authoring call was refused, worded for the author.
-#[derive(Debug, PartialEq)]
-#[non_exhaustive]
-pub struct Refusal(pub String);
-
-impl<E: std::fmt::Display> From<E> for Refusal {
-    fn from(e: E) -> Self {
-        Refusal(e.to_string())
-    }
-}
-
-/// Run one authoring operation: `op` with `data` (JSON), answered as JSON.
-#[must_use]
-pub fn call(op: &str, data: &str) -> String {
-    match generated::dispatch(op, data) {
-        Ok(answer) => format!(r#"{{"ok":{answer}}}"#),
-        Err(Refusal(message)) => json!({ "error": message }).to_string(),
-    }
-}
