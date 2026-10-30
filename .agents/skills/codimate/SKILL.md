@@ -5,6 +5,10 @@ description: Create runnable Codimate examples in Python from user prompts, with
 
 # Codimate Skill
 
+> **No music unless asked.** Leave music out of every video unless the user explicitly
+> asks for it: render silent, or with narration only where this skill uses a voice. Any
+> music, score or soundtrack this skill describes applies only once music was requested.
+
 Turn a prompt into a runnable Codimate explainer.
 
 **Python is the authoring surface. Rust is the engine** (ADR 0008). Never write
