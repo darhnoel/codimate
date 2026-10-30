@@ -45,6 +45,9 @@ manifest-path = "crates/codimate-waist/Cargo.toml"
 python-source = "skins/python"
 module-name = "codimate._codimate"
 features = ["extension-module"]
+# A plain `maturin develop` builds the fast engine. A debug one renders about
+# 25 times slower, and nothing says so but the clock.
+profile = "release"
 
 [tool.ruff]
 line-length = 88

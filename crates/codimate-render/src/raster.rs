@@ -75,7 +75,7 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
     let mut pixmap = Pixmap::new(width, height).expect("viewport is at least 1x1");
     pixmap.fill(tiny_skia::Color::from_rgba8(0, 0, 0, 255)); // opaque black background
 
-    for command in commands {
+    for command in commands.iter().filter(|c| !invisible(c)) {
         // AA on (tiny-skia default, made explicit).
         let mut paint = Paint {
             anti_alias: true,
@@ -196,6 +196,25 @@ fn rasterize_commands(viewport: Viewport, commands: &[RenderCommand], pixel_scal
     }
 }
 
+/// Whether a command would put no ink down: fully transparent, so drawing it
+/// changes no pixel. Films keep every shape in every frame so names can tween,
+/// hiding the unused ones at opacity 0; without this, each hidden text was
+/// still shaped and filled, and a lesson spent most of its frame on them.
+fn invisible(command: &RenderCommand) -> bool {
+    match command {
+        RenderCommand::Circle { fill, .. }
+        | RenderCommand::Rect { fill, .. }
+        | RenderCommand::Text { fill, .. } => fill.a <= 0.0,
+        RenderCommand::Image { opacity, .. } => *opacity <= 0.0,
+        RenderCommand::Path {
+            fill,
+            stroke_width,
+            stroke_color,
+            ..
+        } => fill.a <= 0.0 && (*stroke_width <= 0.0 || stroke_color.a <= 0.0),
+    }
+}
+
 fn render_path(
     pixmap: &mut tiny_skia::Pixmap,
     paint: &mut tiny_skia::Paint,
@@ -247,10 +266,13 @@ fn render_path(
         builder.close();
     }
     if let Some(path) = builder.finish() {
-        paint.set_color(to_sk_color(fill));
-        pixmap.fill_path(&path, paint, FillRule::Winding, transform, None);
+        // `fill("none")` is a transparent fill: an outline only, nothing to fill.
+        if fill.a > 0.0 {
+            paint.set_color(to_sk_color(fill));
+            pixmap.fill_path(&path, paint, FillRule::Winding, transform, None);
+        }
 
-        if stroke_width > 0.0 {
+        if stroke_width > 0.0 && stroke_color.a > 0.0 {
             paint.set_color(to_sk_color(stroke_color));
             let stroke = tiny_skia::Stroke {
                 width: stroke_width,
@@ -660,6 +682,51 @@ mod scale_tests {
             (x1 - x2).abs() < 0.02 && (y1 - y2).abs() < 0.02,
             "text sat at ({x1:.3}, {y1:.3}) unscaled and ({x2:.3}, {y2:.3}) at 3x"
         );
+    }
+
+    /// Hidden shapes are skipped, and skipping them changes no pixel.
+    #[test]
+    fn hidden_shapes_leave_the_picture_as_it_was() {
+        let shown = RenderCommand::Circle {
+            x: 50.0,
+            y: 50.0,
+            radius: 20.0,
+            fill: Color::WHITE,
+        };
+        let clear = Color { a: 0.0, ..Color::WHITE };
+        let hidden = vec![
+            RenderCommand::Text {
+                x: 100.0,
+                y: 50.0,
+                text: "hidden".into(),
+                font_size: 30.0,
+                fill: clear,
+                align: TextAlign::Center,
+                font: String::new(),
+            },
+            RenderCommand::Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 200.0,
+                height: 100.0,
+                fill: clear,
+            },
+            RenderCommand::Path {
+                segments: vec![Segment::Line(
+                    codimate_core::Vec2::new(0.0, 0.0),
+                    codimate_core::Vec2::new(200.0, 100.0),
+                )],
+                closed: false,
+                fill: clear,
+                stroke_width: 4.0,
+                stroke_color: clear,
+            },
+        ];
+        assert!(hidden.iter().all(invisible) && !invisible(&shown));
+        let alone = rasterize(&frame(vec![shown.clone()]));
+        let mut both = hidden;
+        both.push(shown);
+        assert_eq!(rasterize(&frame(both)), alone);
     }
 
     /// The same, for a shape — which always worked, and pins that it still does.
