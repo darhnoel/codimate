@@ -59,26 +59,56 @@ impl<'a> Iterator for PlayableFrameIter<'a> {
 /// needs a batch of instants up front, and a serial `Iterator<Item = f32>`
 /// is the only honest way to get them.
 ///
-/// The step is **accumulated**, not computed as `i / fps`. The two disagree in
-/// the last bits of a float once `i` is large, and that is the difference
-/// between a render that is byte-identical to the old one and a render that is
-/// merely very close.
+/// Frame `i` is sampled at exactly `i / fps`, worked out in `f64`, which is
+/// the instant the encoder shows it at. The last frame lands on `duration`.
+/// The step used to be accumulated in `f32` (`elapsed += 1 / fps`), and the
+/// rounding piled up: a ten-minute film at 60 fps drew frames up to 102 ms
+/// away from when they were shown, out of step with its sound, and encoded
+/// seven frames too many (ADR 0011, amended).
 #[derive(Clone, Debug)]
 pub struct FrameTimes {
     duration: f32,
     fps: f32,
-    elapsed: f32,
+    next: u64,
+    last: u64,
 }
+
+/// How far `duration * fps` may sit above a whole number and still count as
+/// that number: an `f32` duration such as 1.1 s is 33.0000007 frames at 30
+/// fps, which is 33 frames, not a 34th a hair after the 33rd.
+const SLACK: f64 = 1e-3;
 
 impl FrameTimes {
     /// The times of every frame in a clip `duration` seconds long, at `fps` frames per second.
     #[must_use]
     pub fn new(duration: f32, fps: f32) -> Self {
+        // The index of the last frame. A clip of no length has one frame;
+        // any other has at least two, its start and its end, as it always had.
+        let last = if duration <= 0.0 {
+            0
+        } else if fps <= 0.0 {
+            1
+        } else {
+            (f64::from(duration) * f64::from(fps) - SLACK)
+                .ceil()
+                .max(1.0) as u64
+        };
         Self {
             duration,
             fps,
-            elapsed: 0.0,
+            next: if duration < 0.0 { 1 } else { 0 },
+            last,
         }
+    }
+
+    fn at(&self, i: u64) -> f32 {
+        if i == self.last {
+            return self.duration;
+        }
+        if self.fps <= 0.0 {
+            return 0.0;
+        }
+        ((i as f64 / f64::from(self.fps)) as f32).min(self.duration)
     }
 }
 
@@ -86,27 +116,17 @@ impl Iterator for FrameTimes {
     type Item = f32;
 
     fn next(&mut self) -> Option<f32> {
-        if self.elapsed > self.duration {
+        if self.next > self.last {
             return None;
         }
-        let at = self.elapsed;
-
-        let step = if self.fps <= 0.0 {
-            self.duration
-        } else {
-            1.0 / self.fps
-        };
-
-        if self.elapsed >= self.duration {
-            self.elapsed = self.duration + 1.0;
-        } else {
-            self.elapsed += step;
-            if self.elapsed > self.duration {
-                self.elapsed = self.duration;
-            }
-        }
-
+        let at = self.at(self.next);
+        self.next += 1;
         Some(at)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let left = (self.last + 1).saturating_sub(self.next) as usize;
+        (left, Some(left))
     }
 }
 

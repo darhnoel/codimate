@@ -114,3 +114,28 @@ Nothing to win.
 young. What changed is that examples got big enough to notice: a 1,200-frame
 render at 20 seconds is slow enough to discourage iterating on it, and
 iterating on it is the whole point.
+
+## Amended 2026-10-31: frame instants are exact, not accumulated
+
+"Frame instants stay accumulated" above kept renders byte-identical to the
+serial exporter. The price turned out to be a clock that drifts. Adding
+`1 / fps` in `f32` rounds at every step, and the error piles up with the
+length of the film:
+
+    83 s at 60 fps     frames up to   3 ms from where they are shown
+    600 s at 60 fps    frames up to 102 ms from where they are shown,
+                       and 36,008 frames encoded where 36,001 belong
+
+Narration starts are read off the event timeline, not off the frames, so on a
+long film the picture slid out of step with its sound by more than the ~45 ms
+at which lip sync starts to show.
+
+`FrameTimes` now samples frame `i` at `i / fps`, worked out in `f64`, and the
+last frame still lands on the duration. A duration a hair over a whole number
+of frames (1.1 s at 30 fps is 33.0000007 frames) counts as that number rather
+than gaining an extra frame. Frames can still be resolved in any order, which
+is all the parallel exporter needs.
+
+**This changes every render's bytes once**, by the last bits of a float in each
+sampled instant: the trade the original decision refused, accepted now that it
+buys a clock that keeps time.

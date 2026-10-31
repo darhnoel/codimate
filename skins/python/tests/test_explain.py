@@ -445,3 +445,67 @@ def test_sound_is_laid_under_a_video_without_redrawing_it():
                              capture_output=True, text=True).stderr
     assert "Video:" in streams and "Audio:" in streams
     assert not list(here.glob(".*tmp*")), "the temporary is gone"
+    assert _top_boxes(video).index("moov") < _top_boxes(video).index("mdat"), \
+        "the index stays at the front, so a browser can start playing early"
+
+
+def _top_boxes(path) -> list:
+    """An mp4's top-level boxes, in order."""
+    import struct
+    data, at, kinds = open(path, "rb").read(), 0, []
+    while at + 8 <= len(data):
+        size, kind = struct.unpack(">I4s", data[at:at + 8])
+        kinds.append(kind.decode("latin-1"))
+        if size < 8:
+            break
+        at += size
+    return kinds
+
+
+def test_a_failed_sound_mix_leaves_the_video_and_no_temporary():
+    import subprocess
+    import tempfile
+    from pathlib import Path
+    from codimate.explain import _ffmpeg
+    here = Path(tempfile.mkdtemp())
+    video = here / "v.mp4"
+    subprocess.run([_ffmpeg(), "-y", "-v", "error", "-f", "lavfi", "-i",
+                    "color=c=black:s=64x36:d=1", "-pix_fmt", "yuv420p", str(video)],
+                   check=True)
+    before = video.read_bytes()
+
+    def talk(state, emit):
+        emit("one", sound=tone(here / "a.wav"))
+
+    # An ffmpeg that gets as far as writing its output, then fails.
+    def fails_halfway(command, **_):
+        Path(command[-1]).write_bytes(b"half a file")
+        raise subprocess.CalledProcessError(1, command)
+
+    exp = cm.explain(trace=cm.trace(talk, {}), view=lambda f: cm.Scene())
+    real = subprocess.run
+    subprocess.run = fails_halfway
+    try:
+        exp._lay_sound(str(video), exp.sounds())
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        raise AssertionError("the failed mix should be reported")
+    finally:
+        subprocess.run = real
+    assert video.read_bytes() == before
+    assert not list(here.glob(".*tmp*")), "the temporary is gone"
+
+
+def test_a_debug_engine_is_named_before_a_render_and_a_fast_one_is_not():
+    import warnings
+    from types import SimpleNamespace
+    from codimate.explain.explanation import _warn_if_slow
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _warn_if_slow(SimpleNamespace(optimized=lambda: False))
+        assert len(caught) == 1 and "debug build" in str(caught[0].message)
+        _warn_if_slow(SimpleNamespace(optimized=lambda: True))
+        _warn_if_slow(SimpleNamespace())      # an older engine cannot say
+        assert len(caught) == 1

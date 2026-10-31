@@ -30,6 +30,19 @@ class _Captured(BaseException):
     `except Exception` cannot swallow it."""
 
 
+def _warn_if_slow(engine) -> None:
+    """Say so when the engine is a debug build, which renders about 25 times
+    slower and gives no other sign of it. An engine too old to answer is
+    taken to be fine."""
+    optimized = getattr(engine, "optimized", None)
+    if optimized is not None and not optimized():
+        import warnings
+        warnings.warn(
+            "this Codimate engine is a debug build, which renders about 25 "
+            "times slower; rebuild it with `maturin develop --release`",
+            RuntimeWarning, stacklevel=3)
+
+
 def _quoted(name: str, room: int = 32) -> str:
     return f'"{name}"' if len(name) <= room else f'"{name[:room - 1]}…"'
 
@@ -158,6 +171,7 @@ class Explanation(_ExplanationSurface):
 
         from .. import _codimate  # imported here so the pure Python is testable
 
+        _warn_if_slow(_codimate)
         sounds = self.sounds()      # a missing clip fails now, not after the picture
         _find_encoder()
         Path(output).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
@@ -231,14 +245,21 @@ class Explanation(_ExplanationSurface):
         video = Path(output)
         out = video.with_name(f".{video.stem}.sound.tmp{video.suffix}")
         inputs, graph = _mixing(sounds, first=1)
-        subprocess.run(
-            [_ffmpeg(), "-y", "-v", "error", "-i", str(video), *inputs,
-             "-filter_complex", graph, "-map", "0:v", "-map", "[a]",
-             # No -shortest: the picture runs past the last clip by design,
-             # into the final hold, and truncating would cut the ending.
-             "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", str(out)],
-            check=True)
-        out.replace(video)
+        # The engine put the index at the front; a remux moves it back to
+        # the end unless asked not to.
+        front = (["-movflags", "+faststart"]
+                 if video.suffix.lower() in (".mp4", ".mov", ".m4v") else [])
+        try:
+            subprocess.run(
+                [_ffmpeg(), "-y", "-v", "error", "-i", str(video), *inputs,
+                 "-filter_complex", graph, "-map", "0:v", "-map", "[a]",
+                 # No -shortest: the picture runs past the last clip by design,
+                 # into the final hold, and truncating would cut the ending.
+                 "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", *front, str(out)],
+                check=True)
+            out.replace(video)
+        finally:
+            out.unlink(missing_ok=True)
 
     def _arrives(self, beat: int):
         """The Scene beat `beat` travels to — what its event produced."""

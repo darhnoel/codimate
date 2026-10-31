@@ -122,3 +122,115 @@ fn export_mp4_produces_valid_mp4() {
         let _ = std::fs::remove_file(path);
     }
 }
+
+#[test]
+fn frames_of_a_long_film_land_on_the_instants_they_are_shown_at() {
+    use codimate_export::FrameTimes;
+
+    // Accumulating `1 / fps` in f32 drew frame i of this film up to 102 ms
+    // away from i / 60, and made 36,008 frames of 36,001.
+    let times: Vec<f32> = FrameTimes::new(600.0, 60.0).collect();
+    assert_eq!(times.len(), 36_001);
+    for (i, at) in times.iter().enumerate() {
+        assert_eq!(*at, (i as f64 / 60.0) as f32, "frame {i}");
+    }
+    assert_eq!(*times.last().unwrap(), 600.0);
+}
+
+#[test]
+fn a_duration_a_hair_over_a_whole_frame_gets_no_extra_frame() {
+    use codimate_export::FrameTimes;
+
+    // 1.1_f32 * 30 is 33.0000007: 33 frames after the first, not 34.
+    let times: Vec<f32> = FrameTimes::new(1.1, 30.0).collect();
+    assert_eq!(times.len(), 34);
+    assert_eq!(*times.last().unwrap(), 1.1);
+}
+
+#[test]
+fn frame_times_at_the_edges() {
+    use codimate_export::FrameTimes;
+
+    let all = |duration: f32, fps: f32| FrameTimes::new(duration, fps).collect::<Vec<_>>();
+    assert_eq!(all(0.0, 30.0), vec![0.0]);
+    assert_eq!(all(-1.0, 30.0), Vec::<f32>::new());
+    assert_eq!(all(2.0, 0.0), vec![0.0, 2.0]);
+    // Shorter than a frame: the start and the end, as before.
+    assert_eq!(all(0.00001, 30.0), vec![0.0, 0.00001]);
+    // Off the grid: the last frame still lands on the end.
+    assert_eq!(all(0.5, 3.0), vec![0.0, 1.0 / 3.0, 0.5]);
+
+    let mut times = FrameTimes::new(1.0, 4.0);
+    assert_eq!(times.size_hint(), (5, Some(5)));
+    times.next();
+    assert_eq!(times.size_hint(), (4, Some(4)));
+}
+
+/// A unique path in the temporary folder, so tests running at once never share one.
+fn temp(name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("codimate-{}-{name}", std::process::id()))
+}
+
+#[test]
+fn a_finished_mp4_has_its_index_at_the_front_and_leaves_no_partial_file() {
+    let playable = animation(
+        "demo",
+        0.5,
+        scene().node(circle().radius(5.0).fill(Color::RED)),
+    );
+    let config = ExportConfig::new(10.0, Viewport::new(32.0, 20.0));
+    let path = temp("faststart.mp4");
+
+    match codimate_export::export_mp4(&playable, &config, &path) {
+        Ok(()) => {}
+        Err(codimate_export::ExportError::EncoderNotFound) => return,
+        Err(other) => panic!("unexpected export error: {other}"),
+    }
+    let bytes = std::fs::read(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+
+    // The top-level boxes, in order: `moov` must come before `mdat`.
+    let mut boxes = Vec::new();
+    let mut at = 0;
+    while at + 8 <= bytes.len() {
+        let size = u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
+        boxes.push(String::from_utf8_lossy(&bytes[at + 4..at + 8]).to_string());
+        if size < 8 {
+            break;
+        }
+        at += size;
+    }
+    let position = |kind: &str| boxes.iter().position(|b| b == kind).unwrap();
+    assert!(position("moov") < position("mdat"), "boxes: {boxes:?}");
+    assert!(!path
+        .with_file_name(format!(
+            ".partial-{}",
+            path.file_name().unwrap().to_string_lossy()
+        ))
+        .exists());
+}
+
+#[test]
+fn a_failed_render_keeps_the_previous_video_and_leaves_no_partial_file() {
+    let playable = animation("demo", 0.5, scene().node(circle().radius(5.0)));
+    let config = ExportConfig::new(10.0, Viewport::new(32.0, 20.0));
+    // ffmpeg cannot choose a container for this extension, so it fails.
+    let path = temp("keep.not-a-container");
+    std::fs::write(&path, b"the previous video").unwrap();
+
+    let result = codimate_export::export_mp4(&playable, &config, &path);
+    let kept = std::fs::read(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+
+    match result {
+        Err(codimate_export::ExportError::EncoderNotFound) => return,
+        Err(codimate_export::ExportError::EncoderFailed(_)) => {}
+        other => panic!("expected the encoder to fail, got {other:?}"),
+    }
+    assert_eq!(kept, b"the previous video");
+    let partial = path.with_file_name(format!(
+        ".partial-{}",
+        path.file_name().unwrap().to_string_lossy()
+    ));
+    assert!(!partial.exists());
+}

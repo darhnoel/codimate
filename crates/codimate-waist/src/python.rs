@@ -267,9 +267,20 @@ fn measure_formula(latex: &str, size: f32) -> PyResult<(f32, f32)> {
     reconcile::formula_size(latex, size).map_err(py)
 }
 
+/// Whether this engine was built with optimizations.
+///
+/// A debug build renders about 25 times slower (748 ms against 28 ms for one
+/// frame of 598 shapes), and nothing else says so but the clock. `render`
+/// asks, and warns.
+#[pyfunction]
+fn optimized() -> bool {
+    !cfg!(debug_assertions)
+}
+
 #[pymodule]
 fn _codimate(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(call, m)?)?;
+    m.add_function(wrap_pyfunction!(optimized, m)?)?;
     m.add_function(wrap_pyfunction!(render, m)?)?;
     m.add_function(wrap_pyfunction!(render_frame_png, m)?)?;
     m.add_function(wrap_pyfunction!(ease, m)?)?;
