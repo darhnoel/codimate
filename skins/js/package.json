@@ -1,6 +1,6 @@
 {
   "name": "codimate",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Turn a running algorithm into an explainer video: the JavaScript Skin of Codimate",
   "license": "MIT",
   "type": "module",
