@@ -693,7 +693,10 @@ mod scale_tests {
             radius: 20.0,
             fill: Color::WHITE,
         };
-        let clear = Color { a: 0.0, ..Color::WHITE };
+        let clear = Color {
+            a: 0.0,
+            ..Color::WHITE
+        };
         let hidden = vec![
             RenderCommand::Text {
                 x: 100.0,
